@@ -1,0 +1,16 @@
+[Unit]
+Description=Laravel Reverb WebSocket Server
+After=network.target mysql.service
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/var/www/camerooncommunity
+ExecStart=/usr/bin/php artisan reverb:start --port=8080
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/reverb.log
+StandardError=append:/var/log/reverb.log
+
+[Install]
+WantedBy=multi-user.target
