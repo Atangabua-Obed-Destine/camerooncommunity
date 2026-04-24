@@ -118,4 +118,36 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(CommunityPointsLog::class);
     }
+
+    /*
+    |----------------------------------------------------------------------
+    | Connections (mutual friend / DM permission system)
+    |----------------------------------------------------------------------
+    */
+
+    /**
+     * Returns the connection record between this user and another, or null.
+     */
+    public function connectionWith(int $otherUserId): ?UserConnection
+    {
+        return UserConnection::between($this->id, $otherUserId);
+    }
+
+    /**
+     * True when both users have an accepted (mutual) connection.
+     */
+    public function isConnectedWith(int $otherUserId): bool
+    {
+        $c = $this->connectionWith($otherUserId);
+        return $c !== null && $c->status === UserConnection::STATUS_ACCEPTED;
+    }
+
+    /**
+     * True when either side has blocked the other.
+     */
+    public function hasBlockedOrIsBlockedBy(int $otherUserId): bool
+    {
+        $c = $this->connectionWith($otherUserId);
+        return $c !== null && $c->status === UserConnection::STATUS_BLOCKED;
+    }
 }

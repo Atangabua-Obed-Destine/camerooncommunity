@@ -151,6 +151,56 @@ class ChatRoom extends Component
         unset($this->dmPartnerStatus);
     }
 
+    /**
+     * Connection state with the DM partner — drives the "not connected" banner.
+     * Returns: ['state' => 'connected'|'outgoing'|'incoming'|'blocked-by-me'|'blocked-by-them'|'none', 'partner_id' => int]
+     */
+    #[Computed]
+    public function dmConnectionState()
+    {
+        if (!isset($this->room) || !$this->room->exists) return null;
+        if ($this->room->room_type !== RoomType::DirectMessage) return null;
+
+        $partnerId = (int) YardRoomMember::where('room_id', $this->room->id)
+            ->where('user_id', '!=', auth()->id())
+            ->value('user_id');
+        if (!$partnerId) return null;
+
+        $c = \App\Models\UserConnection::between(auth()->id(), $partnerId);
+        $state = 'none';
+        if ($c) {
+            if ($c->status === \App\Models\UserConnection::STATUS_ACCEPTED) {
+                $state = 'connected';
+            } elseif ($c->status === \App\Models\UserConnection::STATUS_PENDING) {
+                $state = $c->requested_by === auth()->id() ? 'outgoing' : 'incoming';
+            } elseif ($c->status === \App\Models\UserConnection::STATUS_BLOCKED) {
+                $state = $c->requested_by === auth()->id() ? 'blocked-by-me' : 'blocked-by-them';
+            }
+        }
+        return ['state' => $state, 'partner_id' => $partnerId];
+    }
+
+    public function requestDmConnection(): void
+    {
+        $info = $this->dmConnectionState;
+        if (! $info || $info['state'] !== 'none') return;
+        $partner = User::find($info['partner_id']);
+        if (! $partner) return;
+        app(\App\Services\ConnectionService::class)->request(auth()->user(), $partner);
+        unset($this->dmConnectionState);
+        $this->dispatch('toast', type: 'success', message: app()->getLocale() === 'fr'
+            ? 'Demande de connexion envoyée.'
+            : 'Connection request sent.');
+    }
+
+    public function acceptDmConnection(): void
+    {
+        $info = $this->dmConnectionState;
+        if (! $info || $info['state'] !== 'incoming') return;
+        app(\App\Services\ConnectionService::class)->accept(auth()->user(), $info['partner_id']);
+        unset($this->dmConnectionState);
+    }
+
     #[Computed]
     public function forwardRooms()
     {
@@ -196,6 +246,19 @@ class ChatRoom extends Component
 
         if (!$isMember) {
             return;
+        }
+
+        // DM connection gate: must be mutually connected to send a 1:1 DM.
+        if ($this->room->room_type === RoomType::DirectMessage) {
+            $partner = $this->room->members()
+                ->where('user_id', '!=', $user->id)
+                ->value('user_id');
+            if ($partner && ! $user->isConnectedWith((int) $partner)) {
+                $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
+                    ? 'Vous devez être connecté avec cet utilisateur pour lui envoyer un message.'
+                    : 'You must connect with this user before you can send a message.');
+                return;
+            }
         }
 
         $message = YardMessage::create([

@@ -189,6 +189,21 @@ class Communities extends Component
     public function leaveCommunity(int $roomId): void
     {
         $user = auth()->user();
+        $room = YardRoom::find($roomId);
+
+        if (! $room) {
+            return;
+        }
+
+        // Default location-based rooms (National / Regional) cannot be left.
+        // Membership is managed automatically by the location switch system.
+        if (in_array($room->room_type, [RoomType::National, RoomType::Regional], true)) {
+            $this->dispatch('toast', type: 'info', message: app()->getLocale() === 'fr'
+                ? 'Vous ne pouvez pas quitter votre groupe national ou régional par défaut.'
+                : "You can't leave your default country or regional group.");
+            return;
+        }
+
         $membership = YardRoomMember::where('room_id', $roomId)
             ->where('user_id', $user->id)
             ->first();

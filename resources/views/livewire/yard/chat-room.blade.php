@@ -664,7 +664,47 @@
         </div>
 
         {{-- ══ Normal mode (text input) ══ --}}
-        <form wire:submit="sendMessage" class="yard-chat__input-form" x-show="!recording && !preview.active" x-transition>
+        @php $dmConn = $room->room_type === \App\Enums\RoomType::DirectMessage ? $this->dmConnectionState : null; @endphp
+        @if($dmConn && $dmConn['state'] !== 'connected')
+            <div class="px-4 py-3 bg-amber-50 border-t border-amber-200 flex items-center gap-3">
+                <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                <div class="flex-1 text-sm text-amber-800 leading-snug">
+                    @switch($dmConn['state'])
+                        @case('outgoing')
+                            <span x-text="$store.lang.t('Connection request sent. You can chat once they accept.', 'Demande envoyée. Vous pourrez discuter une fois acceptée.')"></span>
+                            @break
+                        @case('incoming')
+                            <span x-text="$store.lang.t('This person wants to connect with you. Accept to start chatting.', 'Cette personne souhaite se connecter avec vous. Acceptez pour discuter.')"></span>
+                            @break
+                        @case('blocked-by-me')
+                            <span x-text="$store.lang.t('You blocked this user. Unblock from Connections to chat.', 'Vous avez bloqué cet utilisateur. Débloquez-le depuis Connexions.')"></span>
+                            @break
+                        @case('blocked-by-them')
+                            <span x-text="$store.lang.t('You can’t message this user right now.', 'Vous ne pouvez pas envoyer de message à cet utilisateur.')"></span>
+                            @break
+                        @default
+                            <span x-text="$store.lang.t('You’re not connected with this user yet. Send a request to start chatting.', 'Vous n’êtes pas encore connecté avec cet utilisateur. Envoyez une demande pour discuter.')"></span>
+                    @endswitch
+                </div>
+                @switch($dmConn['state'])
+                    @case('none')
+                        <button wire:click="requestDmConnection"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cm-green text-white hover:bg-cm-green/90 transition-colors whitespace-nowrap">
+                            <span x-text="$store.lang.t('Connect', 'Se connecter')"></span>
+                        </button>
+                        @break
+                    @case('incoming')
+                        <button wire:click="acceptDmConnection"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cm-green text-white hover:bg-cm-green/90 transition-colors whitespace-nowrap">
+                            <span x-text="$store.lang.t('Accept', 'Accepter')"></span>
+                        </button>
+                        @break
+                @endswitch
+            </div>
+        @endif
+
+        <form wire:submit="sendMessage" class="yard-chat__input-form"
+              x-show="!recording && !preview.active{{ ($dmConn && $dmConn['state'] !== 'connected') ? ' && false' : '' }}" x-transition>
             {{-- Unified input pill: buttons + textarea all inside one rounded box --}}
             <div class="yard-chat__input-pill">
                 {{-- Attachment button --}}

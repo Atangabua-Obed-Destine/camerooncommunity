@@ -3,6 +3,7 @@
 namespace App\Livewire\Auth;
 
 use App\Enums\Language;
+use App\Models\PlatformSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\YardRoom;
@@ -295,10 +296,17 @@ class RegisterWizard extends Component
         ]);
 
         // Check founding member status
-        $foundingCap = (int) ($tenant->settings['founding_member_cap'] ?? 1000);
+        $foundingCap = (int) ($tenant->settings['founding_member_cap'] ?? 20);
         $totalUsers = User::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
         if ($totalUsers <= $foundingCap) {
             $user->update(['is_founding_member' => true]);
+        }
+
+        // If admin has disabled email verification, auto-mark the user as verified
+        // so the `verified` middleware on protected routes does not block them.
+        $requireVerification = (string) PlatformSetting::getValue('require_email_verification', '0') === '1';
+        if (! $requireVerification) {
+            $user->forceFill(['email_verified_at' => now()])->save();
         }
 
         Auth::login($user);
@@ -320,7 +328,9 @@ class RegisterWizard extends Component
         }
 
         try {
-            event(new Registered($user));
+            if ($requireVerification) {
+                event(new Registered($user));
+            }
         } catch (\Throwable $e) {
             logger()->warning('Registration event failed: ' . $e->getMessage());
         }

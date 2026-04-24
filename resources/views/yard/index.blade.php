@@ -2,6 +2,7 @@
     <x-slot:title>The Yard — Cameroon Community</x-slot:title>
 
     <div class="yard-container" x-data="yardApp()" @room-selected.window="onRoomSelected($event.detail)" @toggle-room-info.window="toggleInfo()" @room-type-changed.window="activeRoomType = $event.detail.roomType"
+         @open-dm.window="startDmWith($event.detail.userId)"
          :class="{ 'yard-container--fullscreen': activeRoom && isMobile }">
 
         {{-- ══════════════════════════════════════════════════════
@@ -188,6 +189,10 @@
                                     <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
                                     <span x-text="$store.lang.t('New Group', 'Nouveau Groupe')"></span>
                                 </button>
+                                <button @click="newOpen = false; Livewire.dispatch('open-connections')" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                                    <span x-text="$store.lang.t('Connections', 'Connexions')"></span>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -347,6 +352,10 @@
                     <button @click="fabOpen = false; Livewire.dispatch('open-communities')" class="yard-fab-menu__item">
                         <span class="yard-fab-menu__icon bg-violet-500">👥</span>
                         <span x-text="$store.lang.t('Communities', 'Communautés')"></span>
+                    </button>
+                    <button @click="fabOpen = false; Livewire.dispatch('open-connections')" class="yard-fab-menu__item">
+                        <span class="yard-fab-menu__icon bg-cm-green">🤝</span>
+                        <span x-text="$store.lang.t('Connections', 'Connexions')"></span>
                     </button>
                     <button @click="fabOpen = false; openNewChat()" class="yard-fab-menu__item">
                         <span class="yard-fab-menu__icon bg-amber-500">💬</span>
@@ -562,26 +571,54 @@
                     <template x-if="dmResults.length > 0">
                         <div class="yard-modal-dialog__results">
                             <template x-for="user in dmResults" :key="user.id">
-                                <button @click="dmSelected = (dmSelected && dmSelected.id === user.id) ? null : user"
-                                        class="yard-modal-dialog__user"
-                                        :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__user--selected' : ''">
-                                    <div class="yard-modal-dialog__avatar">
-                                        <template x-if="user.avatar">
-                                            <img :src="'{{ asset('storage') }}/' + user.avatar" alt="" class="w-full h-full rounded-full object-cover">
-                                        </template>
-                                        <template x-if="!user.avatar">
-                                            <span x-text="(user.username || user.name).charAt(0).toUpperCase()"></span>
-                                        </template>
-                                    </div>
-                                    <div class="flex-1 min-w-0 text-left">
-                                        <p class="text-sm font-semibold text-slate-800 truncate" x-text="user.username || user.name"></p>
-                                        <p class="text-xs text-slate-500 truncate" x-text="user.current_region || user.email || ''"></p>
-                                    </div>
-                                    <div class="yard-modal-dialog__check"
-                                         :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__check--on' : ''">
-                                        <svg x-show="dmSelected && dmSelected.id === user.id" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                                    </div>
-                                </button>
+                                <div class="yard-modal-dialog__user"
+                                     :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__user--selected' : ''">
+                                    <button type="button"
+                                            class="flex items-center gap-3 flex-1 min-w-0 text-left bg-transparent border-0 p-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                                            :disabled="user.connection_state !== 'connected'"
+                                            @click="toggleDmSelected(user)">
+                                        <div class="yard-modal-dialog__avatar">
+                                            <template x-if="user.avatar">
+                                                <img :src="'{{ asset('storage') }}/' + user.avatar" alt="" class="w-full h-full rounded-full object-cover">
+                                            </template>
+                                            <template x-if="!user.avatar">
+                                                <span x-text="(user.username || user.name).charAt(0).toUpperCase()"></span>
+                                            </template>
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-sm font-semibold text-slate-800 truncate" x-text="user.username || user.name"></p>
+                                            <p class="text-xs text-slate-500 truncate" x-text="user.current_region || user.email || ''"></p>
+                                        </div>
+                                    </button>
+
+                                    {{-- Per-state action --}}
+                                    <template x-if="user.connection_state === 'connected'">
+                                        <div class="yard-modal-dialog__check"
+                                             :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__check--on' : ''">
+                                            <svg x-show="dmSelected && dmSelected.id === user.id" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                        </div>
+                                    </template>
+                                    <template x-if="user.connection_state === 'none'">
+                                        <button type="button" @click.stop="connectUser(user)" :disabled="user.busy"
+                                                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cm-green text-white hover:bg-cm-green/90 disabled:opacity-60 transition-colors whitespace-nowrap">
+                                            <span x-text="$store.lang.t('Connect', 'Connecter')"></span>
+                                        </button>
+                                    </template>
+                                    <template x-if="user.connection_state === 'outgoing'">
+                                        <span class="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap"
+                                              x-text="$store.lang.t('Pending', 'En attente')"></span>
+                                    </template>
+                                    <template x-if="user.connection_state === 'incoming'">
+                                        <button type="button" @click.stop="acceptUser(user)" :disabled="user.busy"
+                                                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors whitespace-nowrap">
+                                            <span x-text="$store.lang.t('Accept', 'Accepter')"></span>
+                                        </button>
+                                    </template>
+                                    <template x-if="user.connection_state === 'blocked-by-me' || user.connection_state === 'blocked-by-them'">
+                                        <span class="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-slate-100 text-slate-500 whitespace-nowrap"
+                                              x-text="$store.lang.t('Unavailable', 'Indisponible')"></span>
+                                    </template>
+                                </div>
                             </template>
                         </div>
                     </template>
@@ -801,6 +838,86 @@
                     }
                 },
 
+                toggleDmSelected(user) {
+                    if (user.connection_state !== 'connected') return;
+                    if (this.dmSelected && this.dmSelected.id === user.id) {
+                        this.dmSelected = null;
+                    } else {
+                        this.dmSelected = user;
+                    }
+                },
+
+                async connectUser(user) {
+                    if (user.busy) return;
+                    user.busy = true;
+                    // Optimistic UI: flip to "Pending" immediately so the user sees feedback.
+                    const prevState = user.connection_state;
+                    user.connection_state = 'outgoing';
+                    try {
+                        const res = await fetch('{{ route("yard.connections.request") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ user_id: user.id })
+                        });
+                        if (!res.ok) {
+                            user.connection_state = prevState;
+                            const data = await res.json().catch(() => ({}));
+                            console.error('Connect failed:', res.status, data);
+                            alert(data.message || 'Failed to send connection request.');
+                        } else {
+                            const data = await res.json().catch(() => ({}));
+                            user.connection_state = data.connection_state || 'outgoing';
+                            try { window.Livewire?.dispatch('toast', { type: 'success', message: '{{ __('Connection request sent.') }}' }); } catch (_) {}
+                        }
+                    } catch (e) {
+                        user.connection_state = prevState;
+                        console.error('Connect error:', e);
+                        alert('Failed to send connection request.');
+                    } finally {
+                        user.busy = false;
+                    }
+                },
+
+                async acceptUser(user) {
+                    if (user.busy) return;
+                    user.busy = true;
+                    const prevState = user.connection_state;
+                    user.connection_state = 'connected';
+                    try {
+                        const res = await fetch('{{ route("yard.connections.accept") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({ user_id: user.id })
+                        });
+                        if (!res.ok) {
+                            user.connection_state = prevState;
+                            const data = await res.json().catch(() => ({}));
+                            console.error('Accept failed:', res.status, data);
+                            alert(data.message || 'Failed to accept connection.');
+                        } else {
+                            const data = await res.json().catch(() => ({}));
+                            user.connection_state = data.connection_state || 'connected';
+                            try { window.Livewire?.dispatch('toast', { type: 'success', message: '{{ __('You are now connected.') }}' }); } catch (_) {}
+                        }
+                    } catch (e) {
+                        user.connection_state = prevState;
+                        console.error('Accept error:', e);
+                        alert('Failed to accept connection.');
+                    } finally {
+                        user.busy = false;
+                    }
+                },
+
                 async startDmWith(userId) {
                     try {
                         const res = await fetch('{{ route("yard.dm.create") }}', {
@@ -821,7 +938,14 @@
                                 Livewire.dispatch('room-selected', { roomId: data.room_id });
                             }
                         } else {
-                            console.error('DM creation failed:', res.status, await res.text());
+                            if (res.status === 403) {
+                                const data = await res.json().catch(() => ({}));
+                                Livewire.dispatch('toast', { type: 'warning', message: data.message || 'You must connect with this user first.' });
+                                this.closeNewChat();
+                                Livewire.dispatch('open-connections', { tab: 'search' });
+                            } else {
+                                console.error('DM creation failed:', res.status, await res.text());
+                            }
                         }
                     } catch (e) {
                         console.error('DM creation error:', e);
@@ -864,6 +988,11 @@
     {{-- ── Communities Modal ── --}}
     @auth
     <livewire:yard.communities />
+    @endauth
+
+    {{-- ── Connections Modal ── --}}
+    @auth
+    <livewire:yard.connections />
     @endauth
 
     {{-- ── Call Manager (WebRTC voice/video overlay) ── --}}

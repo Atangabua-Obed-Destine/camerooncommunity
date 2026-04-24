@@ -57,7 +57,7 @@
                         <div>
                             <h3 class="font-bold text-slate-900" x-text="$store.lang.t('Founding Member!', 'Membre Fondateur !')"></h3>
                             <p class="text-sm text-slate-600 mt-1" x-text="$store.lang.t(
-                                'You\\'re one of our first 1,000 members! You\\'ve earned the exclusive Founding Member badge.',
+                                'You\'re one of our first 20 members! You\'ve earned the exclusive Founding Member badge.',
                                 'Vous êtes l\\'un de nos 1 000 premiers membres ! Vous avez obtenu le badge exclusif de Membre Fondateur.'
                             )"></p>
                         </div>

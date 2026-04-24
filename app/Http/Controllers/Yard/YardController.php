@@ -79,6 +79,14 @@ class YardController extends Controller
             return response()->json(['error' => 'Cannot DM yourself'], 422);
         }
 
+        // Connection gate: users must be mutually connected before DMing.
+        if (! $user->isConnectedWith($targetId)) {
+            return response()->json([
+                'error' => 'not_connected',
+                'message' => 'You must connect with this user before you can message them.',
+            ], 403);
+        }
+
         // Find existing DM between these two users
         $existingRoom = YardRoom::where('room_type', RoomType::DirectMessage)
             ->whereHas('members', fn ($q) => $q->where('user_id', $user->id))
@@ -178,6 +186,88 @@ class YardController extends Controller
             ->limit(20)
             ->get();
 
-        return response()->json($users);
+        // Annotate each result with the current viewer's connection state.
+        $userIds = $users->pluck('id')->all();
+        $connections = \App\Models\UserConnection::where(function ($q) use ($user, $userIds) {
+                $q->where(function ($qq) use ($user, $userIds) {
+                    $qq->where('user_a_id', $user->id)->whereIn('user_b_id', $userIds);
+                })->orWhere(function ($qq) use ($user, $userIds) {
+                    $qq->where('user_b_id', $user->id)->whereIn('user_a_id', $userIds);
+                });
+            })
+            ->get(['user_a_id', 'user_b_id', 'status', 'requested_by'])
+            ->keyBy(fn ($c) => $c->user_a_id === $user->id ? $c->user_b_id : $c->user_a_id);
+
+        $payload = $users->map(function ($u) use ($connections, $user) {
+            $c = $connections->get($u->id);
+            $state = 'none';
+            if ($c) {
+                if ($c->status === \App\Models\UserConnection::STATUS_ACCEPTED) {
+                    $state = 'connected';
+                } elseif ($c->status === \App\Models\UserConnection::STATUS_PENDING) {
+                    $state = $c->requested_by === $user->id ? 'outgoing' : 'incoming';
+                } elseif ($c->status === \App\Models\UserConnection::STATUS_BLOCKED) {
+                    $state = $c->requested_by === $user->id ? 'blocked-by-me' : 'blocked-by-them';
+                }
+            }
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'username' => $u->username,
+                'avatar' => $u->avatar,
+                'current_region' => $u->current_region,
+                'connection_state' => $state,
+            ];
+        });
+
+        return response()->json($payload);
+    }
+
+    /**
+     * Send a connection request from the current user to the target user.
+     */
+    public function requestConnection(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $user = $request->user();
+        $targetId = (int) $request->input('user_id');
+
+        if ($targetId === $user->id) {
+            return response()->json(['error' => 'Cannot connect with yourself'], 422);
+        }
+
+        $target = User::findOrFail($targetId);
+
+        try {
+            app(\App\Services\ConnectionService::class)->request($user, $target);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'request_failed', 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['status' => 'ok', 'connection_state' => 'outgoing']);
+    }
+
+    /**
+     * Accept an incoming connection request from the given user.
+     */
+    public function acceptConnection(Request $request)
+    {
+        $request->validate([
+            'user_id' => 'required|integer|exists:users,id',
+        ]);
+
+        $user = $request->user();
+        $targetId = (int) $request->input('user_id');
+
+        try {
+            app(\App\Services\ConnectionService::class)->accept($user, $targetId);
+        } catch (\Throwable $e) {
+            return response()->json(['error' => 'accept_failed', 'message' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['status' => 'ok', 'connection_state' => 'connected']);
     }
 }

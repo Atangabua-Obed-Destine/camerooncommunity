@@ -54,6 +54,8 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::post('/yard/dm', [YardController::class, 'createDm'])->name('yard.dm.create');
     Route::post('/yard/group', [YardController::class, 'createGroup'])->name('yard.group.create');
     Route::get('/yard/users/search', [YardController::class, 'searchUsers'])->name('yard.users.search');
+    Route::post('/yard/connections/request', [YardController::class, 'requestConnection'])->name('yard.connections.request');
+    Route::post('/yard/connections/accept', [YardController::class, 'acceptConnection'])->name('yard.connections.accept');
 
     // TURN credentials (proxies Metered API — keeps secret server-side)
     Route::get('/api/turn-credentials', function () {

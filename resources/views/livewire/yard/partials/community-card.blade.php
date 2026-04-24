@@ -5,9 +5,12 @@
     $colorIdx = crc32($room->name) % count($colors);
     $avatarColor = $colors[$colorIdx];
     $isPublic = in_array($room->room_type, [\App\Enums\RoomType::National, \App\Enums\RoomType::Regional, \App\Enums\RoomType::City]);
+    $isDefaultRoom = in_array($room->room_type, [\App\Enums\RoomType::National, \App\Enums\RoomType::Regional]);
     $memberCount = $room->live_members_count ?? $room->members_count ?? 0;
     $messageCount = $room->messages_count ?? 0;
     $isPrivateGroup = $room->is_private ?? false;
+    // Any non-default group that isn't private is effectively public
+    $showPublicBadge = ! $isPrivateGroup && ! $isDefaultRoom;
     $hasPendingRequest = !$isMember && isset($pendingRequestRoomIds) && in_array($room->id, $pendingRequestRoomIds);
 @endphp
 <div class="comm-card" wire:key="comm-{{ $room->id }}">
@@ -26,7 +29,7 @@
                     <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z"/></svg>
                     <span x-text="$store.lang.t('Private', 'Privé')"></span>
                 </span>
-            @elseif($isPublic)
+            @elseif($showPublicBadge)
                 <span class="comm-card__badge comm-card__badge--public">
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3"/></svg>
                     Public
@@ -48,7 +51,7 @@
     </div>
 
     {{-- Name --}}
-    <h3 class="comm-card__name">{{ Str::upper($room->name) }}</h3>
+    <h3 class="comm-card__name">{{ Str::title($room->name) }}</h3>
 
     {{-- Description --}}
     <p class="comm-card__desc">{{ Str::limit($room->description ?? '', 80) ?: (app()->getLocale() === 'fr' ? 'Aucune description' : 'No description') }}</p>
@@ -72,12 +75,20 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
                 <span x-text="$store.lang.t('Open', 'Ouvrir')"></span>
             </button>
-            <button wire:click="leaveCommunity({{ $room->id }})"
-                    wire:confirm="{{ app()->getLocale() === 'fr' ? 'Quitter cette communauté ?' : 'Leave this community?' }}"
-                    class="comm-card__btn comm-card__btn--leave">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
-                <span x-text="$store.lang.t('Leave', 'Quitter')"></span>
-            </button>
+            @if($isDefaultRoom)
+                <span class="comm-card__btn comm-card__btn--leave opacity-60 cursor-not-allowed"
+                      title="{{ app()->getLocale() === 'fr' ? 'Groupe par défaut — ne peut pas être quitté' : 'Default group — cannot be left' }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z"/></svg>
+                    <span x-text="$store.lang.t('Default', 'Par défaut')"></span>
+                </span>
+            @else
+                <button wire:click="leaveCommunity({{ $room->id }})"
+                        wire:confirm="{{ app()->getLocale() === 'fr' ? 'Quitter cette communauté ?' : 'Leave this community?' }}"
+                        class="comm-card__btn comm-card__btn--leave">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75"/></svg>
+                    <span x-text="$store.lang.t('Leave', 'Quitter')"></span>
+                </button>
+            @endif
         @elseif($hasPendingRequest)
             {{-- Pending request — cancel button --}}
             <button wire:click="cancelRequest({{ $room->id }})" class="comm-card__btn comm-card__btn--pending">

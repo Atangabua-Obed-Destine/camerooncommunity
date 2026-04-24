@@ -341,8 +341,8 @@
                        x-transition:enter-start="opacity-0"
                        x-transition:enter-end="opacity-100"
                        x-text="$store.lang.t(
-                           'You\'re one of the first 1,000 members! This exclusive badge is yours forever.',
-                           'Vous êtes parmi les 1 000 premiers membres ! Ce badge exclusif est à vous pour toujours.'
+                           'You\'re one of the first 20 members! This exclusive badge is yours forever.',
+                           'Vous êtes parmi les 20 premiers membres ! Ce badge exclusif est à vous pour toujours.'
                        )"></p>
                 </div>
                 @endif

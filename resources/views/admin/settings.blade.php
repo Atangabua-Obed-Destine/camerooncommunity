@@ -188,6 +188,50 @@
             </div>
         </div>
 
+        {{-- Email Verification --}}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">✉️</span>
+                    <h2 class="font-semibold text-slate-700">Authentication</h2>
+                </div>
+            </div>
+            <div class="p-5 space-y-4">
+                <form method="POST" action="{{ route('admin.settings.update') }}">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                        <div>
+                            <label class="text-sm font-medium text-slate-700">Require Email Verification</label>
+                            <p class="text-xs text-slate-400 mt-0.5">When enabled, new users must click a link sent to their email before they can access the platform. When disabled, accounts are activated instantly on registration.</p>
+                        </div>
+                        <div class="md:col-span-2 flex items-center gap-4">
+                            @php $requireVerify = (string) \App\Models\PlatformSetting::getValue('require_email_verification', '0') === '1'; @endphp
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="hidden" name="settings[require_email_verification]" value="0">
+                                <input type="checkbox" name="settings[require_email_verification]" value="1"
+                                       {{ $requireVerify ? 'checked' : '' }}
+                                       class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cm-green rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cm-green"></div>
+                                <span class="ml-3 text-sm text-slate-600">{{ $requireVerify ? 'Enabled' : 'Disabled' }}</span>
+                            </label>
+                            <button type="submit" class="px-4 py-2 bg-cm-green text-white text-sm font-semibold rounded-lg hover:bg-cm-green/90 transition-colors whitespace-nowrap">Save</button>
+                        </div>
+                    </div>
+                </form>
+                @if(! $requireVerify)
+                <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+                    <span>ℹ️</span>
+                    <span>Email verification is currently <strong>disabled</strong>. New registrations are auto-verified and can access the platform immediately.</span>
+                </div>
+                @else
+                <div class="flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-200">
+                    <span>🔒</span>
+                    <span>Email verification is currently <strong>required</strong>. New users will be redirected to a verification notice until they confirm their email.</span>
+                </div>
+                @endif
+            </div>
+        </div>
+
         <form method="POST" action="{{ route('admin.settings.update') }}">
             @csrf
 

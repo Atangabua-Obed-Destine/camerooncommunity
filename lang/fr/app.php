@@ -115,7 +115,7 @@ return [
 
     // Onboarding
     'welcome_to_yard' => 'Bienvenue au Yard :country, :name ! 🎉',
-    'founding_member' => 'Vous faites partie de nos 1 000 premiers membres ! Vous avez gagné le badge de Membre Fondateur.',
+    'founding_member' => 'Vous faites partie de nos 20 premiers membres ! Vous avez gagné le badge de Membre Fondateur.',
     'first_in_city' => 'Vous êtes le premier Camerounais que nous avons trouvé à :city ! Votre salon de ville est prêt — invitez d\'autres à vous rejoindre.',
     'city_room_prompt' => ':count Camerounais sont déjà dans le salon de :city. Voulez-vous rejoindre ?',
     'join' => 'Rejoindre',

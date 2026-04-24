@@ -16,6 +16,18 @@
                 <div class="absolute -bottom-32 -left-20 w-96 h-96 rounded-full bg-cm-yellow/[.06] blur-3xl"></div>
                 <div class="absolute top-1/3 right-0 w-64 h-64 rounded-full bg-cm-red/[.04] blur-3xl"></div>
                 <div class="absolute inset-0 opacity-[.03]" style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 32px 32px;"></div>
+
+                {{-- Concentric circles (matches register page) --}}
+                <svg class="absolute -top-20 -left-20 w-96 h-96 animate-pulse-soft opacity-[.02]" viewBox="0 0 200 200">
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="#FCD116" stroke-width="1.5"/>
+                    <circle cx="100" cy="100" r="60" fill="none" stroke="#FCD116" stroke-width="1"/>
+                    <circle cx="100" cy="100" r="40" fill="none" stroke="#FCD116" stroke-width="0.5"/>
+                </svg>
+                <svg class="absolute -bottom-16 -right-16 w-80 h-80 animate-pulse-soft opacity-[.02]" viewBox="0 0 200 200" style="animation-delay: 1s">
+                    <circle cx="100" cy="100" r="80" fill="none" stroke="#FCD116" stroke-width="1.5"/>
+                    <circle cx="100" cy="100" r="60" fill="none" stroke="#FCD116" stroke-width="1"/>
+                    <circle cx="100" cy="100" r="40" fill="none" stroke="#FCD116" stroke-width="0.5"/>
+                </svg>
             </div>
 
             <div class="relative z-10 flex flex-col justify-between h-full p-8 xl:p-10">
@@ -32,8 +44,8 @@
 
                 {{-- Hero Section --}}
                 <div class="mt-10 mb-8">
-                    <h1 class="text-3xl xl:text-4xl font-extrabold text-white leading-tight"
-                        x-text="$store.lang.t('Welcome\nBack!', 'Bon\nRetour !')" style="white-space: pre-line"></h1>
+                    <h1 class="text-3xl xl:text-4xl font-extrabold text-white leading-tight whitespace-nowrap"
+                        x-text="$store.lang.t('Welcome Back!', 'Bon Retour !')"></h1>
                     <p class="mt-3 text-sm text-white/70 leading-relaxed max-w-xs"
                        x-text="$store.lang.t(
                            'Your community is always here for you. Sign in to reconnect.',
