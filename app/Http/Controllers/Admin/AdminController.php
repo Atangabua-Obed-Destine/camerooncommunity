@@ -66,6 +66,18 @@ class AdminController extends Controller
         return view('admin.users', compact('users'));
     }
 
+    public function showUser(User $user)
+    {
+        $stats = [
+            'rooms_joined'  => \DB::table('yard_room_members')->where('user_id', $user->id)->count(),
+            'messages_sent' => \DB::table('yard_messages')->where('user_id', $user->id)->count(),
+            'reports_filed' => \DB::table('reports')->where('reporter_id', $user->id)->count(),
+            'roles'         => $user->getRoleNames(),
+        ];
+
+        return view('admin.user-show', compact('user', 'stats'));
+    }
+
     public function toggleAdmin(User $user)
     {
         // Prevent removing your own admin role

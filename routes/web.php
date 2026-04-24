@@ -143,6 +143,7 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'role:super_admin|admin'])->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [\App\Http\Controllers\Admin\AdminController::class, 'users'])->name('users');
+    Route::get('/users/{user}', [\App\Http\Controllers\Admin\AdminController::class, 'showUser'])->name('users.show');
     Route::post('/users/{user}/toggle-admin', [\App\Http\Controllers\Admin\AdminController::class, 'toggleAdmin'])->name('users.toggle-admin');
     Route::get('/yard', [\App\Http\Controllers\Admin\AdminController::class, 'yard'])->name('yard');
     Route::get('/solidarity', [\App\Http\Controllers\Admin\AdminController::class, 'solidarity'])->name('solidarity');

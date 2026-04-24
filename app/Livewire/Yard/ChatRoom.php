@@ -9,6 +9,9 @@ use App\Models\YardMessage;
 use App\Models\YardRoom;
 use App\Models\YardRoomMember;
 use App\Models\YardMessageReaction;
+use App\Models\YardPoll;
+use App\Models\YardPollOption;
+use App\Models\YardPollVote;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
@@ -86,7 +89,7 @@ class ChatRoom extends Component
         }
 
         $query = YardMessage::where('room_id', $this->room->id)
-            ->with(['user:id,name,username,avatar', 'parent:id,content,user_id', 'parent.user:id,name,username']);
+            ->with(['user:id,name,username,avatar', 'parent:id,content,user_id', 'parent.user:id,name,username', 'poll.options']);
 
         if ($this->searchActive && $this->messageSearch) {
             $query->where('content', 'like', '%' . $this->messageSearch . '%');
@@ -313,6 +316,234 @@ class ChatRoom extends Component
         } catch (\Throwable $e) {
             \Log::warning('Broadcast failed: ' . $e->getMessage());
         }
+    }
+
+    // ─── POLLS ───
+
+    public function createPoll(string $question, array $options, bool $allowMultiple = false): void
+    {
+        if (!isset($this->room) || !$this->room->exists) {
+            return;
+        }
+
+        $user = auth()->user();
+
+        $isMember = YardRoomMember::where('room_id', $this->room->id)
+            ->where('user_id', $user->id)
+            ->exists();
+        if (!$isMember) {
+            return;
+        }
+
+        $question = trim($question);
+        if ($question === '' || mb_strlen($question) > 300) {
+            $this->dispatch('toast', type: 'error', message: 'Invalid poll question.');
+            return;
+        }
+
+        // Sanitise option list — drop blanks, trim, dedupe (case-insensitive).
+        $clean = collect($options)
+            ->map(fn ($o) => is_string($o) ? trim($o) : '')
+            ->filter(fn ($o) => $o !== '' && mb_strlen($o) <= 200)
+            ->unique(fn ($o) => mb_strtolower($o))
+            ->values();
+
+        if ($clean->count() < 2 || $clean->count() > 12) {
+            $this->dispatch('toast', type: 'error', message: 'A poll needs 2 to 12 options.');
+            return;
+        }
+
+        \DB::transaction(function () use ($user, $question, $clean, $allowMultiple, &$message) {
+            $message = YardMessage::create([
+                'tenant_id'         => $user->tenant_id,
+                'uuid'              => Str::uuid()->toString(),
+                'room_id'           => $this->room->id,
+                'user_id'           => $user->id,
+                'parent_message_id' => $this->replyToId,
+                'message_type'      => MessageType::Poll,
+                'content'           => $question,
+            ]);
+
+            $poll = YardPoll::create([
+                'tenant_id'      => $user->tenant_id,
+                'message_id'     => $message->id,
+                'room_id'        => $this->room->id,
+                'user_id'        => $user->id,
+                'question'       => $question,
+                'allow_multiple' => $allowMultiple,
+                'is_closed'      => false,
+            ]);
+
+            foreach ($clean as $i => $text) {
+                YardPollOption::create([
+                    'poll_id'     => $poll->id,
+                    'text'        => $text,
+                    'position'    => $i,
+                    'votes_count' => 0,
+                ]);
+            }
+        });
+
+        $this->updateRoomMeta('📊 Poll: ' . $question);
+
+        $this->reset('replyToId', 'replyToPreview');
+        unset($this->roomMessages);
+        $this->dispatch('message-sent');
+        $this->dispatch('room-updated');
+        $this->dispatch('poll-created');
+
+        if (isset($message)) {
+            try {
+                broadcast(new \App\Events\MessageSent($message))->toOthers();
+            } catch (\Throwable $e) {
+                \Log::warning('Poll broadcast failed: ' . $e->getMessage());
+            }
+        }
+    }
+
+    public function votePoll(int $optionId): void
+    {
+        $user = auth()->user();
+        $option = YardPollOption::find($optionId);
+        if (!$option) {
+            return;
+        }
+
+        $poll = YardPoll::find($option->poll_id);
+        if (!$poll || $poll->is_closed) {
+            return;
+        }
+
+        // Membership check via the poll's room.
+        $isMember = YardRoomMember::where('room_id', $poll->room_id)
+            ->where('user_id', $user->id)
+            ->exists();
+        if (!$isMember) {
+            return;
+        }
+
+        \DB::transaction(function () use ($poll, $option, $user) {
+            $existing = YardPollVote::where('poll_id', $poll->id)
+                ->where('user_id', $user->id)
+                ->get();
+
+            $alreadyOnThis = $existing->firstWhere('option_id', $option->id);
+
+            if ($poll->allow_multiple) {
+                if ($alreadyOnThis) {
+                    // Toggle off
+                    $alreadyOnThis->delete();
+                    YardPollOption::where('id', $option->id)->decrement('votes_count');
+                } else {
+                    YardPollVote::create([
+                        'poll_id'   => $poll->id,
+                        'option_id' => $option->id,
+                        'user_id'   => $user->id,
+                    ]);
+                    YardPollOption::where('id', $option->id)->increment('votes_count');
+                }
+            } else {
+                if ($alreadyOnThis) {
+                    // Toggle off the only vote
+                    $alreadyOnThis->delete();
+                    YardPollOption::where('id', $option->id)->decrement('votes_count');
+                } else {
+                    // Remove any previous single vote(s)
+                    foreach ($existing as $prev) {
+                        YardPollOption::where('id', $prev->option_id)->decrement('votes_count');
+                        $prev->delete();
+                    }
+                    YardPollVote::create([
+                        'poll_id'   => $poll->id,
+                        'option_id' => $option->id,
+                        'user_id'   => $user->id,
+                    ]);
+                    YardPollOption::where('id', $option->id)->increment('votes_count');
+                }
+            }
+        });
+
+        unset($this->roomMessages);
+        $this->dispatch('poll-voted', pollId: $poll->id);
+
+        // Re-broadcast the host message so other clients refresh.
+        try {
+            $msg = YardMessage::find($poll->message_id);
+            if ($msg) {
+                broadcast(new \App\Events\MessageSent($msg))->toOthers();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Poll vote broadcast failed: ' . $e->getMessage());
+        }
+    }
+
+    public function closePoll(int $pollId): void
+    {
+        $poll = YardPoll::find($pollId);
+        if (!$poll) {
+            return;
+        }
+        if ($poll->user_id !== auth()->id()) {
+            return;
+        }
+        $poll->update(['is_closed' => true]);
+        unset($this->roomMessages);
+        $this->dispatch('poll-closed', pollId: $poll->id);
+    }
+
+    /**
+     * Fetch grouped voters per option for the "View votes" panel.
+     * Returns: [['id'=>..,'text'=>..,'votes_count'=>..,'pct'=>..,'voters'=>[['id'=>,'name'=>,'username'=>,'avatar'=>], ...]], ...]
+     */
+    public function pollVoters(int $pollId): array
+    {
+        $poll = YardPoll::with('options')->find($pollId);
+        if (!$poll) {
+            return [];
+        }
+
+        // Membership check via the poll's room.
+        $isMember = YardRoomMember::where('room_id', $poll->room_id)
+            ->where('user_id', auth()->id())
+            ->exists();
+        if (!$isMember) {
+            return [];
+        }
+
+        $optionIds = $poll->options->pluck('id');
+
+        $votes = \DB::table('yard_poll_votes as v')
+            ->join('users as u', 'u.id', '=', 'v.user_id')
+            ->whereIn('v.option_id', $optionIds)
+            ->orderBy('v.created_at')
+            ->get(['v.option_id', 'u.id', 'u.name', 'u.username', 'u.avatar'])
+            ->groupBy('option_id');
+
+        $totalVotes = (int) $poll->options->sum('votes_count');
+
+        return [
+            'pollId'        => $poll->id,
+            'question'      => $poll->question,
+            'allowMultiple' => (bool) $poll->allow_multiple,
+            'isClosed'      => (bool) $poll->is_closed,
+            'totalVotes'    => $totalVotes,
+            'options'       => $poll->options->map(function ($opt) use ($votes, $totalVotes) {
+                $voters = ($votes[$opt->id] ?? collect())->map(fn ($v) => [
+                    'id'       => $v->id,
+                    'name'     => $v->name,
+                    'username' => $v->username,
+                    'avatar'   => $v->avatar,
+                ])->values()->all();
+
+                return [
+                    'id'           => $opt->id,
+                    'text'         => $opt->text,
+                    'votes_count'  => (int) $opt->votes_count,
+                    'pct'          => $totalVotes > 0 ? (int) round(($opt->votes_count / $totalVotes) * 100) : 0,
+                    'voters'       => $voters,
+                ];
+            })->all(),
+        ];
     }
 
     // ─── EDIT MESSAGE ───

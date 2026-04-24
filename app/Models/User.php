@@ -37,6 +37,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'current_lat',
         'current_lng',
         'location_updated_at',
+        'active_country',
+        'active_region',
         'language_pref',
         'account_type',
         'community_points',

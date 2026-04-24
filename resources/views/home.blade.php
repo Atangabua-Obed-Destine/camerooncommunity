@@ -9,7 +9,7 @@
          :class="scrolled ? 'bg-white/95 backdrop-blur shadow-sm' : 'bg-transparent'"
          class="fixed top-0 inset-x-0 z-50 transition-all duration-300 pointer-events-auto">
         {{-- Logo — absolutely positioned, centered across full header height --}}
-        <a href="{{ route('home') }}" class="absolute left-6 sm:left-10 lg:left-28 top-1/2 -translate-y-1/2 z-10 flex items-center">
+        <a href="{{ route('home') }}" class="absolute left-6 sm:left-10 lg:left-12 top-1/2 -translate-y-1/2 z-10 flex items-center">
             @if($__siteLogo ?? null)
             <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-[120px] object-contain">
             @else
@@ -19,7 +19,7 @@
 
         {{-- Location strip for logged-in users --}}
         @auth
-        <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-28 transition-colors duration-300"
+        <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300"
              :class="scrolled ? 'text-slate-500' : 'text-white/70'">
             <div class="flex items-center gap-1.5 text-[11px] font-medium">
                 <span>🇨🇲</span>
@@ -28,7 +28,7 @@
         </div>
         @endauth
 
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28 flex items-center justify-between h-16">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12 flex items-center justify-between h-16">
             {{-- Spacer for logo --}}
             <div class="shrink-0 w-48"></div>
 
@@ -129,7 +129,7 @@
              ═══════════════════════════════════════════════════ --}}
         <x-cameroon-ribbon />
 
-        <div class="relative z-10 mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28 py-20 w-full">
+        <div class="relative z-10 mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12 py-20 w-full">
             <div class="grid lg:grid-cols-2 gap-12 items-center">
                 {{-- Left: Text Content --}}
                 <div data-animate class="space-y-8">
@@ -203,7 +203,7 @@
 
                 {{-- Right: Animated Hero Slider --}}
                 <div data-animate class="hidden lg:block">
-                    <div class="relative mx-auto w-[420px]"
+                    <div class="relative ml-auto w-[420px]"
                          x-data="{
                             current: 0,
                             slides: 3,
@@ -489,7 +489,7 @@
          SECTION 2 — THE PROBLEM
          ═══════════════════════════════════════════════════════════════ --}}
     <section class="py-20 lg:py-28 bg-white" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
                     x-text="$store.lang.t('Landing abroad is the hardest part.', 'Arriver à l\'étranger est le plus difficile.')"></h2>
@@ -564,7 +564,7 @@
          SECTION 3 — MODULE PREVIEW GRID
          ═══════════════════════════════════════════════════════════════ --}}
     <section id="features" class="py-20 lg:py-28 bg-slate-50" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
                     x-text="$store.lang.t('Everything a Cameroonian needs. In one place.', 'Tout ce dont un Camerounais a besoin. En un seul endroit.')"></h2>
@@ -612,7 +612,7 @@
          SECTION 4 — THE YARD FEATURE HIGHLIGHT
          ═══════════════════════════════════════════════════════════════ --}}
     <section class="py-20 lg:py-28 bg-white" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 {{-- Left: Copy --}}
                 <div class="space-y-6">
@@ -708,7 +708,7 @@
          SECTION 5 — SOLIDARITY HIGHLIGHT
          ═══════════════════════════════════════════════════════════════ --}}
     <section id="solidarity" class="py-20 lg:py-28 bg-gradient-to-br from-cm-yellow/10 via-cm-yellow/5 to-white" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 {{-- Left: Solidarity Card Mockup --}}
                 <div class="order-2 lg:order-1">
@@ -795,7 +795,7 @@
          SECTION 6 — HOW IT WORKS
          ═══════════════════════════════════════════════════════════════ --}}
     <section id="how-it-works" class="py-20 lg:py-28 bg-white" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
                     x-text="$store.lang.t('How It Works', 'Comment Ça Marche')"></h2>
@@ -838,7 +838,7 @@
          SECTION 7 — COMMUNITY STATS
          ═══════════════════════════════════════════════════════════════ --}}
     <section id="community" class="py-20 lg:py-28 bg-cm-green" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
                 @php
                     $stats = [
@@ -866,7 +866,7 @@
          SECTION 8 — TESTIMONIALS
          ═══════════════════════════════════════════════════════════════ --}}
     <section class="py-20 lg:py-28 bg-white" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
                     x-text="$store.lang.t('What Cameroonians in the UK are saying', 'Ce que disent les Camerounais au Royaume-Uni')"></h2>
@@ -925,7 +925,7 @@
          SECTION 9 — THE VISION
          ═══════════════════════════════════════════════════════════════ --}}
     <section class="py-20 lg:py-28 bg-slate-900 text-white" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 <div class="space-y-6">
                     <h2 class="text-3xl sm:text-4xl font-bold"
@@ -990,7 +990,7 @@
          SECTION 10 — FINAL CTA
          ═══════════════════════════════════════════════════════════════ --}}
     <section class="py-20 lg:py-28 bg-cm-green" data-animate>
-        <div class="mx-auto max-w-4xl px-6 sm:px-10 lg:px-28 text-center">
+        <div class="mx-auto max-w-4xl px-6 sm:px-10 lg:px-12 text-center">
             <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white"
                 x-text="$store.lang.t('Your community is already waiting for you.', 'Votre communauté vous attend déjà.')"></h2>
             <div class="mt-8">
@@ -1010,7 +1010,7 @@
          SECTION 11 — FOOTER
          ═══════════════════════════════════════════════════════════════ --}}
     <footer class="bg-slate-900 text-slate-400 py-16">
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-28">
+        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid md:grid-cols-4 gap-8">
                 {{-- Brand --}}
                 <div class="md:col-span-2">

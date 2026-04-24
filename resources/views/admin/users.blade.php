@@ -48,6 +48,7 @@
                     <thead>
                         <tr class="border-b border-slate-200 bg-slate-50 text-left">
                             <th class="px-4 py-3 font-semibold text-slate-600">User</th>
+                            <th class="px-4 py-3 font-semibold text-slate-600">Username</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Email</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Country</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Region</th>
@@ -72,6 +73,13 @@
                                         @endif
                                     </div>
                                 </div>
+                            </td>
+                            <td class="px-4 py-3 text-slate-600">
+                                @if($user->username)
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono">{{ '@' . $user->username }}</span>
+                                @else
+                                    <span class="text-slate-400">—</span>
+                                @endif
                             </td>
                             <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $user->current_country ?? '—' }}</td>
@@ -102,7 +110,7 @@
                                     </button>
                                     <div x-show="open" @click.away="open = false" x-transition
                                          class="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-20">
-                                        <a href="#" class="block px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">View Profile</a>
+                                        <a href="{{ route('admin.users.show', $user) }}" class="block px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50">View Profile</a>
                                         @if(!$user->hasRole('super_admin') && $user->id !== auth()->id())
                                             <form method="POST" action="{{ route('admin.users.toggle-admin', $user) }}">
                                                 @csrf

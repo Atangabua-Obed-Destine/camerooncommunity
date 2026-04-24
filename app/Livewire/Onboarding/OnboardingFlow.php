@@ -46,6 +46,27 @@ class OnboardingFlow extends Component
                 '',
                 $user->current_region ?? ''
             );
+
+            // Pre-select the National + Regional rooms for the user's country
+            // so the "default room" is checked by default on the Discover step.
+            // The user can still uncheck them, but most people just want to
+            // tap "Join" and get straight into their country's main room.
+            $this->selectedRoomIds = YardRoom::where('is_system_room', true)
+                ->where('is_active', true)
+                ->where('country', $user->current_country)
+                ->whereIn('room_type', [RoomType::National, RoomType::Regional])
+                ->when($user->current_region, function ($q) use ($user) {
+                    // Only auto-select the regional room that matches the user's region
+                    $q->where(function ($q2) use ($user) {
+                        $q2->where('room_type', RoomType::National)
+                           ->orWhere('region', $user->current_region);
+                    });
+                }, function ($q) {
+                    // No region known — only auto-select the National room
+                    $q->where('room_type', RoomType::National);
+                })
+                ->pluck('id')
+                ->all();
         }
 
         // Load Kamer AI welcome from session (set during registration), or create fresh

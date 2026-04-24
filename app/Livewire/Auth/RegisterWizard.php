@@ -284,6 +284,12 @@ class RegisterWizard extends Component
             'current_region' => $this->current_region ?: null,
             'current_lat' => $this->current_lat,
             'current_lng' => $this->current_lng,
+            // Treat the location chosen during signup as the user's active
+            // location. This ensures National/Regional room suggestions are
+            // available immediately on first yard visit, without waiting for
+            // the IP/GPS auto-detection cycle to bootstrap them.
+            'active_country' => $this->current_country,
+            'active_region' => $this->current_region ?: null,
             'location_updated_at' => now(),
             'is_active' => true,
         ]);

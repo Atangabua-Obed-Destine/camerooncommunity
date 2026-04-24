@@ -48,6 +48,44 @@
         @endforeach
     </div>
 
+    {{-- ═══════════════════════════════════════════════════════════
+         ACTIVE LOCATION STRIP — manual switcher entry point.
+         Lets the user explicitly change their active location and
+         join the new location's default rooms (instead of waiting
+         for auto-detection).
+         ═══════════════════════════════════════════════════════════ --}}
+    @php
+        $isDetectedDifferent = $detectedCountry
+            && ($detectedCountry !== $activeCountry
+                || ($detectedRegion && $activeRegion && $detectedRegion !== $activeRegion));
+    @endphp
+    <div class="yard-active-loc">
+        <button type="button" wire:click="openLocationSwitcher" class="yard-active-loc__btn">
+            <span class="yard-active-loc__icon">
+                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+            </span>
+            <span class="yard-active-loc__body">
+                <span class="yard-active-loc__label" x-text="$store.lang.t('Active location', 'Lieu actif')"></span>
+                <span class="yard-active-loc__place">
+                    @if($activeCountry)
+                        {{ $activeCountry }}@if($activeRegion) <span class="text-slate-400">·</span> {{ $activeRegion }}@endif
+                    @else
+                        <span class="text-slate-400" x-text="$store.lang.t('Not set yet', 'Non défini')"></span>
+                    @endif
+                </span>
+            </span>
+            @if($isDetectedDifferent)
+            <span class="yard-active-loc__dot" title="{{ __('You are detected in a different location') }}"></span>
+            @endif
+            <svg class="yard-active-loc__chev" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+        </button>
+    </div>
+
     {{-- ═══ Suggested Rooms (rooms user should join) ═══ --}}
     @if($suggested->count())
     <div class="px-3 pt-3 pb-1">
@@ -80,16 +118,7 @@
     </div>
     @endif
 
-    @forelse($groupedRooms as $key => $rooms)
-        @if($rooms->count())
-        {{-- Section label --}}
-        @if($groupedRooms->keys()->count() > 1)
-        <div class="yard-section-label">
-            <span x-text="$store.lang.t('{{ $sections[$key]['label_en'] ?? ucfirst($key) }}', '{{ $sections[$key]['label_fr'] ?? ucfirst($key) }}')"></span>
-        </div>
-        @endif
-
-        @foreach($rooms as $room)
+    @forelse($groupedRooms as $room)
         <div wire:key="room-{{ $room->id }}" class="yard-room-wrap" x-data="{ ctx: false, longTimer: null }"
              @contextmenu.prevent="ctx = true"
              @touchstart="longTimer = setTimeout(() => ctx = true, 500)"
@@ -168,9 +197,6 @@
             </button>
         </div>
         </div>
-        @endforeach
-
-        @endif
     @empty
         @if($suggested->isEmpty())
         <div class="yard-room-list__empty">
@@ -191,6 +217,63 @@
         </div>
         @endif
     @endforelse
+
+    {{-- ═══════════════════════════════════════════════════════════
+         ARCHIVED (AWAY) — Default rooms auto-hidden because the user
+         switched their active location. They auto-resurface when the
+         user returns to that location.
+         ═══════════════════════════════════════════════════════════ --}}
+    @if($archived && $archived->count())
+    <div class="yard-room-archived" x-data="{ open: false }">
+        <button type="button"
+                class="yard-room-archived__toggle"
+                @click="open = !open">
+            <span class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-cm-green/80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
+                </svg>
+                <span x-text="$store.lang.t('Archived (away)', 'Archivés (absent)')"></span>
+                <span class="yard-room-archived__count">{{ $archived->count() }}</span>
+            </span>
+            <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="{ 'rotate-180': open }"
+                 fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+            </svg>
+        </button>
+        <p class="yard-room-archived__hint" x-show="open" x-cloak
+           x-text="$store.lang.t('These rooms come back automatically when you return to their location.', 'Ces salons réapparaîtront automatiquement à votre retour.')"></p>
+        <div x-show="open" x-cloak x-collapse>
+            @foreach($archived as $room)
+            <button wire:key="archived-{{ $room->id }}"
+                    wire:click="selectRoom({{ $room->id }})"
+                    class="yard-room yard-room--archived">
+                <div class="yard-room__avatar {{ $roomColors[$room->room_type->value] ?? 'bg-slate-400' }} relative opacity-70">
+                    @if($room->avatar)
+                        <img src="{{ $room->avatar }}" alt="" class="w-full h-full rounded-full object-cover">
+                    @else
+                        <span class="text-lg">{{ $roomIcons[$room->room_type->value] ?? '💬' }}</span>
+                    @endif
+                </div>
+                <div class="yard-room__body">
+                    <div class="yard-room__row">
+                        <span class="yard-room__name text-slate-500">{{ $room->name }}</span>
+                        <span class="yard-room__meta">
+                            <span class="yard-room-archived__pill">
+                                {{ $room->country }}{{ $room->region ? ' · ' . $room->region : '' }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="yard-room__row">
+                        <span class="yard-room__preview text-slate-400 italic">
+                            <span x-text="$store.lang.t('Muted while away', 'Muet pendant votre absence')"></span>
+                        </span>
+                    </div>
+                </div>
+            </button>
+            @endforeach
+        </div>
+    </div>
+    @endif
 
     {{-- ═══════════════════════════════════════════════════════════
          JOIN PREVIEW MODAL — Interactive AI-powered room welcome
@@ -343,6 +426,128 @@
                             class="w-full rounded-xl border border-slate-200 py-3 text-sm font-medium text-slate-500 hover:bg-slate-50 transition-colors"
                             x-text="$store.lang.t('Maybe Later', 'Peut-être plus tard')"></button>
                 </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
+    {{-- ═══════════════════════════════════════════════════════════
+         LOCATION SWITCHER MODAL
+         Manual entry point so the user doesn't have to wait for the
+         auto-detection toast. Quick-switch to detected location, or
+         pick any seeded country/region.
+         ═══════════════════════════════════════════════════════════ --}}
+    @if($showLocationSwitcher)
+    <div class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
+         x-data="{ entering: false }"
+         x-init="$nextTick(() => entering = true)"
+         @keydown.escape.window="$wire.closeLocationSwitcher()">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+             x-show="entering" x-transition.opacity
+             wire:click="closeLocationSwitcher"></div>
+
+        <div class="relative z-10 w-full sm:max-w-md mx-0 sm:mx-4 yard-loc-modal"
+             x-show="entering"
+             x-transition:enter="transform transition ease-out duration-300"
+             x-transition:enter-start="translate-y-8 sm:translate-y-0 sm:scale-95 opacity-0"
+             x-transition:enter-end="translate-y-0 sm:scale-100 opacity-100">
+
+            <div class="yard-loc-modal__bar"></div>
+
+            <div class="yard-loc-modal__head">
+                <div>
+                    <h3 class="yard-loc-modal__title" x-text="$store.lang.t('Switch active location', 'Changer de lieu actif')"></h3>
+                    <p class="yard-loc-modal__sub" x-text="$store.lang.t('Pick a country and region — default rooms for that location will appear, others will be archived.', 'Choisissez un pays et une région — les salons par défaut apparaîtront, les autres seront archivés.')"></p>
+                </div>
+                <button wire:click="closeLocationSwitcher" class="yard-loc-modal__x">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+
+            <div class="yard-loc-modal__body">
+                {{-- Current active --}}
+                <div class="yard-loc-modal__current">
+                    <span class="yard-loc-modal__current-label" x-text="$store.lang.t('Currently active', 'Actuellement actif')"></span>
+                    <span class="yard-loc-modal__current-value">
+                        @if($activeCountry)
+                            {{ $activeCountry }}@if($activeRegion) · {{ $activeRegion }}@endif
+                        @else
+                            <span class="italic text-slate-400" x-text="$store.lang.t('Not set', 'Non défini')"></span>
+                        @endif
+                    </span>
+                </div>
+
+                {{-- Quick-switch to detected --}}
+                @if($detectedCountry && ($detectedCountry !== $activeCountry || $detectedRegion !== $activeRegion))
+                <button type="button"
+                        wire:click="$set('switchCountry', @js($detectedCountry))"
+                        class="yard-loc-modal__quick">
+                    <span class="yard-loc-modal__quick-icon">
+                        <svg class="w-5 h-5 text-cm-green" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </span>
+                    <span class="flex-1 text-left">
+                        <span class="block text-xs text-slate-500" x-text="$store.lang.t('Use detected location', 'Utiliser le lieu détecté')"></span>
+                        <span class="block text-sm font-semibold text-slate-800">
+                            {{ $detectedCountry }}@if($detectedRegion) · {{ $detectedRegion }}@endif
+                        </span>
+                    </span>
+                </button>
+                @endif
+
+                {{-- Country picker --}}
+                <label class="yard-loc-modal__field">
+                    <span class="yard-loc-modal__field-label" x-text="$store.lang.t('Country', 'Pays')"></span>
+                    <select wire:model.live="switchCountry" class="yard-loc-modal__select">
+                        <option value="">— {{ __('Select country') }} —</option>
+                        @foreach($switcherCountries as $code => $name)
+                            <option value="{{ $name }}" {{ $switchCountry === $name ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+
+                {{-- Region picker (only if country has seeded regions) --}}
+                @php
+                    $countryCodeMap = array_flip($switcherCountries);
+                    $countryCode = $countryCodeMap[$switchCountry] ?? null;
+                    $regionsForCountry = $countryCode ? ($switcherRegionsMap[$countryCode] ?? []) : [];
+                @endphp
+                @if(!empty($regionsForCountry))
+                <label class="yard-loc-modal__field">
+                    <span class="yard-loc-modal__field-label" x-text="$store.lang.t('Region (optional)', 'Région (optionnel)')"></span>
+                    <select wire:model="switchRegion" class="yard-loc-modal__select">
+                        <option value="">— {{ __('All regions') }} —</option>
+                        @foreach($regionsForCountry as $regionName)
+                            <option value="{{ $regionName }}" {{ $switchRegion === $regionName ? 'selected' : '' }}>{{ $regionName }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                @endif
+
+                {{-- Impact preview --}}
+                <div class="yard-loc-modal__warn">
+                    <svg class="w-4 h-4 flex-shrink-0 text-cm-yellow mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L1 21h22L12 2zm0 6l7.53 13H4.47L12 8zm-1 4v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
+                    </svg>
+                    <span x-text="$store.lang.t('Default rooms (national + regional) for other locations will be archived. Your private chats and groups stay open.', 'Les salons par défaut (national + régional) des autres lieux seront archivés. Vos discussions privées et groupes restent ouverts.')"></span>
+                </div>
+            </div>
+
+            <div class="yard-loc-modal__footer">
+                <button wire:click="closeLocationSwitcher"
+                        class="yard-loc-modal__btn yard-loc-modal__btn--ghost"
+                        x-text="$store.lang.t('Cancel', 'Annuler')"></button>
+                <button wire:click="confirmLocationSwitch"
+                        wire:loading.attr="disabled"
+                        @if(!$switchCountry) disabled @endif
+                        class="yard-loc-modal__btn yard-loc-modal__btn--primary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span x-text="$store.lang.t('Switch & join rooms', 'Changer & rejoindre')"></span>
+                </button>
             </div>
         </div>
     </div>

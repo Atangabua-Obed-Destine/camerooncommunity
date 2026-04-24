@@ -165,7 +165,7 @@
 
             <header class="yard-header">
                 {{-- Default header --}}
-                <div class="flex items-center gap-2 w-full" x-show="!newChatView && !newGroupStep">
+                <div class="flex items-center gap-2 w-full" x-show="!newGroupStep">
                     <button @click="menuOpen = !menuOpen" class="yard-header__btn md:hidden" aria-label="Menu">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
                     </button>
@@ -193,14 +193,6 @@
                     </div>
                 </div>
 
-                {{-- New Chat header --}}
-                <div class="flex items-center gap-3 w-full" x-show="newChatView" x-cloak>
-                    <button @click="closeNewChat()" class="yard-header__btn">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
-                    </button>
-                    <h2 class="text-base font-semibold text-white" x-text="$store.lang.t('New Message', 'Nouveau Message')"></h2>
-                </div>
-
                 {{-- New Group header (Step 1) --}}
                 <div class="flex items-center gap-3 w-full" x-show="newGroupStep === 1" x-cloak>
                     <button @click="closeNewGroup()" class="yard-header__btn">
@@ -222,7 +214,7 @@
             </header>
 
             {{-- ═══ Default view: search + rooms ═══ --}}
-            <div class="flex flex-col flex-1 min-h-0" x-show="!newChatView && !newGroupStep">
+            <div class="flex flex-col flex-1 min-h-0" x-show="!newGroupStep">
                 <div class="yard-search">
                     <div class="yard-search__inner">
                         <svg class="yard-search__icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
@@ -237,59 +229,7 @@
                 </div>
             </div>
 
-            {{-- ═══ New Chat panel (WhatsApp-style slide-in) ═══ --}}
-            <div class="flex flex-col flex-1 min-h-0" x-show="newChatView" x-cloak>
-                {{-- Search contacts --}}
-                <div class="yard-search">
-                    <div class="yard-search__inner">
-                        <svg class="yard-search__icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
-                        <input type="text" class="yard-search__input" x-model="dmQuery"
-                               @input.debounce.400ms="searchDmUsers()"
-                               :placeholder="$store.lang.t('Search name...', 'Rechercher un nom...')"
-                               x-ref="newChatSearch">
-                    </div>
-                </div>
-
-                <div class="flex-1 overflow-y-auto">
-                    {{-- Quick actions --}}
-                    <button @click="closeNewChat(); Livewire.dispatch('open-communities')" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left border-b border-slate-100">
-                        <div class="w-11 h-11 rounded-full bg-cm-green flex items-center justify-center shrink-0">
-                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
-                        </div>
-                        <span class="text-sm font-medium text-slate-800" x-text="$store.lang.t('Communities', 'Communautés')"></span>
-                    </button>
-
-                    {{-- Contact list --}}
-                    <template x-for="user in dmResults" :key="user.id">
-                        <button @click="startDmWith(user.id)" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left">
-                            <div class="w-11 h-11 rounded-full bg-slate-200 flex items-center justify-center shrink-0 text-slate-500 font-bold text-sm">
-                                <template x-if="user.avatar">
-                                    <img :src="'{{ asset('storage') }}/' + user.avatar" alt="" class="w-11 h-11 rounded-full object-cover">
-                                </template>
-                                <template x-if="!user.avatar">
-                                    <span x-text="(user.username || user.name).charAt(0).toUpperCase()"></span>
-                                </template>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-slate-800 truncate" x-text="user.username || user.name"></p>
-                                <p class="text-xs text-slate-400 truncate" x-text="user.current_region || user.email || ''"></p>
-                            </div>
-                        </button>
-                    </template>
-
-                    {{-- Empty state --}}
-                    <div x-show="dmQuery.length >= 1 && dmResults.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-400">
-                        <svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
-                        <p class="text-sm" x-text="$store.lang.t('No users found', 'Aucun utilisateur trouvé')"></p>
-                    </div>
-
-                    {{-- Prompt when no search --}}
-                    <div x-show="dmQuery.length < 1 && dmResults.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-400">
-                        <svg class="w-12 h-12 mb-3 text-slate-300" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
-                        <p class="text-sm" x-text="$store.lang.t('Search for a user to start chatting', 'Recherchez un utilisateur pour discuter')"></p>
-                    </div>
-                </div>
-            </div>
+            {{-- ═══ New Chat: now rendered as a centered modal below (outside the panel) ═══ --}}
 
             {{-- ═══ New Group panel — Step 1: Add members ═══ --}}
             <div class="flex flex-col flex-1 min-h-0" x-show="newGroupStep === 1" x-cloak>
@@ -399,7 +339,7 @@
             </div>
 
             {{-- FAB (mobile only) --}}
-            <div class="yard-fab-wrap md:hidden" x-data="{ fabOpen: false }" x-show="!newChatView && !newGroupStep">
+            <div class="yard-fab-wrap md:hidden" x-data="{ fabOpen: false }" x-show="!newGroupStep">
                 <button class="yard-fab" @click="fabOpen = !fabOpen">
                     <svg class="w-6 h-6 transition-transform" :class="fabOpen && 'rotate-45'" fill="currentColor" viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </button>
@@ -567,6 +507,120 @@
                 </form>
             </nav>
         </aside>
+
+        {{-- ═══════════════════════════════════════════════════════════
+             NEW CHAT MODAL — Centered overlay popup (WhatsApp / Slack style)
+             Triggered by openNewChat(); shows search + picker + Cancel/Select
+             ═══════════════════════════════════════════════════════════ --}}
+        <div x-show="newChatView" x-cloak
+             class="yard-modal-overlay"
+             x-transition.opacity.duration.200ms
+             @keydown.escape.window="closeNewChat()">
+            {{-- Backdrop --}}
+            <div class="yard-modal-overlay__backdrop" @click="closeNewChat()"></div>
+
+            {{-- Dialog --}}
+            <div class="yard-modal-dialog"
+                 x-transition:enter="transition ease-out duration-250"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95"
+                 @click.stop>
+
+                {{-- Header --}}
+                <div class="yard-modal-dialog__header">
+                    <div class="yard-modal-dialog__icon">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                    </div>
+                    <h2 class="yard-modal-dialog__title" x-text="$store.lang.t('New conversation', 'Nouvelle conversation')"></h2>
+                    <button @click="closeNewChat()" class="yard-modal-dialog__close" :title="$store.lang.t('Close', 'Fermer')">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                </div>
+
+                {{-- Search bar --}}
+                <div class="yard-modal-dialog__search-wrap">
+                    <div class="yard-modal-dialog__search">
+                        <svg class="w-4 h-4 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" class="yard-modal-dialog__search-input"
+                               x-model="dmQuery"
+                               @input.debounce.400ms="searchDmUsers()"
+                               :placeholder="$store.lang.t('Search by name or email...', 'Rechercher par nom ou e-mail...')"
+                               x-ref="newChatSearch">
+                        <button x-show="dmQuery.length > 0" @click="dmQuery=''; dmResults=[]"
+                                class="text-slate-300 hover:text-slate-500 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </div>
+
+                {{-- Body: results / empty / suggestions --}}
+                <div class="yard-modal-dialog__body">
+                    {{-- Results list --}}
+                    <template x-if="dmResults.length > 0">
+                        <div class="yard-modal-dialog__results">
+                            <template x-for="user in dmResults" :key="user.id">
+                                <button @click="dmSelected = (dmSelected && dmSelected.id === user.id) ? null : user"
+                                        class="yard-modal-dialog__user"
+                                        :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__user--selected' : ''">
+                                    <div class="yard-modal-dialog__avatar">
+                                        <template x-if="user.avatar">
+                                            <img :src="'{{ asset('storage') }}/' + user.avatar" alt="" class="w-full h-full rounded-full object-cover">
+                                        </template>
+                                        <template x-if="!user.avatar">
+                                            <span x-text="(user.username || user.name).charAt(0).toUpperCase()"></span>
+                                        </template>
+                                    </div>
+                                    <div class="flex-1 min-w-0 text-left">
+                                        <p class="text-sm font-semibold text-slate-800 truncate" x-text="user.username || user.name"></p>
+                                        <p class="text-xs text-slate-500 truncate" x-text="user.current_region || user.email || ''"></p>
+                                    </div>
+                                    <div class="yard-modal-dialog__check"
+                                         :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__check--on' : ''">
+                                        <svg x-show="dmSelected && dmSelected.id === user.id" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    </div>
+                                </button>
+                            </template>
+                        </div>
+                    </template>
+
+                    {{-- Empty state: typing less than 2 chars --}}
+                    <div x-show="dmResults.length === 0 && dmQuery.length < 2" class="yard-modal-dialog__empty">
+                        <div class="yard-modal-dialog__empty-icon">
+                            <svg class="w-7 h-7 text-sky-500" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.501 20.118a7.5 7.5 0 0114.998 0"/>
+                                <circle cx="18" cy="17" r="3" stroke-width="1.8"/>
+                                <path stroke-linecap="round" d="m20.5 19.5 1.5 1.5"/>
+                            </svg>
+                        </div>
+                        <p class="yard-modal-dialog__empty-title" x-text="$store.lang.t('Find someone', 'Trouver quelqu\'un')"></p>
+                        <p class="yard-modal-dialog__empty-text" x-text="$store.lang.t('Type at least 2 characters to search for a user.', 'Tapez au moins 2 caractères pour rechercher un utilisateur.')"></p>
+                    </div>
+
+                    {{-- Empty state: no results --}}
+                    <div x-show="dmResults.length === 0 && dmQuery.length >= 2" class="yard-modal-dialog__empty">
+                        <div class="yard-modal-dialog__empty-icon yard-modal-dialog__empty-icon--none">
+                            <svg class="w-7 h-7 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0"/></svg>
+                        </div>
+                        <p class="yard-modal-dialog__empty-title" x-text="$store.lang.t('No users found', 'Aucun utilisateur trouvé')"></p>
+                        <p class="yard-modal-dialog__empty-text" x-text="$store.lang.t('Try a different name or email.', 'Essayez un autre nom ou e-mail.')"></p>
+                    </div>
+                </div>
+
+                {{-- Footer --}}
+                <div class="yard-modal-dialog__footer">
+                    <button @click="closeNewChat()" class="yard-modal-dialog__btn yard-modal-dialog__btn--ghost"
+                            x-text="$store.lang.t('Cancel', 'Annuler')"></button>
+                    <button @click="dmSelected && startDmWith(dmSelected.id)"
+                            :disabled="!dmSelected"
+                            class="yard-modal-dialog__btn yard-modal-dialog__btn--primary"
+                            x-text="$store.lang.t('Select', 'Sélectionner')"></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     @push('scripts')
@@ -584,6 +638,7 @@
                 newChatView: false,
                 dmQuery: '',
                 dmResults: [],
+                dmSelected: null,
 
                 // New Group flow (step 1 = add members, step 2 = name, null = off)
                 newGroupStep: null,
@@ -643,12 +698,14 @@
                     this.newChatView = true;
                     this.dmQuery = '';
                     this.dmResults = [];
+                    this.dmSelected = null;
                     this.$nextTick(() => { this.$refs.newChatSearch?.focus(); });
                 },
                 closeNewChat() {
                     this.newChatView = false;
                     this.dmQuery = '';
                     this.dmResults = [];
+                    this.dmSelected = null;
                 },
 
                 // ── New Group flow ──

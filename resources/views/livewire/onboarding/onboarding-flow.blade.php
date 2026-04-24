@@ -70,7 +70,7 @@
                             <span class="text-sm">🤖</span>
                         </div>
                         <div class="bg-slate-50 rounded-2xl rounded-tl-md px-4 py-3 text-sm text-slate-700 leading-relaxed prose prose-sm"
-                             x-data x-html="marked(@js($msg['content']))">
+                             x-data x-html="(window.marked && (window.marked.parse ? window.marked.parse(@js($msg['content'])) : window.marked(@js($msg['content'])))) || @js($msg['content'])">
                         </div>
                     </div>
                     @else
@@ -481,8 +481,8 @@
     </div>
 
     @push('scripts')
-    {{-- Marked.js for rendering Kamer AI markdown --}}
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    {{-- Marked.js for rendering Kamer AI markdown (v12 exports marked.parse) --}}
+    <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
     <script>
         function onboardingFlow() {
             return {

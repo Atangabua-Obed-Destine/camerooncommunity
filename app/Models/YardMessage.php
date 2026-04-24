@@ -81,6 +81,11 @@ class YardMessage extends Model
         return $this->hasMany(self::class, 'parent_message_id');
     }
 
+    public function poll()
+    {
+        return $this->hasOne(YardPoll::class, 'message_id');
+    }
+
     public function reactions(): HasMany
     {
         return $this->hasMany(YardMessageReaction::class, 'message_id');

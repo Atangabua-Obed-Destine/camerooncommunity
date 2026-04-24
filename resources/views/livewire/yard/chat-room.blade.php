@@ -440,6 +440,80 @@
                                         @include('livewire.yard._solidarity-card', ['campaign' => $msg->solidarityCampaign])
                                     @endif
                                     @break
+                                @case(\App\Enums\MessageType::Poll)
+                                    @php
+                                        $poll = $msg->poll;
+                                        $myId = auth()->id();
+                                        $totalVotes = $poll ? (int) $poll->options->sum('votes_count') : 0;
+                                        $myVotes = collect();
+                                        if ($poll) {
+                                            $myVotes = \DB::table('yard_poll_votes')
+                                                ->where('poll_id', $poll->id)
+                                                ->where('user_id', $myId)
+                                                ->pluck('option_id');
+                                        }
+                                    @endphp
+                                    @if($poll)
+                                    <div class="yard-poll {{ $isOwn ? 'yard-poll--own' : '' }}">
+                                        <div class="yard-poll__header">
+                                            <span class="yard-poll__icon">
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 19V11m6 8V5m6 14v-6"/></svg>
+                                            </span>
+                                            <span class="yard-poll__label">
+                                                {{ $poll->allow_multiple ? 'Poll · Select one or more' : 'Poll · Select one' }}
+                                            </span>
+                                            @if($poll->is_closed)
+                                                <span class="yard-poll__closed">Closed</span>
+                                            @endif
+                                        </div>
+                                        <p class="yard-poll__question">{{ $poll->question }}</p>
+                                        <div class="yard-poll__options">
+                                            @foreach($poll->options as $opt)
+                                                @php
+                                                    $pct = $totalVotes > 0 ? round(($opt->votes_count / $totalVotes) * 100) : 0;
+                                                    $voted = $myVotes->contains($opt->id);
+                                                @endphp
+                                                <button type="button"
+                                                        class="yard-poll__option {{ $voted ? 'yard-poll__option--voted' : '' }}"
+                                                        @if(!$poll->is_closed) wire:click="votePoll({{ $opt->id }})" @endif
+                                                        @if($poll->is_closed) disabled @endif>
+                                                    <span class="yard-poll__bar" style="width: {{ $pct }}%"></span>
+                                                    <span class="yard-poll__row">
+                                                        <span class="yard-poll__check {{ $voted ? 'yard-poll__check--on' : '' }}">
+                                                            @if($poll->allow_multiple)
+                                                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                                                            @else
+                                                                <span class="yard-poll__dot"></span>
+                                                            @endif
+                                                        </span>
+                                                        <span class="yard-poll__text">{{ $opt->text }}</span>
+                                                        <span class="yard-poll__count">{{ $opt->votes_count }}</span>
+                                                    </span>
+                                                    <span class="yard-poll__pct">{{ $pct }}%</span>
+                                                </button>
+                                            @endforeach
+                                        </div>
+                                        <div class="yard-poll__footer">
+                                            <span>{{ $totalVotes }} {{ \Illuminate\Support\Str::plural('vote', $totalVotes) }}</span>
+                                            <div class="yard-poll__footer-actions">
+                                                @if($totalVotes > 0)
+                                                    <button type="button" class="yard-poll__view-btn"
+                                                            @click="$dispatch('open-poll-voters', { pollId: {{ $poll->id }} })">
+                                                        View votes
+                                                    </button>
+                                                @endif
+                                                @if(!$poll->is_closed && $poll->user_id === $myId)
+                                                    <button type="button" class="yard-poll__close-btn"
+                                                            wire:click="closePoll({{ $poll->id }})"
+                                                            wire:confirm="End this poll? Voting will be locked.">
+                                                        End poll
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endif
+                                    @break
                                 @default
                                     <p class="whitespace-pre-wrap">{!! nl2br(e($msg->content)) !!}</p>
                             @endswitch
@@ -518,7 +592,7 @@
     @endif
 
     {{-- ── Input Bar ── --}}
-    <div class="yard-chat__input-bar" x-data="inputBar()" @message-sent.window="msgText = ''; if($refs.msgInput) { $refs.msgInput.value = ''; $refs.msgInput.style.height = 'auto'; }" @media-sent.window="closePreview()">
+    <div class="yard-chat__input-bar" x-data="inputBar()" @message-sent.window="msgText = ''; if($refs.msgInput) { $refs.msgInput.value = ''; $refs.msgInput.style.height = 'auto'; }" @media-sent.window="closePreview()" @poll-created.window="closePoll()">
         {{-- Hidden file inputs --}}
         <input type="file" x-ref="photoInput" class="hidden" accept="image/*" wire:model="mediaUpload"
                @change="onFileSelected($event, 'image')">
@@ -636,6 +710,13 @@
                                 <span class="yard-chat__attach-icon yard-chat__attach-icon--solidarity">🤲</span>
                                 <span class="yard-chat__attach-label" x-text="$store.lang.t('Solidarity', 'Solidarité')"></span>
                             </button>
+                            {{-- Poll --}}
+                            <button type="button" class="yard-chat__attach-cell" @click="open = false; pollOpen = true">
+                                <span class="yard-chat__attach-icon yard-chat__attach-icon--poll">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 19V11m6 8V5m6 14v-6"/></svg>
+                                </span>
+                                <span class="yard-chat__attach-label" x-text="$store.lang.t('Poll', 'Sondage')"></span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -716,6 +797,174 @@
         <div wire:loading wire:target="mediaUpload" x-show="recording" class="yard-chat__upload-progress">
             <div class="yard-upload-spinner"></div>
             <span class="text-xs text-slate-500" x-text="$store.lang.t('Uploading...', 'Envoi...')"></span>
+        </div>
+
+        {{-- ══ Poll Builder Modal (WhatsApp-style) ══ --}}
+        <div x-show="pollOpen" x-cloak
+             x-transition.opacity
+             @keydown.escape.window="closePoll()"
+             class="yard-modal-overlay" style="z-index:300">
+            <div class="yard-modal-overlay__backdrop" @click="closePoll()"></div>
+            <div class="yard-modal-dialog yard-poll-builder"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+                <div class="yard-modal-dialog__header">
+                    <span class="yard-modal-dialog__icon">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 19V11m6 8V5m6 14v-6"/></svg>
+                    </span>
+                    <span class="yard-modal-dialog__title" x-text="$store.lang.t('Create poll', 'Créer un sondage')"></span>
+                    <button type="button" class="yard-modal-dialog__close" @click="closePoll()">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M6 18L18 6"/></svg>
+                    </button>
+                </div>
+
+                <div class="yard-poll-builder__body">
+                    {{-- Question --}}
+                    <label class="yard-poll-builder__label" x-text="$store.lang.t('Question', 'Question')"></label>
+                    <div class="yard-poll-builder__field">
+                        <textarea x-model="pollDraft.question"
+                                  maxlength="300"
+                                  rows="2"
+                                  :placeholder="$store.lang.t('Ask a question…', 'Posez une question…')"
+                                  class="yard-poll-builder__input"></textarea>
+                        <span class="yard-poll-builder__counter" x-text="(pollDraft.question || '').length + ' / 300'"></span>
+                    </div>
+
+                    {{-- Options --}}
+                    <label class="yard-poll-builder__label" x-text="$store.lang.t('Options', 'Options')"></label>
+                    <div class="yard-poll-builder__options">
+                        <template x-for="(opt, i) in pollDraft.options" :key="i">
+                            <div class="yard-poll-builder__option">
+                                <span class="yard-poll-builder__handle">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="6" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="18" r="1.5"/></svg>
+                                </span>
+                                <input type="text"
+                                       x-model="pollDraft.options[i]"
+                                       maxlength="200"
+                                       :placeholder="$store.lang.t('Option', 'Option') + ' ' + (i + 1)"
+                                       class="yard-poll-builder__opt-input"
+                                       @input="ensureOptionRow()">
+                                <button type="button" class="yard-poll-builder__remove"
+                                        x-show="pollDraft.options.length > 2"
+                                        @click="removeOption(i)">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M6 18L18 6"/></svg>
+                                </button>
+                            </div>
+                        </template>
+                        <p class="yard-poll-builder__hint"
+                           x-text="$store.lang.t('Add up to 12 options', 'Ajoutez jusqu’à 12 options')"></p>
+                    </div>
+
+                    {{-- Allow multiple toggle --}}
+                    <label class="yard-poll-builder__toggle">
+                        <span>
+                            <strong x-text="$store.lang.t('Allow multiple answers', 'Autoriser plusieurs réponses')"></strong>
+                            <small x-text="$store.lang.t('People can pick more than one option', 'Les personnes peuvent choisir plus d’une option')"></small>
+                        </span>
+                        <span class="yard-poll-builder__switch" :class="pollDraft.allowMultiple && 'yard-poll-builder__switch--on'"
+                              @click="pollDraft.allowMultiple = !pollDraft.allowMultiple">
+                            <span class="yard-poll-builder__switch-thumb"></span>
+                        </span>
+                    </label>
+                </div>
+
+                <div class="yard-modal-dialog__footer">
+                    <button type="button" class="yard-modal-dialog__btn yard-modal-dialog__btn--ghost"
+                            @click="closePoll()" x-text="$store.lang.t('Cancel', 'Annuler')"></button>
+                    <button type="button" class="yard-modal-dialog__btn yard-modal-dialog__btn--primary"
+                            :disabled="!canSendPoll()"
+                            @click="sendPoll()">
+                        <span x-text="$store.lang.t('Send', 'Envoyer')"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {{-- ══ Poll Voters Modal (WhatsApp-style "View votes") ══ --}}
+        <div x-show="votersOpen" x-cloak
+             x-transition.opacity
+             @open-poll-voters.window="openVoters($event.detail.pollId)"
+             @keydown.escape.window="closeVoters()"
+             class="yard-modal-overlay" style="z-index:310">
+            <div class="yard-modal-overlay__backdrop" @click="closeVoters()"></div>
+            <div class="yard-modal-dialog yard-poll-voters"
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95 translate-y-2"
+                 x-transition:enter-end="opacity-100 scale-100 translate-y-0">
+                <div class="yard-modal-dialog__header">
+                    <span class="yard-modal-dialog__icon">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 19V11m6 8V5m6 14v-6"/></svg>
+                    </span>
+                    <span class="yard-modal-dialog__title" x-text="$store.lang.t('Poll results', 'Résultats du sondage')"></span>
+                    <button type="button" class="yard-modal-dialog__close" @click="closeVoters()">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 6l12 12M6 18L18 6"/></svg>
+                    </button>
+                </div>
+
+                <div class="yard-poll-voters__body">
+                    {{-- Loading --}}
+                    <template x-if="votersLoading">
+                        <div class="yard-poll-voters__loading">
+                            <div class="yard-upload-spinner"></div>
+                            <span x-text="$store.lang.t('Loading…', 'Chargement…')"></span>
+                        </div>
+                    </template>
+
+                    {{-- Content --}}
+                    <template x-if="!votersLoading && votersData">
+                        <div>
+                            <p class="yard-poll-voters__question" x-text="votersData.question"></p>
+                            <p class="yard-poll-voters__meta">
+                                <span x-text="votersData.totalVotes + ' ' + (votersData.totalVotes === 1 ? 'vote' : 'votes')"></span>
+                                <span x-show="votersData.allowMultiple"> · <span x-text="$store.lang.t('Multiple answers', 'Réponses multiples')"></span></span>
+                                <span x-show="votersData.isClosed"> · <span x-text="$store.lang.t('Closed', 'Fermé')"></span></span>
+                            </p>
+
+                            <div class="yard-poll-voters__list">
+                                <template x-for="opt in votersData.options" :key="opt.id">
+                                    <div class="yard-poll-voters__group">
+                                        <div class="yard-poll-voters__opt-head">
+                                            <span class="yard-poll-voters__opt-text" x-text="opt.text"></span>
+                                            <span class="yard-poll-voters__opt-count">
+                                                <span x-text="opt.votes_count"></span>
+                                                <small x-text="'(' + opt.pct + '%)'"></small>
+                                            </span>
+                                        </div>
+                                        <div class="yard-poll-voters__opt-bar">
+                                            <span class="yard-poll-voters__opt-fill" :style="'width:' + opt.pct + '%'"></span>
+                                        </div>
+                                        <template x-if="opt.voters.length === 0">
+                                            <p class="yard-poll-voters__empty" x-text="$store.lang.t('No votes yet', 'Aucun vote')"></p>
+                                        </template>
+                                        <template x-if="opt.voters.length > 0">
+                                            <ul class="yard-poll-voters__people">
+                                                <template x-for="voter in opt.voters" :key="voter.id">
+                                                    <li class="yard-poll-voters__person">
+                                                        <span class="yard-poll-voters__avatar"
+                                                              x-html="voter.avatar
+                                                                  ? '<img src=&quot;' + voter.avatar + '&quot; alt=&quot;&quot;>'
+                                                                  : (voter.name || voter.username || '?').charAt(0).toUpperCase()"></span>
+                                                        <span class="yard-poll-voters__name">
+                                                            <strong x-text="voter.name || voter.username"></strong>
+                                                            <small x-show="voter.username" x-text="'@' + voter.username"></small>
+                                                        </span>
+                                                    </li>
+                                                </template>
+                                            </ul>
+                                        </template>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div class="yard-modal-dialog__footer">
+                    <button type="button" class="yard-modal-dialog__btn yard-modal-dialog__btn--ghost"
+                            @click="closeVoters()" x-text="$store.lang.t('Close', 'Fermer')"></button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1194,6 +1443,65 @@
                 _analyser: null,
                 _stream: null,
                 msgText: @js($newMessage ?? ''),
+
+                // ── Poll Builder state ──
+                pollOpen: false,
+                pollDraft: {
+                    question: '',
+                    options: ['', ''],
+                    allowMultiple: false,
+                },
+                ensureOptionRow() {
+                    // Auto-grow: if last input has text and we're under 12, add a fresh blank.
+                    const opts = this.pollDraft.options;
+                    if (opts.length < 12 && opts[opts.length - 1].trim() !== '') {
+                        opts.push('');
+                    }
+                },
+                removeOption(i) {
+                    if (this.pollDraft.options.length > 2) {
+                        this.pollDraft.options.splice(i, 1);
+                    }
+                },
+                canSendPoll() {
+                    const q = (this.pollDraft.question || '').trim();
+                    const opts = this.pollDraft.options.map(o => (o || '').trim()).filter(o => o !== '');
+                    const unique = [...new Set(opts.map(o => o.toLowerCase()))];
+                    return q !== '' && unique.length >= 2;
+                },
+                sendPoll() {
+                    if (!this.canSendPoll()) return;
+                    const q = this.pollDraft.question.trim();
+                    const opts = this.pollDraft.options.map(o => o.trim()).filter(o => o !== '');
+                    this.$wire.createPoll(q, opts, this.pollDraft.allowMultiple);
+                },
+                closePoll() {
+                    this.pollOpen = false;
+                    this.pollDraft = { question: '', options: ['', ''], allowMultiple: false };
+                },
+
+                // ── Poll Voters ("View votes") state ──
+                votersOpen: false,
+                votersLoading: false,
+                votersData: null,
+                async openVoters(pollId) {
+                    this.votersOpen = true;
+                    this.votersLoading = true;
+                    this.votersData = null;
+                    try {
+                        const data = await this.$wire.pollVoters(pollId);
+                        this.votersData = data && data.options ? data : null;
+                    } catch (e) {
+                        console.error('pollVoters failed', e);
+                        this.votersData = null;
+                    } finally {
+                        this.votersLoading = false;
+                    }
+                },
+                closeVoters() {
+                    this.votersOpen = false;
+                    this.votersData = null;
+                },
 
                 // ── Media Preview state (WhatsApp-style) ──
                 preview: {

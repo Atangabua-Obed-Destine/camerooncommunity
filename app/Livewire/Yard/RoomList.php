@@ -8,6 +8,7 @@ use App\Models\YardRoomMember;
 use App\Models\YardMessage;
 use App\Services\AIService;
 use App\Services\LocationService;
+use App\Services\LocationSwitchService;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -18,6 +19,11 @@ class RoomList extends Component
     public ?string $search = '';
     public ?int $activeRoomId = null;
     public string $filter = 'all'; // all, unread, favorites, groups
+
+    // Location switcher modal state
+    public bool $showLocationSwitcher = false;
+    public ?string $switchCountry = null;
+    public ?string $switchRegion = null;
 
     // Join preview modal state
     public bool $showJoinPreview = false;
@@ -65,7 +71,8 @@ class RoomList extends Component
         // Single join to get rooms the user belongs to (avoids whereHas subquery)
         $rooms = YardRoom::join('yard_room_members as m', function ($join) use ($user) {
                 $join->on('m.room_id', '=', 'yard_rooms.id')
-                     ->where('m.user_id', $user->id);
+                     ->where('m.user_id', $user->id)
+                     ->whereNull('m.auto_archived_at'); // hide rooms auto-archived by location switch
             })
             ->select('yard_rooms.*', 'm.last_read_at as member_last_read_at', 'm.is_favorited as is_favorited')
             ->selectRaw('(SELECT COUNT(*) FROM yard_room_members WHERE room_id = yard_rooms.id) as members_count')
@@ -135,13 +142,28 @@ class RoomList extends Component
             $rooms = $rooms->filter(fn ($r) => ($r->unread_count ?? 0) > 0)->values();
         }
 
-        return $rooms->groupBy(fn ($room) => match ($room->room_type) {
-            RoomType::National => 'national',
-            RoomType::Regional => 'regional',
-            RoomType::City => 'city',       // City rooms hidden for now
-            RoomType::PrivateGroup => 'groups',
-            RoomType::DirectMessage => 'dms',
-        });
+        // Flat list — already ordered by pinned first, then last_message_at desc (WhatsApp-style)
+        return $rooms;
+    }
+
+    /**
+     * Rooms that were auto-archived because the user travelled to a new
+     * location. They reappear in the main list silently when the user
+     * returns. Surfaced under "Archived (away)" section.
+     */
+    #[Computed]
+    public function archivedRooms()
+    {
+        $user = auth()->user();
+
+        return YardRoom::join('yard_room_members as m', function ($join) use ($user) {
+                $join->on('m.room_id', '=', 'yard_rooms.id')
+                     ->where('m.user_id', $user->id)
+                     ->whereNotNull('m.auto_archived_at');
+            })
+            ->select('yard_rooms.*', 'm.auto_archived_at as archived_at')
+            ->orderByDesc('m.auto_archived_at')
+            ->get();
     }
 
     /**
@@ -152,7 +174,12 @@ class RoomList extends Component
     {
         $user = auth()->user();
 
-        if (! $user->current_country) {
+        // Only suggest rooms for the user's *active* location — i.e. the
+        // location they have explicitly switched to. If they were just
+        // detected somewhere new but haven't confirmed the switch yet,
+        // we don't surface those rooms here (the location-switch prompt
+        // handles that flow). Home region is still honoured as a fallback.
+        if (! $user->active_country) {
             return collect();
         }
 
@@ -162,19 +189,20 @@ class RoomList extends Component
             ->where('is_active', true)
             ->whereNotIn('id', $joinedRoomIds)
             ->where(function ($q) use ($user) {
-                // National room for user's country
+                // National room for user's active country
                 $q->where(function ($q2) use ($user) {
                     $q2->where('room_type', RoomType::National)
-                       ->where('country', $user->current_country);
+                       ->where('country', $user->active_country);
                 });
-                // Regional room for user's region
+                // Regional room for user's active region (within active country)
                 $q->orWhere(function ($q2) use ($user) {
                     $q2->where('room_type', RoomType::Regional)
+                       ->where('country', $user->active_country)
                        ->where(function ($q3) use ($user) {
-                           if ($user->current_region) {
-                               $q3->where('region', $user->current_region);
+                           if ($user->active_region) {
+                               $q3->where('region', $user->active_region);
                            }
-                           if ($user->home_region) {
+                           if ($user->home_region && $user->active_country === 'Cameroon') {
                                $regionName = config('cameroon.regions.' . $user->home_region, $user->home_region);
                                $q3->orWhere('region', $regionName);
                            }
@@ -348,11 +376,70 @@ class RoomList extends Component
 
     public function render()
     {
+        $user = auth()->user();
+        $config = config('cameroon');
+
         return view('livewire.yard.room-list', [
             'groupedRooms' => $this->rooms,
             'suggested' => $this->suggestedRooms,
+            'archived' => $this->archivedRooms,
             'activeFilter' => $this->filter,
+            'activeCountry' => $user->active_country ?: $user->current_country,
+            'activeRegion' => $user->active_region ?: $user->current_region,
+            'detectedCountry' => $user->current_country,
+            'detectedRegion' => $user->current_region,
+            'switcherCountries' => $config['seeded_countries'] ?? [],
+            'switcherRegionsMap' => $config['seeded_regions'] ?? [],
         ]);
+    }
+
+    /**
+     * Open the manual location switcher modal.
+     * Pre-fills with the user's current detected location so the most
+     * common case (switch to where I am) is one click.
+     */
+    public function openLocationSwitcher(): void
+    {
+        $user = auth()->user();
+        $this->switchCountry = $user->current_country ?: $user->active_country;
+        $this->switchRegion = $user->current_region ?: $user->active_region;
+        $this->showLocationSwitcher = true;
+    }
+
+    public function closeLocationSwitcher(): void
+    {
+        $this->showLocationSwitcher = false;
+        $this->switchCountry = null;
+        $this->switchRegion = null;
+    }
+
+    /**
+     * Confirm a manual location switch from the modal.
+     */
+    public function confirmLocationSwitch(): void
+    {
+        $user = auth()->user();
+        $country = trim((string) $this->switchCountry);
+        $region = trim((string) $this->switchRegion);
+
+        if (! $country || mb_strlen($country) > 100 || mb_strlen($region) > 100) {
+            return;
+        }
+
+        // Don't fire when nothing actually changes
+        if ($user->active_country === $country && (string) $user->active_region === $region) {
+            $this->closeLocationSwitcher();
+            return;
+        }
+
+        app(LocationSwitchService::class)->switchTo($user, $country, $region ?: null);
+
+        unset($this->rooms);
+        unset($this->suggestedRooms);
+        unset($this->archivedRooms);
+
+        $this->closeLocationSwitcher();
+        $this->dispatch('location-changed');
     }
 
     /**
@@ -360,10 +447,17 @@ class RoomList extends Component
      */
     #[On('room-updated')]
     #[On('refreshRoomList')]
+    #[On('location-changed')]
     public function refreshRooms(): void
     {
         unset($this->rooms);
         unset($this->suggestedRooms);
+        unset($this->archivedRooms);
+    }
+
+    public function onLocationChanged(): void
+    {
+        $this->refreshRooms();
     }
 
     /**
@@ -373,15 +467,5 @@ class RoomList extends Component
     public function onNewMessage($data): void
     {
         unset($this->rooms);
-    }
-
-    /**
-     * Refresh suggested rooms when the user's location changes (e.g. travel).
-     */
-    #[On('location-changed')]
-    public function onLocationChanged(): void
-    {
-        unset($this->rooms);
-        unset($this->suggestedRooms);
     }
 }
