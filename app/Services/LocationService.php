@@ -6,6 +6,7 @@ use App\Enums\RoomType;
 use App\Models\User;
 use App\Models\YardRoom;
 use App\Models\YardRoomMember;
+use App\Services\RoomNamingService;
 use Illuminate\Support\Str;
 
 class LocationService
@@ -52,9 +53,9 @@ class LocationService
                 'country' => $country,
             ],
             [
-                'name' => "Cameroonians in {$country}",
-                'slug' => Str::slug("cameroonians-in-{$country}"),
-                'description' => "The national room for all Cameroonians in {$country}.",
+                'name' => RoomNamingService::national($country),
+                'slug' => Str::slug(RoomNamingService::shortCountry($country) . '-kamer'),
+                'description' => RoomNamingService::nationalDescription($country),
                 'is_active' => true,
                 'is_system_room' => true,
                 'members_count' => 0,
@@ -72,9 +73,9 @@ class LocationService
                     'region' => $region,
                 ],
                 [
-                    'name' => "{$region} Cameroonians",
-                    'slug' => Str::slug("{$region}-cameroonians-{$country}"),
-                    'description' => "The regional room for Cameroonians from {$region}, {$country}.",
+                    'name' => RoomNamingService::regional($region),
+                    'slug' => Str::slug("{$region}-kamer-" . RoomNamingService::shortCountry($country)),
+                    'description' => RoomNamingService::regionalDescription($region, $country),
                     'is_active' => true,
                     'is_system_room' => true,
                     'members_count' => 0,

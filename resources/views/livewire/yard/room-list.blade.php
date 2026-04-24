@@ -244,15 +244,24 @@
            x-text="$store.lang.t('These rooms come back automatically when you return to their location.', 'Ces salons réapparaîtront automatiquement à votre retour.')"></p>
         <div x-show="open" x-cloak x-collapse>
             @foreach($archived as $room)
-            <button wire:key="archived-{{ $room->id }}"
-                    wire:click="selectRoom({{ $room->id }})"
-                    class="yard-room yard-room--archived">
-                <div class="yard-room__avatar {{ $roomColors[$room->room_type->value] ?? 'bg-slate-400' }} relative opacity-70">
+            {{-- Non-interactive: archived rooms are visible but locked until
+                 the user returns to that location. Use <div>, no wire:click. --}}
+            <div wire:key="archived-{{ $room->id }}"
+                 class="yard-room yard-room--archived yard-room--locked"
+                 role="group"
+                 aria-disabled="true"
+                 :title="$store.lang.t('Locked — switch back to this location to reopen', 'Verrouillé — revenez à ce lieu pour rouvrir')">
+                <div class="yard-room__avatar {{ $roomColors[$room->room_type->value] ?? 'bg-slate-400' }} relative opacity-60">
                     @if($room->avatar)
                         <img src="{{ $room->avatar }}" alt="" class="w-full h-full rounded-full object-cover">
                     @else
                         <span class="text-lg">{{ $roomIcons[$room->room_type->value] ?? '💬' }}</span>
                     @endif
+                    <span class="yard-room-archived__lock" aria-hidden="true">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 11v4m-6-4V7a6 6 0 1112 0v4M5 11h14v9a1 1 0 01-1 1H6a1 1 0 01-1-1v-9z"/>
+                        </svg>
+                    </span>
                 </div>
                 <div class="yard-room__body">
                     <div class="yard-room__row">
@@ -265,11 +274,11 @@
                     </div>
                     <div class="yard-room__row">
                         <span class="yard-room__preview text-slate-400 italic">
-                            <span x-text="$store.lang.t('Muted while away', 'Muet pendant votre absence')"></span>
+                            <span x-text="$store.lang.t('Locked — return to this location to reopen', 'Verrouillé — revenez ici pour rouvrir')"></span>
                         </span>
                     </div>
                 </div>
-            </button>
+            </div>
             @endforeach
         </div>
     </div>
@@ -457,7 +466,7 @@
             <div class="yard-loc-modal__head">
                 <div>
                     <h3 class="yard-loc-modal__title" x-text="$store.lang.t('Switch active location', 'Changer de lieu actif')"></h3>
-                    <p class="yard-loc-modal__sub" x-text="$store.lang.t('Pick a country and region — default rooms for that location will appear, others will be archived.', 'Choisissez un pays et une région — les salons par défaut apparaîtront, les autres seront archivés.')"></p>
+                    <p class="yard-loc-modal__sub" x-text="$store.lang.t('Confirm a switch to where we detected you. Default rooms for that location will appear, others will be archived.', 'Confirmez le passage au lieu détecté. Les salons par défaut apparaîtront, les autres seront archivés.')"></p>
                 </div>
                 <button wire:click="closeLocationSwitcher" class="yard-loc-modal__x">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -477,77 +486,72 @@
                     </span>
                 </div>
 
-                {{-- Quick-switch to detected --}}
-                @if($detectedCountry && ($detectedCountry !== $activeCountry || $detectedRegion !== $activeRegion))
-                <button type="button"
-                        wire:click="$set('switchCountry', @js($detectedCountry))"
-                        class="yard-loc-modal__quick">
-                    <span class="yard-loc-modal__quick-icon">
-                        <svg class="w-5 h-5 text-cm-green" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                {{-- Detected location card (the only switch target).
+                     Users can't pick an arbitrary country/region — they can
+                     only switch to where they actually are right now, so
+                     room membership stays grounded in physical reality. --}}
+                @php
+                    $hasDetected = (bool) $detectedCountry;
+                    $detectedDiffers = $hasDetected
+                        && ($detectedCountry !== $activeCountry || $detectedRegion !== $activeRegion);
+                @endphp
+
+                @if($hasDetected && $detectedDiffers)
+                <div class="yard-loc-modal__detected">
+                    <div class="yard-loc-modal__detected-icon">
+                        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
-                    </span>
-                    <span class="flex-1 text-left">
-                        <span class="block text-xs text-slate-500" x-text="$store.lang.t('Use detected location', 'Utiliser le lieu détecté')"></span>
-                        <span class="block text-sm font-semibold text-slate-800">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-cm-green" x-text="$store.lang.t('We detected you in', 'Lieu détecté')"></div>
+                        <div class="text-sm font-bold text-slate-800 mt-0.5">
                             {{ $detectedCountry }}@if($detectedRegion) · {{ $detectedRegion }}@endif
-                        </span>
-                    </span>
-                </button>
-                @endif
-
-                {{-- Country picker --}}
-                <label class="yard-loc-modal__field">
-                    <span class="yard-loc-modal__field-label" x-text="$store.lang.t('Country', 'Pays')"></span>
-                    <select wire:model.live="switchCountry" class="yard-loc-modal__select">
-                        <option value="">— {{ __('Select country') }} —</option>
-                        @foreach($switcherCountries as $code => $name)
-                            <option value="{{ $name }}" {{ $switchCountry === $name ? 'selected' : '' }}>{{ $name }}</option>
-                        @endforeach
-                    </select>
-                </label>
-
-                {{-- Region picker (only if country has seeded regions) --}}
-                @php
-                    $countryCodeMap = array_flip($switcherCountries);
-                    $countryCode = $countryCodeMap[$switchCountry] ?? null;
-                    $regionsForCountry = $countryCode ? ($switcherRegionsMap[$countryCode] ?? []) : [];
-                @endphp
-                @if(!empty($regionsForCountry))
-                <label class="yard-loc-modal__field">
-                    <span class="yard-loc-modal__field-label" x-text="$store.lang.t('Region (optional)', 'Région (optionnel)')"></span>
-                    <select wire:model="switchRegion" class="yard-loc-modal__select">
-                        <option value="">— {{ __('All regions') }} —</option>
-                        @foreach($regionsForCountry as $regionName)
-                            <option value="{{ $regionName }}" {{ $switchRegion === $regionName ? 'selected' : '' }}>{{ $regionName }}</option>
-                        @endforeach
-                    </select>
-                </label>
+                        </div>
+                    </div>
+                </div>
+                @elseif($hasDetected)
+                <div class="yard-loc-modal__detected yard-loc-modal__detected--match">
+                    <svg class="w-5 h-5 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+                    </svg>
+                    <span class="text-sm text-slate-700" x-text="$store.lang.t('You are already in your active location.', 'Vous êtes déjà dans votre lieu actif.')"></span>
+                </div>
+                @else
+                <div class="yard-loc-modal__detected yard-loc-modal__detected--unknown">
+                    <svg class="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="text-sm text-slate-600" x-text="$store.lang.t('We couldn\'t detect your location yet. Please enable location access and try again.', 'Impossible de détecter votre position. Veuillez activer la géolocalisation et réessayer.')"></span>
+                </div>
                 @endif
 
                 {{-- Impact preview --}}
+                @if($hasDetected && $detectedDiffers)
                 <div class="yard-loc-modal__warn">
                     <svg class="w-4 h-4 flex-shrink-0 text-cm-yellow mt-0.5" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M12 2L1 21h22L12 2zm0 6l7.53 13H4.47L12 8zm-1 4v4h2v-4h-2zm0 6v2h2v-2h-2z"/>
                     </svg>
                     <span x-text="$store.lang.t('Default rooms (national + regional) for other locations will be archived. Your private chats and groups stay open.', 'Les salons par défaut (national + régional) des autres lieux seront archivés. Vos discussions privées et groupes restent ouverts.')"></span>
                 </div>
+                @endif
             </div>
 
             <div class="yard-loc-modal__footer">
                 <button wire:click="closeLocationSwitcher"
                         class="yard-loc-modal__btn yard-loc-modal__btn--ghost"
-                        x-text="$store.lang.t('Cancel', 'Annuler')"></button>
-                <button wire:click="confirmLocationSwitch"
+                        x-text="$store.lang.t('Close', 'Fermer')"></button>
+                @if($hasDetected && $detectedDiffers)
+                <button wire:click="confirmDetectedSwitch"
                         wire:loading.attr="disabled"
-                        @if(!$switchCountry) disabled @endif
                         class="yard-loc-modal__btn yard-loc-modal__btn--primary">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
                     </svg>
                     <span x-text="$store.lang.t('Switch & join rooms', 'Changer & rejoindre')"></span>
                 </button>
+                @endif
             </div>
         </div>
     </div>

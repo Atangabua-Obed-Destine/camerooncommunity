@@ -85,7 +85,21 @@ return [
     */
     'seeded_regions' => [
         'CM' => ['Adamawa', 'Centre', 'East', 'Far North', 'Littoral', 'North', 'Northwest', 'South', 'Southwest', 'West'],
-        'GB' => ['England', 'Scotland', 'Wales', 'Northern Ireland'],
+        // For the UK we use major cities/areas across all four constituent
+        // countries instead of England/Scotland/Wales/NI — this matches how
+        // diaspora communities actually cluster (by city, not by nation).
+        'GB' => [
+            // England
+            'London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Sheffield',
+            'Bristol', 'Newcastle', 'Nottingham', 'Leicester', 'Coventry', 'Southampton',
+            'Reading', 'Oxford', 'Cambridge', 'Brighton', 'Milton Keynes',
+            // Scotland
+            'Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee', 'Livingston', 'Stirling',
+            // Wales
+            'Cardiff', 'Swansea', 'Newport',
+            // Northern Ireland
+            'Belfast', 'Derry',
+        ],
         'FR' => ['Île-de-France', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur', 'Occitanie', 'Nouvelle-Aquitaine', 'Grand Est'],
         'DE' => ['Bavaria', 'Berlin', 'North Rhine-Westphalia', 'Baden-Württemberg', 'Hesse', 'Lower Saxony'],
         'US' => ['Northeast', 'Southeast', 'Midwest', 'Southwest', 'West Coast'],

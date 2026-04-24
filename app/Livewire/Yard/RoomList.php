@@ -370,6 +370,23 @@ class RoomList extends Component
 
     public function selectRoom(int $roomId)
     {
+        // Defense-in-depth: archived (away) memberships are visible in the
+        // sidebar but locked. Refuse to open them even if the client crafts
+        // the request. They auto-unlock when the user returns to that location.
+        $isArchived = \App\Models\YardRoomMember::query()
+            ->where('user_id', auth()->id())
+            ->where('room_id', $roomId)
+            ->whereNotNull('auto_archived_at')
+            ->exists();
+
+        if ($isArchived) {
+            $this->dispatch('toast',
+                type: 'info',
+                message: __('This room is locked. Switch back to its location to reopen it.'),
+            );
+            return;
+        }
+
         $this->activeRoomId = $roomId;
         $this->dispatch('room-selected', roomId: $roomId);
     }
@@ -427,6 +444,35 @@ class RoomList extends Component
         }
 
         // Don't fire when nothing actually changes
+        if ($user->active_country === $country && (string) $user->active_region === $region) {
+            $this->closeLocationSwitcher();
+            return;
+        }
+
+        app(LocationSwitchService::class)->switchTo($user, $country, $region ?: null);
+
+        unset($this->rooms);
+        unset($this->suggestedRooms);
+        unset($this->archivedRooms);
+
+        $this->closeLocationSwitcher();
+        $this->dispatch('location-changed');
+    }
+
+    /**
+     * Switch to the detected location only — no free choice. Keeps room
+     * memberships grounded in the user's actual physical location.
+     */
+    public function confirmDetectedSwitch(): void
+    {
+        $user = auth()->user();
+        $country = (string) ($user->current_country ?? '');
+        $region = (string) ($user->current_region ?? '');
+
+        if ($country === '' || mb_strlen($country) > 100 || mb_strlen($region) > 100) {
+            return;
+        }
+
         if ($user->active_country === $country && (string) $user->active_region === $region) {
             $this->closeLocationSwitcher();
             return;

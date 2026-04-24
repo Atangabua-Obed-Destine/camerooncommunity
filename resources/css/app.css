@@ -5305,7 +5305,7 @@
 
 
 /* -----------------------------------------------------------
-   Archived (away) — collapsible section in room list shown
+   Archived (away) ï¿½ collapsible section in room list shown
    when the user has switched their active location.
    ----------------------------------------------------------- */
 .yard-room-archived {
@@ -5363,8 +5363,31 @@
 }
 .yard-room--archived:hover { opacity: 1; background: rgb(248 250 252); }
 
+/* Locked archived rooms â€” visible but not interactive. */
+.yard-room--locked {
+    cursor: not-allowed;
+    user-select: none;
+    pointer-events: auto; /* keep tooltip working */
+    opacity: 0.7;
+}
+.yard-room--locked:hover { background: transparent; opacity: 0.75; }
+.yard-room-archived__lock {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 9999px;
+    background: rgb(71 85 105);
+    color: white;
+    box-shadow: 0 0 0 2px white;
+}
+
 /* -----------------------------------------------------------
-   Active Location Strip — sits above the room list, opens the
+   Active Location Strip ï¿½ sits above the room list, opens the
    manual location switcher modal.
    ----------------------------------------------------------- */
 .yard-active-loc {
@@ -5605,3 +5628,34 @@
 }
 .yard-loc-modal__btn--primary:hover { background: #1c2f4a; }
 .yard-loc-modal__btn--primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.yard-loc-modal__detected {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: 0.875rem;
+    background: linear-gradient(135deg, rgb(36 58 92 / 0.06), rgb(252 209 22 / 0.06));
+    border: 1px solid rgb(36 58 92 / 0.18);
+}
+.yard-loc-modal__detected--match {
+    background: rgb(16 185 129 / 0.08);
+    border-color: rgb(16 185 129 / 0.25);
+}
+.yard-loc-modal__detected--unknown {
+    background: rgb(248 250 252);
+    border-color: rgb(226 232 240);
+}
+.yard-loc-modal__detected-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: white;
+    border: 1px solid rgb(36 58 92 / 0.2);
+    color: var(--color-cm-green, #243a5c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.yard-loc-modal__detected-icon svg { width: 18px; height: 18px; }

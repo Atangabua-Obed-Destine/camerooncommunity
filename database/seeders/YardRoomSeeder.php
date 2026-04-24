@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Enums\RoomType;
 use App\Models\Tenant;
 use App\Models\YardRoom;
+use App\Services\RoomNamingService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -33,9 +34,9 @@ class YardRoomSeeder extends Seeder
                     'country' => $name,
                 ],
                 [
-                    'name' => "Cameroonians in {$name}",
-                    'slug' => Str::slug("cameroonians-in-{$name}"),
-                    'description' => "The national room for all Cameroonians in {$name}. Automatically joined when you arrive.",
+                    'name' => RoomNamingService::national($name),
+                    'slug' => Str::slug(RoomNamingService::shortCountry($name) . '-kamer'),
+                    'description' => RoomNamingService::nationalDescription($name) . ' Automatically joined when you arrive.',
                     'country' => $name,
                     'is_active' => true,
                     'is_system_room' => true,
@@ -57,9 +58,9 @@ class YardRoomSeeder extends Seeder
                         'region' => $region,
                     ],
                     [
-                        'name' => "{$region} Cameroonians",
-                        'slug' => Str::slug("{$region}-cameroonians-{$countryName}"),
-                        'description' => "The regional room for Cameroonians from {$region}, {$countryName}.",
+                        'name' => RoomNamingService::regional($region),
+                        'slug' => Str::slug("{$region}-kamer-" . RoomNamingService::shortCountry($countryName)),
+                        'description' => RoomNamingService::regionalDescription($region, $countryName),
                         'is_active' => true,
                         'is_system_room' => true,
                         'members_count' => 0,
@@ -81,9 +82,9 @@ class YardRoomSeeder extends Seeder
                         'city' => $city,
                     ],
                     [
-                        'name' => "{$city} Cameroonians",
-                        'slug' => Str::slug("{$city}-cameroonians"),
-                        'description' => "The city room for Cameroonians in {$city}, {$countryName}.",
+                        'name' => RoomNamingService::city($city),
+                        'slug' => Str::slug("{$city}-kamer"),
+                        'description' => RoomNamingService::cityDescription($city, $countryName),
                         'is_active' => false,
                         'is_system_room' => true,
                         'members_count' => 0,

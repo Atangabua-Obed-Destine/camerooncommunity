@@ -22,7 +22,7 @@ class LocationTracker extends Component
      *     so the toast can ask the user whether to switch their active
      *     location.
      */
-    public function updateLocation(float $lat, float $lng, string $country, string $region): void
+    public function updateLocation(float $lat, float $lng, string $country, string $region, string $city = ''): void
     {
         // Basic bounds validation
         if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
@@ -31,9 +31,18 @@ class LocationTracker extends Component
 
         $country = trim(strip_tags($country));
         $region = trim(strip_tags($region));
+        $city = trim(strip_tags($city));
 
-        if (! $country || mb_strlen($country) > 100 || mb_strlen($region) > 100) {
+        if (! $country || mb_strlen($country) > 100 || mb_strlen($region) > 100 || mb_strlen($city) > 100) {
             return;
+        }
+
+        // Normalise UK regions: ip-api / Nominatim return the constituent
+        // country (England, Scotland, Wales, Northern Ireland) but our
+        // diaspora communities are organised by city. Prefer the city
+        // when we have it.
+        if (in_array($country, ['United Kingdom', 'UK'], true) && $city !== '') {
+            $region = $city;
         }
 
         $user = auth()->user();
@@ -51,7 +60,7 @@ class LocationTracker extends Component
             ]);
         }
 
-        app(LocationService::class)->handleUserLocation($user, $country, '', $region);
+        app(LocationService::class)->handleUserLocation($user, $country, $city, $region);
 
         $user = $user->fresh();
 

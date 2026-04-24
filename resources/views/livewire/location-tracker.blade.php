@@ -26,6 +26,26 @@
             {{-- Small delay so location detection doesn't compete with page paint --}}
             setTimeout(() => this.detect(), 2500);
 
+            {{-- Periodic re-detection so a user who moves to a new
+                 city/country while the tab stays open is noticed without
+                 needing a manual refresh. 10-minute cadence keeps API
+                 cost negligible (~6 calls/hour to ip-api.com). --}}
+            this._reDetectInterval = setInterval(() => this.detect(), 10 * 60 * 1000);
+
+            {{-- Re-detect immediately when the tab regains visibility.
+                 Covers the very common case: user backgrounds the app,
+                 walks to a new place, comes back. We throttle to once
+                 every 60 s to avoid hammering the API on quick tab
+                 switches. --}}
+            this._lastVisibilityDetect = 0;
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState !== 'visible') return;
+                const now = Date.now();
+                if (now - this._lastVisibilityDetect < 60_000) return;
+                this._lastVisibilityDetect = now;
+                this.detect();
+            });
+
             {{-- Server tells us a switch should be offered --}}
             window.addEventListener('location-switch-prompt', (e) => {
                 const d = e.detail?.[0] ?? e.detail ?? {};
@@ -88,7 +108,7 @@
 
                 {{-- Push update to the server (Livewire). The server decides
                      whether to fire the switch prompt event. --}}
-                $wire.updateLocation(result.lat, result.lng, result.country, result.region);
+                $wire.updateLocation(result.lat, result.lng, result.country, result.region, result.city || '');
             } catch { /* best-effort — silent fail */ }
         },
 
@@ -108,11 +128,13 @@
                 );
                 const geo = await resp.json();
 
+                const addr = geo.address || {};
                 return {
                     lat:     pos.coords.latitude,
                     lng:     pos.coords.longitude,
-                    country: geo.address?.country || '',
-                    region:  geo.address?.state || '',
+                    country: addr.country || '',
+                    region:  addr.state || '',
+                    city:    addr.city || addr.town || addr.village || addr.municipality || addr.county || '',
                 };
             } catch { return null; }
         },
@@ -120,10 +142,10 @@
         {{-- ─── IP-based Detection (ip-api.com) ─── --}}
         async detectByIP() {
             try {
-                const resp = await fetch('http://ip-api.com/json/?fields=status,country,regionName,lat,lon,query');
+                const resp = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,query');
                 const data = await resp.json();
                 if (data.status !== 'success') return null;
-                return { lat: data.lat, lng: data.lon, country: data.country, region: data.regionName || '', ip: data.query || '' };
+                return { lat: data.lat, lng: data.lon, country: data.country, region: data.regionName || '', city: data.city || '', ip: data.query || '' };
             } catch { return null; }
         },
 
