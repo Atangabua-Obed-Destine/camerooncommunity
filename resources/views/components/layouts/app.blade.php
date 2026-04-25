@@ -139,6 +139,9 @@
         @endunless
     @endauth
 
+    {{-- Real-time connection request / accept notifier (toast + chime + confetti) --}}
+    <x-connection-notifier />
+
     @livewireScripts
     <script>
         document.addEventListener('livewire:init', () => {

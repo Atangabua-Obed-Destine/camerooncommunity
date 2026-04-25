@@ -263,6 +263,18 @@ document.addEventListener('alpine:init', () => {
             if (data.action === 'declined') {
                 this.$wire.call('refreshParticipants').then(() => {
                     this.callParticipants = this.$wire.get('participants') || [];
+
+                    // If we're still in 'outgoing' (caller waiting) and no one
+                    // else is ringing/joined, the callee declined → end the call.
+                    if (this.callState === 'outgoing') {
+                        const others = (this.callParticipants || []).filter(p =>
+                            p.user_id !== currentUserId &&
+                            (p.status === 'ringing' || p.status === 'joined')
+                        );
+                        if (others.length === 0) {
+                            this.cleanup();
+                        }
+                    }
                 });
             }
 

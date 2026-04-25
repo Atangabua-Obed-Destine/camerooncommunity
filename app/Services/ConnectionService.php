@@ -2,10 +2,14 @@
 
 namespace App\Services;
 
+use App\Events\ConnectionAccepted;
+use App\Events\ConnectionRequested;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserConnection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class ConnectionService
 {
@@ -22,7 +26,7 @@ class ConnectionService
 
         [$x, $y] = UserConnection::canonicalPair($from->id, $to->id);
 
-        return DB::transaction(function () use ($from, $to, $x, $y) {
+        $result = DB::transaction(function () use ($from, $to, $x, $y) {
             $existing = UserConnection::where('user_a_id', $x)
                 ->where('user_b_id', $y)
                 ->lockForUpdate()
@@ -30,17 +34,39 @@ class ConnectionService
 
             if ($existing) {
                 // Don't override accepted/blocked
-                return $existing;
+                return ['connection' => $existing, 'created' => false];
             }
 
-            return UserConnection::create([
+            $conn = UserConnection::create([
                 'tenant_id'    => $from->tenant_id ?? Tenant::first()?->id,
                 'user_a_id'    => $x,
                 'user_b_id'    => $y,
                 'requested_by' => $from->id,
                 'status'       => UserConnection::STATUS_PENDING,
             ]);
+
+            return ['connection' => $conn, 'created' => true];
         });
+
+        // Notify the recipient — DB row + realtime push — only on first request.
+        if ($result['created']) {
+            $notifId = $this->writeNotification(
+                user: $to,
+                type: 'connection.requested',
+                actor: $from,
+                title: 'New connection request',
+                body: ($from->username ?: $from->name) . ' wants to connect with you.',
+                extra: ['action_url' => route('yard') . '?open=connections&tab=requests'],
+            );
+
+            try {
+                broadcast(new ConnectionRequested($from, $to, $notifId))->toOthers();
+            } catch (\Throwable $e) {
+                Log::warning('ConnectionRequested broadcast failed: ' . $e->getMessage());
+            }
+        }
+
+        return $result['connection'];
     }
 
     /**
@@ -60,6 +86,26 @@ class ConnectionService
             'status'      => UserConnection::STATUS_ACCEPTED,
             'accepted_at' => now(),
         ]);
+
+        // Notify the original requester — DB row + realtime push.
+        $requester = User::find($c->requested_by);
+        if ($requester) {
+            $notifId = $this->writeNotification(
+                user: $requester,
+                type: 'connection.accepted',
+                actor: $accepter,
+                title: '🎉 Connection accepted',
+                body: ($accepter->username ?: $accepter->name) . ' accepted your connection request.',
+                extra: ['action_url' => route('yard')],
+            );
+
+            try {
+                broadcast(new ConnectionAccepted($accepter, $requester, $notifId))->toOthers();
+            } catch (\Throwable $e) {
+                Log::warning('ConnectionAccepted broadcast failed: ' . $e->getMessage());
+            }
+        }
+
         return true;
     }
 
@@ -151,5 +197,38 @@ class ConnectionService
         }
         $c->delete();
         return true;
+    }
+
+    /**
+     * Insert a row into the custom `notifications` table for a user.
+     * Returns the new notification UUID (or null on failure — never throws).
+     */
+    private function writeNotification(User $user, string $type, User $actor, string $title, string $body, array $extra = []): ?string
+    {
+        try {
+            $id = (string) Str::uuid();
+            DB::table('notifications')->insert([
+                'id'              => $id,
+                'tenant_id'       => $user->tenant_id ?? Tenant::first()?->id,
+                'user_id'         => $user->id,
+                'type'            => $type,
+                'notifiable_type' => User::class,
+                'notifiable_id'   => $user->id,
+                'data'            => json_encode(array_merge([
+                    'title'      => $title,
+                    'body'       => $body,
+                    'actor_id'   => $actor->id,
+                    'actor_name' => $actor->username ?: $actor->name,
+                    'actor_avatar' => $actor->avatar,
+                ], $extra)),
+                'read_at'    => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            return $id;
+        } catch (\Throwable $e) {
+            Log::warning('writeNotification failed: ' . $e->getMessage());
+            return null;
+        }
     }
 }

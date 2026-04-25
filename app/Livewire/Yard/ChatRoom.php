@@ -12,6 +12,7 @@ use App\Models\YardMessageReaction;
 use App\Models\YardPoll;
 use App\Models\YardPollOption;
 use App\Models\YardPollVote;
+use App\Services\ReceiptService;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
@@ -1008,6 +1009,31 @@ class ChatRoom extends Component
         YardRoomMember::where('room_id', $this->room->id)
             ->where('user_id', auth()->id())
             ->update(['last_read_at' => now()]);
+
+        // Per-message read receipts (WhatsApp blue ticks).
+        app(ReceiptService::class)->markRoomRead($this->room, auth()->id());
+    }
+
+    /**
+     * Called by the recipient's browser when it receives a MessageSent broadcast.
+     * Records that the message was DELIVERED (double grey ticks for the sender).
+     */
+    #[On('mark-message-delivered')]
+    public function markMessageDelivered(int $messageId): void
+    {
+        if (!isset($this->room) || !$this->room->exists) {
+            return;
+        }
+
+        $message = YardMessage::where('id', $messageId)
+            ->where('room_id', $this->room->id)
+            ->first();
+
+        if (!$message) {
+            return;
+        }
+
+        app(ReceiptService::class)->markDelivered($message, auth()->id());
     }
 
     protected function updateRoomMeta(string $preview): void
@@ -1022,9 +1048,18 @@ class ChatRoom extends Component
 
     public function render()
     {
+        $messages = $this->roomMessages;
+
+        // Compute WhatsApp-style tick statuses for the current user's OWN messages.
+        $ownMessages = $messages->where('user_id', auth()->id())->all();
+        $messageStatuses = isset($this->room) && $this->room->exists
+            ? app(ReceiptService::class)->bulkStatusFor($ownMessages, $this->room->id)
+            : [];
+
         return view('livewire.yard.chat-room', [
-            'roomMessages' => $this->roomMessages,
+            'roomMessages' => $messages,
             'pinnedMessages' => $this->pinnedMessages,
+            'messageStatuses' => $messageStatuses,
         ]);
     }
 }

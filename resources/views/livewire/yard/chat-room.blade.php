@@ -21,25 +21,37 @@
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         </button>
 
-        <div class="yard-chat__header-avatar {{ match($room->room_type->value) { 'national' => 'bg-cm-green', 'regional' => '!bg-amber-500', 'city' => '!bg-blue-500', 'private_group' => '!bg-violet-500', default => 'bg-cm-green' } }}">
+        @php
+            $isDmHdr = $room->room_type === \App\Enums\RoomType::DirectMessage;
+            $hdrAvatarBg = $isDmHdr
+                ? (match($room->room_type->value) { 'national' => 'bg-cm-green', 'regional' => '!bg-amber-500', 'city' => '!bg-blue-500', 'private_group' => '!bg-violet-500', default => 'bg-cm-green' })
+                : ($room->avatar
+                    ? (match($room->room_type->value) { 'national' => 'bg-cm-green', 'regional' => '!bg-amber-500', 'city' => '!bg-blue-500', 'private_group' => '!bg-violet-500', default => 'bg-cm-green' })
+                    : \App\Support\AvatarPalette::colorClass('room:' . $room->id));
+        @endphp
+        <div class="yard-chat__header-avatar {{ $hdrAvatarBg }}">
             @if($room->room_type === \App\Enums\RoomType::DirectMessage)
                 @php $dmPartner = $room->members()->where('user_id', '!=', auth()->id())->with('user:id,name,username,avatar')->first()?->user; @endphp
                 @if($dmPartner?->avatar)
                     <img src="{{ asset('storage/' . $dmPartner->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                 @else
-                    <span class="text-sm font-bold text-white">{{ strtoupper(substr($dmPartner?->username ?? $dmPartner?->name ?? '?', 0, 1)) }}</span>
+                    <span class="w-full h-full rounded-full flex items-center justify-center text-sm font-bold text-white {{ \App\Support\AvatarPalette::colorClass('user:' . ($dmPartner?->id ?? $dmPartner?->name ?? '?')) }}">{{ strtoupper(substr($dmPartner?->username ?? $dmPartner?->name ?? '?', 0, 1)) }}</span>
                 @endif
                 @if($this->dmPartnerStatus && $this->dmPartnerStatus['is_online'])
                     <span class="yard-online-dot yard-online-dot--header"></span>
                 @endif
             @else
-                @switch($room->room_type)
-                    @case(\App\Enums\RoomType::National)     <span>🇨🇲</span> @break
-                    @case(\App\Enums\RoomType::Regional)     <span>🌍</span> @break
-                    @case(\App\Enums\RoomType::City)         <span>📍</span> @break
-                    @case(\App\Enums\RoomType::PrivateGroup) <span>👥</span> @break
-                    @default                                 <span>💬</span>
-                @endswitch
+                @if($room->avatar)
+                    <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                @else
+                    @switch($room->room_type)
+                        @case(\App\Enums\RoomType::National)     <span>🇨🇲</span> @break
+                        @case(\App\Enums\RoomType::Regional)     <span>🌍</span> @break
+                        @case(\App\Enums\RoomType::City)         <span>📍</span> @break
+                        @case(\App\Enums\RoomType::PrivateGroup) <span>👥</span> @break
+                        @default                                 <span>💬</span>
+                    @endswitch
+                @endif
             @endif
         </div>
 
@@ -264,7 +276,7 @@
 
                     {{-- Avatar (other users only) --}}
                     @unless($isOwn)
-                    <button class="yard-msg__avatar" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msg->user?->username ?? $msg->user?->name ?? '?') }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}')">
+                    <button class="yard-msg__avatar {{ $msg->user?->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . ($msg->user_id ?? $msg->user?->name ?? '?')) }}" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msg->user?->username ?? $msg->user?->name ?? '?') }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}')">
                         @if($msg->user?->avatar)
                             <img src="{{ asset('storage/' . $msg->user->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
@@ -518,10 +530,16 @@
                                     <p class="whitespace-pre-wrap">{!! nl2br(e($msg->content)) !!}</p>
                             @endswitch
 
-                            {{-- Timestamp + edited badge --}}
+                            {{-- Timestamp + edited badge + ticks (own only) --}}
                             <span class="yard-msg__time {{ $isOwn ? 'text-blue-800/60' : 'text-slate-400' }}">
                                 {{ $msg->created_at->format('H:i') }}
                                 @if($msg->is_edited) · <span x-text="$store.lang.t('edited', 'modifié')"></span> @endif
+                                @if($isOwn && !$msg->is_deleted)
+                                    <x-message-ticks
+                                        :status="$messageStatuses[$msg->id] ?? 'sent'"
+                                        :messageId="$msg->id"
+                                    />
+                                @endif
                             </span>
 
                         </div>
@@ -566,7 +584,10 @@
                             <p class="yard-msg__text whitespace-pre-wrap" x-text="om.text"></p>
                         </div>
                         <div class="yard-msg__meta">
-                            <span class="yard-msg__time text-slate-400">{{ __('Sending...') }}</span>
+                            <span class="yard-msg__time text-slate-400">
+                                <span x-text="$store.lang.t('Sending...', 'Envoi...')"></span>
+                                <x-message-ticks status="sending" />
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -1269,9 +1290,19 @@
                 _optId: 0,
                 _echoChannel: null,
                 _echoChannelName: null,
+                _receiptsChannelName: null,
                 _statusPoll: null,
 
                 init() {
+                    // Hydrate the global msgStatus store with server-computed statuses
+                    // so ticks render correctly on first paint and after Livewire updates.
+                    this.hydrateStatuses();
+
+                    // Subscribe ONCE to this user's private receipts channel for tick updates.
+                    @auth
+                    this.subscribeReceipts('{{ 'tenant.' . app('currentTenant')?->id . '.user.' . auth()->id() . '.receipts' }}');
+                    @endauth
+
                     // Poll DM partner status every 30 seconds
                     this._statusPoll = setInterval(() => {
                         if (this.$wire) this.$wire.pollDmStatus();
@@ -1279,6 +1310,69 @@
                 },
                 destroy() {
                     if (this._statusPoll) clearInterval(this._statusPoll);
+                    if (this._receiptsChannelName && window.Echo) {
+                        window.Echo.leave(this._receiptsChannelName);
+                        this._receiptsChannelName = null;
+                    }
+                },
+
+                hydrateStatuses() {
+                    @if(isset($messageStatuses) && !empty($messageStatuses))
+                    const initial = @json($messageStatuses);
+                    if (window.Alpine && window.Alpine.store) {
+                        const store = window.Alpine.store('msgStatus');
+                        for (const id in initial) {
+                            // Don't downgrade existing (e.g. 'read' should not go back to 'sent').
+                            const cur = store[id];
+                            const next = initial[id];
+                            if (!cur || this._statusRank(next) > this._statusRank(cur)) {
+                                store[id] = next;
+                            }
+                        }
+                    }
+                    @endif
+                },
+
+                _statusRank(s) {
+                    return { 'sending': 0, 'sent': 1, 'delivered': 2, 'read': 3 }[s] ?? 0;
+                },
+
+                subscribeReceipts(channelName) {
+                    if (!window.Echo || !channelName) return;
+                    if (this._receiptsChannelName === channelName) return;
+
+                    if (this._receiptsChannelName) {
+                        window.Echo.leave(this._receiptsChannelName);
+                    }
+                    this._receiptsChannelName = channelName;
+
+                    const self = this;
+                    window.Echo.channel(channelName)
+                        .listen('.MessageDelivered', (e) => {
+                            // Sender side: a recipient confirmed delivery.
+                            // Only upgrade to 'delivered' if ALL recipients have delivered.
+                            if (!e || !e.message_id) return;
+                            const store = window.Alpine.store('msgStatus');
+                            const cur = store[e.message_id];
+                            if (e.all_delivered && self._statusRank('delivered') > self._statusRank(cur)) {
+                                store[e.message_id] = 'delivered';
+                            } else if (!cur) {
+                                store[e.message_id] = 'sent';
+                            }
+                        })
+                        .listen('.MessageRead', (e) => {
+                            // Sender side: recipient(s) opened the room and read.
+                            if (!e || !e.message_ids) return;
+                            const store = window.Alpine.store('msgStatus');
+                            const allRead = e.all_read || {};
+                            for (const id of e.message_ids) {
+                                if (allRead[id]) {
+                                    store[id] = 'read';
+                                } else if (self._statusRank('delivered') > self._statusRank(store[id])) {
+                                    store[id] = 'delivered';
+                                }
+                            }
+                        });
                 },
 
                 // ── Context Menu state ──
@@ -1400,6 +1494,13 @@
                         .listen('.MessageSent', (e) => {
                             component.onMessageReceived(e);
                             self.scrollToBottom();
+                            // Tell the server we received it (→ delivered tick on sender side).
+                            if (e && e.id && e.user_id) {
+                                const myId = {{ auth()->id() ?? 'null' }};
+                                if (e.user_id !== myId) {
+                                    component.markMessageDelivered(e.id);
+                                }
+                            }
                             // Delay markAsRead so RoomList has time to show the unread badge first
                             setTimeout(() => component.delayedMarkRead(), 1500);
                         })

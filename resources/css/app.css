@@ -4,6 +4,10 @@
 @source '../../storage/framework/views/*.php';
 @source '../**/*.blade.php';
 @source '../**/*.js';
+@source '../../app/Support/**/*.php';
+
+/* Safelist random avatar gradients (used dynamically in PHP — see App\Support\AvatarPalette). */
+@source inline("bg-gradient-to-br from-rose-400 to-rose-600 from-pink-400 to-pink-600 from-fuchsia-400 to-fuchsia-600 from-purple-400 to-purple-600 from-violet-400 to-violet-600 from-indigo-400 to-indigo-600 from-blue-400 to-blue-600 from-sky-400 to-sky-600 from-cyan-500 to-cyan-700 from-teal-400 to-teal-600 from-emerald-400 to-emerald-600 from-green-500 to-green-700 from-lime-500 to-lime-700 from-amber-400 to-amber-600 from-orange-400 to-orange-600 from-red-400 to-red-600 from-slate-500 to-slate-700 from-stone-500 to-stone-700");
 
 @theme {
     --font-sans: 'Inter', 'DM Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
@@ -1299,7 +1303,7 @@
     width: 38px;
     height: 38px;
     border-radius: 9999px;
-    background: var(--color-cm-green);
+    background-color: var(--color-cm-green);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1456,7 +1460,7 @@
     width: 32px;
     height: 32px;
     border-radius: 9999px;
-    background: var(--color-slate-300);
+    background-color: var(--color-slate-300);
     color: #fff;
     display: flex;
     align-items: center;
@@ -1528,6 +1532,48 @@
     font-size: 0.65rem;
     margin-top: 2px;
     line-height: 1;
+}
+
+/* ── WhatsApp-style ticks (own messages only) ── */
+.yard-tick {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 3px;
+    vertical-align: middle;
+    line-height: 0;
+    color: rgba(30, 51, 82, 0.55); /* default grey, sits on own bubble bg */
+    transition: color 240ms ease-out;
+}
+.yard-tick__svg {
+    width: 14px;
+    height: 12px;
+    display: block;
+}
+.yard-tick__svg--clock {
+    width: 12px;
+    height: 12px;
+}
+.yard-tick--sending {
+    color: rgba(30, 51, 82, 0.45);
+    animation: yard-tick-pulse 1.2s ease-in-out infinite;
+}
+.yard-tick--sent,
+.yard-tick--delivered {
+    color: rgba(30, 51, 82, 0.55);
+}
+.yard-tick--read,
+.yard-tick__svg--read {
+    color: #34B7F1; /* WhatsApp blue */
+    animation: yard-tick-blue-pop 320ms ease-out;
+}
+@keyframes yard-tick-pulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; }
+}
+@keyframes yard-tick-blue-pop {
+    0%   { transform: scale(0.85); }
+    60%  { transform: scale(1.12); }
+    100% { transform: scale(1); }
 }
 
 /* ── Emoji button beside bubble (WhatsApp-style) ── */
@@ -3510,7 +3556,7 @@
     width: 42px;
     height: 42px;
     border-radius: 50%;
-    background: var(--color-cm-green);
+    background-color: var(--color-cm-green);
     color: #fff;
     display: flex;
     align-items: center;

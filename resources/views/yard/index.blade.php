@@ -3,6 +3,8 @@
 
     <div class="yard-container" x-data="yardApp()" @room-selected.window="onRoomSelected($event.detail)" @toggle-room-info.window="toggleInfo()" @room-type-changed.window="activeRoomType = $event.detail.roomType"
          @open-dm.window="startDmWith($event.detail.userId)"
+         @connection-updated.window="syncConnectionState($event.detail)"
+         @connection-failed.window="rollbackConnectionState($event.detail)"
          :class="{ 'yard-container--fullscreen': activeRoom && isMobile }">
 
         {{-- ══════════════════════════════════════════════════════
@@ -176,8 +178,11 @@
                             <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992"/></svg>
                         </button>
                         <div class="relative" x-data="{ newOpen: false }">
-                            <button @click="newOpen = !newOpen" class="yard-header__btn" :title="$store.lang.t('New Chat', 'Nouvelle discussion')">
+                            <button @click="newOpen = !newOpen" class="yard-header__btn relative" :title="$store.lang.t('New Chat', 'Nouvelle discussion')">
                                 <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                                @auth
+                                    <livewire:yard.connections-badge :variant="'dot'" />
+                                @endauth
                             </button>
                             <div x-show="newOpen" @click.away="newOpen = false" x-transition
                                  class="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
@@ -189,9 +194,12 @@
                                     <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
                                     <span x-text="$store.lang.t('New Group', 'Nouveau Groupe')"></span>
                                 </button>
-                                <button @click="newOpen = false; Livewire.dispatch('open-connections')" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                                <button @click="newOpen = false; Livewire.dispatch('open-connections', { tab: 'requests' })" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
                                     <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
                                     <span x-text="$store.lang.t('Connections', 'Connexions')"></span>
+                                    @auth
+                                        <livewire:yard.connections-badge :variant="'pill'" />
+                                    @endauth
                                 </button>
                             </div>
                         </div>
@@ -572,52 +580,44 @@
                         <div class="yard-modal-dialog__results">
                             <template x-for="user in dmResults" :key="user.id">
                                 <div class="yard-modal-dialog__user"
-                                     :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__user--selected' : ''">
-                                    <button type="button"
-                                            class="flex items-center gap-3 flex-1 min-w-0 text-left bg-transparent border-0 p-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
-                                            :disabled="user.connection_state !== 'connected'"
-                                            @click="toggleDmSelected(user)">
-                                        <div class="yard-modal-dialog__avatar">
-                                            <template x-if="user.avatar">
-                                                <img :src="'{{ asset('storage') }}/' + user.avatar" alt="" class="w-full h-full rounded-full object-cover">
-                                            </template>
-                                            <template x-if="!user.avatar">
-                                                <span x-text="(user.username || user.name).charAt(0).toUpperCase()"></span>
-                                            </template>
-                                        </div>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="text-sm font-semibold text-slate-800 truncate" x-text="user.username || user.name"></p>
-                                            <p class="text-xs text-slate-500 truncate" x-text="user.current_region || user.email || ''"></p>
-                                        </div>
-                                    </button>
+                                     :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__user--selected' : ''"
+                                     @click="toggleDmSelected(user)"
+                                     :style="user.connection_state === 'connected' ? 'cursor:pointer' : 'cursor:default'">
+                                    <div class="yard-modal-dialog__avatar">
+                                        <template x-if="user.avatar">
+                                            <img :src="'{{ asset('storage') }}/' + user.avatar" alt="" class="w-full h-full rounded-full object-cover">
+                                        </template>
+                                        <template x-if="!user.avatar">
+                                            <span x-text="(user.username || user.name).charAt(0).toUpperCase()"></span>
+                                        </template>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-semibold text-slate-800 truncate" x-text="user.username || user.name"></p>
+                                        <p class="text-xs text-slate-500 truncate" x-text="user.current_region || user.email || ''"></p>
+                                    </div>
 
-                                    {{-- Per-state action --}}
-                                    <template x-if="user.connection_state === 'connected'">
-                                        <div class="yard-modal-dialog__check"
-                                             :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__check--on' : ''">
-                                            <svg x-show="dmSelected && dmSelected.id === user.id" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                                        </div>
-                                    </template>
-                                    <template x-if="user.connection_state === 'none'">
-                                        <button type="button" @click.stop="connectUser(user)" :disabled="user.busy"
-                                                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cm-green text-white hover:bg-cm-green/90 disabled:opacity-60 transition-colors whitespace-nowrap">
-                                            <span x-text="$store.lang.t('Connect', 'Connecter')"></span>
-                                        </button>
-                                    </template>
-                                    <template x-if="user.connection_state === 'outgoing'">
-                                        <span class="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap"
-                                              x-text="$store.lang.t('Pending', 'En attente')"></span>
-                                    </template>
-                                    <template x-if="user.connection_state === 'incoming'">
-                                        <button type="button" @click.stop="acceptUser(user)" :disabled="user.busy"
-                                                class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors whitespace-nowrap">
-                                            <span x-text="$store.lang.t('Accept', 'Accepter')"></span>
-                                        </button>
-                                    </template>
-                                    <template x-if="user.connection_state === 'blocked-by-me' || user.connection_state === 'blocked-by-them'">
-                                        <span class="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-slate-100 text-slate-500 whitespace-nowrap"
-                                              x-text="$store.lang.t('Unavailable', 'Indisponible')"></span>
-                                    </template>
+                                    {{-- Per-state action (siblings, no nested templates) --}}
+                                    <div x-show="user.connection_state === 'connected'"
+                                         class="yard-modal-dialog__check"
+                                         :class="dmSelected && dmSelected.id === user.id ? 'yard-modal-dialog__check--on' : ''">
+                                        <svg x-show="dmSelected && dmSelected.id === user.id" class="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                    </div>
+                                    <button x-show="user.connection_state === 'none'"
+                                            type="button"
+                                            onclick="console.log('[Connect btn] native onclick fired')"
+                                            @click.stop.prevent="console.log('[Connect btn] alpine @click fired'); connectUser(user)"
+                                            class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cm-green text-white hover:bg-cm-green/90 transition-colors whitespace-nowrap"
+                                            x-text="$store.lang.t('Connect', 'Connecter')"></button>
+                                    <span x-show="user.connection_state === 'outgoing'"
+                                          class="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-amber-50 text-amber-700 border border-amber-200 whitespace-nowrap"
+                                          x-text="$store.lang.t('Pending', 'En attente')"></span>
+                                    <button x-show="user.connection_state === 'incoming'"
+                                            type="button" @click.stop="acceptUser(user)" :disabled="user.busy"
+                                            class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition-colors whitespace-nowrap"
+                                            x-text="$store.lang.t('Accept', 'Accepter')"></button>
+                                    <span x-show="user.connection_state === 'blocked-by-me' || user.connection_state === 'blocked-by-them'"
+                                          class="px-2.5 py-1 text-[11px] font-semibold rounded-md bg-slate-100 text-slate-500 whitespace-nowrap"
+                                          x-text="$store.lang.t('Unavailable', 'Indisponible')"></span>
                                 </div>
                             </template>
                         </div>
@@ -847,74 +847,66 @@
                     }
                 },
 
-                async connectUser(user) {
-                    if (user.busy) return;
+                connectUser(user) {
+                    console.log('[connectUser] called with', user);
+                    if (!user) { console.warn('[connectUser] no user'); return; }
+                    if (user.busy) { console.warn('[connectUser] user is busy, skipping'); return; }
                     user.busy = true;
-                    // Optimistic UI: flip to "Pending" immediately so the user sees feedback.
-                    const prevState = user.connection_state;
+                    // Optimistic UI flip — server will confirm via 'connection-updated' event.
                     user.connection_state = 'outgoing';
                     try {
-                        const res = await fetch('{{ route("yard.connections.request") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify({ user_id: user.id })
-                        });
-                        if (!res.ok) {
-                            user.connection_state = prevState;
-                            const data = await res.json().catch(() => ({}));
-                            console.error('Connect failed:', res.status, data);
-                            alert(data.message || 'Failed to send connection request.');
-                        } else {
-                            const data = await res.json().catch(() => ({}));
-                            user.connection_state = data.connection_state || 'outgoing';
-                            try { window.Livewire?.dispatch('toast', { type: 'success', message: '{{ __('Connection request sent.') }}' }); } catch (_) {}
+                        if (!window.Livewire) {
+                            console.error('[connectUser] window.Livewire not loaded yet');
+                            user.connection_state = 'none';
+                            user.busy = false;
+                            alert('Livewire not loaded — please refresh the page.');
+                            return;
                         }
+                        console.log('[connectUser] dispatching Livewire event connect-user', { userId: user.id });
+                        window.Livewire.dispatch('connect-user', { userId: user.id });
+                        console.log('[connectUser] dispatch succeeded');
                     } catch (e) {
-                        user.connection_state = prevState;
-                        console.error('Connect error:', e);
-                        alert('Failed to send connection request.');
+                        console.error('[connectUser] dispatch threw:', e);
+                        user.connection_state = 'none';
+                        alert('Connect failed: ' + (e?.message || e));
                     } finally {
-                        user.busy = false;
+                        // Release busy after a short tick so users can't double-click.
+                        setTimeout(() => { user.busy = false; }, 1500);
                     }
                 },
 
-                async acceptUser(user) {
-                    if (user.busy) return;
+                /**
+                 * Reconcile a row in dmResults when the Livewire Connections component
+                 * confirms a state change (or fails). Detail shape: { userId, state }.
+                 */
+                syncConnectionState(detail) {
+                    if (!detail || !detail.userId) return;
+                    const u = (this.dmResults || []).find(r => r.id === detail.userId);
+                    if (u && detail.state) {
+                        u.connection_state = detail.state;
+                        u.busy = false;
+                    }
+                },
+                rollbackConnectionState(detail) {
+                    if (!detail || !detail.userId) return;
+                    const u = (this.dmResults || []).find(r => r.id === detail.userId);
+                    if (u) {
+                        u.connection_state = 'none';
+                        u.busy = false;
+                    }
+                    if (detail.message) alert(detail.message);
+                },
+
+                acceptUser(user) {
+                    if (!user || user.busy) return;
                     user.busy = true;
-                    const prevState = user.connection_state;
                     user.connection_state = 'connected';
                     try {
-                        const res = await fetch('{{ route("yard.connections.accept") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
-                            },
-                            body: JSON.stringify({ user_id: user.id })
-                        });
-                        if (!res.ok) {
-                            user.connection_state = prevState;
-                            const data = await res.json().catch(() => ({}));
-                            console.error('Accept failed:', res.status, data);
-                            alert(data.message || 'Failed to accept connection.');
-                        } else {
-                            const data = await res.json().catch(() => ({}));
-                            user.connection_state = data.connection_state || 'connected';
-                            try { window.Livewire?.dispatch('toast', { type: 'success', message: '{{ __('You are now connected.') }}' }); } catch (_) {}
-                        }
+                        window.Livewire.dispatch('accept-user', { userId: user.id });
                     } catch (e) {
-                        user.connection_state = prevState;
-                        console.error('Accept error:', e);
-                        alert('Failed to accept connection.');
+                        console.error('accept-user dispatch failed:', e);
                     } finally {
-                        user.busy = false;
+                        setTimeout(() => { user.busy = false; }, 600);
                     }
                 },
 
@@ -993,6 +985,22 @@
     {{-- ── Connections Modal ── --}}
     @auth
     <livewire:yard.connections />
+    @endauth
+
+    {{-- Auto-open Connections modal via ?open=connections&tab=requests --}}
+    @auth
+    <script>
+        document.addEventListener('livewire:initialized', () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('open') === 'connections') {
+                const tab = params.get('tab') || 'mine';
+                window.Livewire.dispatch('open-connections', { tab });
+                // Strip the query so reloads don't keep re-opening it.
+                const clean = window.location.pathname + window.location.hash;
+                window.history.replaceState({}, '', clean);
+            }
+        });
+    </script>
     @endauth
 
     {{-- ── Call Manager (WebRTC voice/video overlay) ── --}}

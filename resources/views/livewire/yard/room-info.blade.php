@@ -1,12 +1,13 @@
 <div class="yard-room-info" wire:poll.30s
      x-data="{ joinToast: null }"
+     @if($room && $room->created_by === auth()->id())
      x-on:join-request-received.window="
-        @if($room && $room->created_by === auth()->id())
             joinToast = $event.detail;
             $wire.$refresh();
             setTimeout(() => { joinToast = null }, 6000);
-        @endif
-     ">
+     "
+     @endif
+     >
 
     {{-- Join request toast notification (admin only) --}}
     <template x-if="joinToast">
@@ -122,9 +123,21 @@
     {{-- ═══════════════════════════════════════════════════
          HERO — WhatsApp-style profile card
     ═══════════════════════════════════════════════════ --}}
+    @php
+        $canEditAvatar = !$isDm
+            && !$room->is_system_room
+            && in_array($room->room_type->value, ['private_group'], true)
+            && $room->created_by === auth()->id();
+        $heroHasImg = ($isDm && $dmPartner?->avatar) || (!$isDm && $room->avatar);
+        $heroBgClass = $heroHasImg
+            ? (match($room->room_type->value) { 'national' => 'bg-cm-green', 'regional' => 'bg-amber-500', 'city' => 'bg-blue-500', 'private_group' => 'bg-violet-500', 'direct_message' => 'bg-cm-green', default => 'bg-cm-green' })
+            : ($isDm
+                ? \App\Support\AvatarPalette::colorClass('user:' . ($dmPartner?->id ?? $dmPartner?->name ?? '?'))
+                : \App\Support\AvatarPalette::colorClass('room:' . $room->id));
+    @endphp
     <div class="wa-info-hero">
         {{-- Avatar --}}
-        <div class="wa-info-hero__avatar {{ match($room->room_type->value) { 'national' => 'bg-cm-green', 'regional' => 'bg-amber-500', 'city' => 'bg-blue-500', 'private_group' => 'bg-violet-500', 'direct_message' => 'bg-cm-green', default => 'bg-cm-green' } }}">
+        <div class="wa-info-hero__avatar relative group {{ $heroBgClass }}">
             @if($isDm && $dmPartner?->avatar)
                 <img src="{{ asset('storage/' . $dmPartner->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
             @elseif($isDm && $dmPartner)
@@ -133,6 +146,43 @@
                 <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
             @else
                 <span class="text-4xl">{{ match($room->room_type->value) { 'national' => '🇨🇲', 'regional' => '🌍', 'city' => '📍', 'private_group' => '👥', default => '💬' } }}</span>
+            @endif
+
+            {{-- Admin avatar editor overlay --}}
+            @if($canEditAvatar)
+                <label for="room-avatar-upload-{{ $room->id }}"
+                       class="absolute inset-0 rounded-full flex flex-col items-center justify-center gap-1 bg-black/50 text-white opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                       wire:loading.class="!opacity-100"
+                       wire:target="newAvatar,updatedNewAvatar,removeAvatar">
+                    <svg wire:loading.remove wire:target="newAvatar,updatedNewAvatar,removeAvatar"
+                         class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+                    </svg>
+                    <span wire:loading.remove wire:target="newAvatar,updatedNewAvatar,removeAvatar"
+                          class="text-[10px] font-semibold uppercase tracking-wide"
+                          x-text="$store.lang.t('Change photo', 'Modifier la photo')"></span>
+                    <svg wire:loading wire:target="newAvatar,updatedNewAvatar,removeAvatar"
+                         class="w-7 h-7 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-opacity=".25"/>
+                        <path d="M22 12a10 10 0 0 1-10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                    </svg>
+                </label>
+                <input id="room-avatar-upload-{{ $room->id }}" type="file"
+                       wire:model="newAvatar"
+                       accept="image/jpeg,image/png,image/webp"
+                       class="hidden">
+                @if($room->avatar)
+                    <button type="button" wire:click="removeAvatar"
+                            wire:confirm="{{ __('Remove the group photo?') }}"
+                            class="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-white text-rose-500 shadow-md flex items-center justify-center hover:bg-rose-50 transition-colors"
+                            title="{{ __('Remove photo') }}">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                    </button>
+                @endif
+                @error('newAvatar')
+                    <div class="absolute -bottom-7 left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] text-rose-600 bg-rose-50 px-2 py-0.5 rounded">{{ $message }}</div>
+                @enderror
             @endif
         </div>
 
@@ -327,11 +377,11 @@
             @if($reqUser)
             <div class="wa-info-request" wire:key="req-{{ $req->id }}">
                 <div class="wa-info-request__user">
-                    <div class="wa-info-member__avatar">
+                    <div class="wa-info-member__avatar {{ $reqUser->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . $reqUser->id) }}">
                         @if($reqUser->avatar)
                             <img src="{{ asset('storage/' . $reqUser->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
-                            <span>{{ strtoupper(substr($reqUser->username ?? $reqUser->name, 0, 1)) }}</span>
+                            <span class="text-white">{{ strtoupper(substr($reqUser->username ?? $reqUser->name, 0, 1)) }}</span>
                         @endif
                     </div>
                     <div class="flex-1 min-w-0">
@@ -389,11 +439,11 @@
                 @php $member = $membership->user; @endphp
                 @if($member)
                 <div class="wa-info-member">
-                    <div class="wa-info-member__avatar">
+                    <div class="wa-info-member__avatar {{ $member->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . $member->id) }}">
                         @if($member->avatar)
                             <img src="{{ asset('storage/' . $member->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
-                            <span>{{ strtoupper(substr($member->username ?? $member->name, 0, 1)) }}</span>
+                            <span class="text-white">{{ strtoupper(substr($member->username ?? $member->name, 0, 1)) }}</span>
                         @endif
                     </div>
                     <div class="flex-1 min-w-0">

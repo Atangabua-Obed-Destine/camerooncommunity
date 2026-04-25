@@ -96,7 +96,7 @@
             </div>
             @foreach($suggested as $room)
             <div wire:key="suggested-{{ $room->id }}" class="flex items-center gap-3 px-4 py-3 border-t border-cm-green/10 hover:bg-white/60 transition-colors">
-                <div class="w-10 h-10 rounded-full {{ $roomColors[$room->room_type->value] ?? 'bg-slate-400' }} flex items-center justify-center shrink-0">
+                <div class="w-10 h-10 rounded-full {{ \App\Support\AvatarPalette::colorClass('room:' . $room->id) }} flex items-center justify-center shrink-0">
                     <span class="text-lg">{{ $roomIcons[$room->room_type->value] ?? '💬' }}</span>
                 </div>
                 <div class="flex-1 min-w-0">
@@ -132,7 +132,15 @@
                 wire:loading.attr="disabled">
 
             {{-- Avatar --}}
-            <div class="yard-room__avatar {{ $roomColors[$room->room_type->value] ?? 'bg-slate-400' }} relative">
+            @php
+                $isDmRoom = $room->room_type === \App\Enums\RoomType::DirectMessage;
+                // Always pick a deterministic gradient so the placeholder behind the image
+                // (and the visible bg when no image is set) is always colorful & unique.
+                $avatarBgClass = $isDmRoom
+                    ? \App\Support\AvatarPalette::colorClass('user:' . ($room->dm_other_id ?? $room->dm_other_name ?? $room->id))
+                    : \App\Support\AvatarPalette::colorClass('room:' . $room->id);
+            @endphp
+            <div class="yard-room__avatar {{ $avatarBgClass }} relative">
                 @if($room->room_type === \App\Enums\RoomType::DirectMessage)
                     @if($room->dm_other_avatar)
                         <img src="{{ asset('storage/' . $room->dm_other_avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
@@ -142,7 +150,7 @@
                         <span class="text-lg">💬</span>
                     @endif
                 @elseif($room->avatar)
-                    <img src="{{ $room->avatar }}" alt="" class="w-full h-full rounded-full object-cover">
+                    <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                 @else
                     <span class="text-lg">{{ $roomIcons[$room->room_type->value] ?? '💬' }}</span>
                 @endif
@@ -251,9 +259,9 @@
                  role="group"
                  aria-disabled="true"
                  :title="$store.lang.t('Locked — switch back to this location to reopen', 'Verrouillé — revenez à ce lieu pour rouvrir')">
-                <div class="yard-room__avatar {{ $roomColors[$room->room_type->value] ?? 'bg-slate-400' }} relative opacity-60">
+                <div class="yard-room__avatar {{ $room->avatar ? ($roomColors[$room->room_type->value] ?? 'bg-slate-400') : \App\Support\AvatarPalette::colorClass('room:' . $room->id) }} relative opacity-60">
                     @if($room->avatar)
-                        <img src="{{ $room->avatar }}" alt="" class="w-full h-full rounded-full object-cover">
+                        <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                     @else
                         <span class="text-lg">{{ $roomIcons[$room->room_type->value] ?? '💬' }}</span>
                     @endif

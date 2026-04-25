@@ -206,6 +206,7 @@ class CallManager extends Component
             ->whereIn('status', ['ringing', 'joined'])
             ->count();
 
+        $callEnded = false;
         if ($stillRinging === 0) {
             $call->update([
                 'status' => 'declined',
@@ -214,16 +215,17 @@ class CallManager extends Component
 
             // Log declined call in chat
             $this->createCallLogMessage($call, 'declined');
+            $callEnded = true;
         }
 
         $this->broadcastToOthers(new CallUpdated(
             $call->tenant_id,
             $call->room_id,
             $call->uuid,
-            'declined',
+            $callEnded ? 'ended' : 'declined',
             $user->id,
             $user->username ?? $user->name,
-            'declined',
+            $callEnded ? 'ended' : 'declined',
         ));
 
         $this->resetCallState();

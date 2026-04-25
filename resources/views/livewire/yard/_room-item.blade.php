@@ -10,10 +10,10 @@
         class="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left
                {{ $activeRoomId === $room->id ? 'bg-cm-green/5 border-r-2 border-cm-green' : '' }}">
     {{-- Room avatar --}}
-    <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0
-                {{ $activeRoomId === $room->id ? 'bg-cm-green/10' : 'bg-slate-100' }}">
+    <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0 text-white
+                {{ $activeRoomId === $room->id && $room->avatar ? 'bg-cm-green/10' : ($room->avatar ? 'bg-slate-100' : \App\Support\AvatarPalette::colorClass('room:' . $room->id)) }}">
         @if($room->avatar)
-            <img src="{{ $room->avatar }}" alt="" class="w-11 h-11 rounded-full object-cover">
+            <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-11 h-11 rounded-full object-cover">
         @else
             {{ $roomIcons }}
         @endif

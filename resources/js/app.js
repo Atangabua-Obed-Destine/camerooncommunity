@@ -33,6 +33,10 @@ document.addEventListener('alpine:init', () => {
             return this.current === 'fr' ? (fr || en) : en;
         }
     });
+
+    // Live message-status store for WhatsApp-style ticks.
+    // Keyed by message id → 'sending' | 'sent' | 'delivered' | 'read'.
+    Alpine.store('msgStatus', {});
 });
 
 // IntersectionObserver for scroll animations

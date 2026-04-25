@@ -177,7 +177,7 @@
             {{-- ══ Progress Bar ══ --}}
             @php
                 $stepIcons = [
-                    1 => ['icon' => '📍', 'en' => 'Location', 'fr' => 'Position'],
+                    1 => ['icon' => '�', 'en' => 'Welcome', 'fr' => 'Bienvenue'],
                     2 => ['icon' => '👤', 'en' => 'Account', 'fr' => 'Compte'],
                     3 => ['icon' => '🏠', 'en' => 'Roots', 'fr' => 'Origines'],
                     4 => ['icon' => '🚀', 'en' => 'Launch', 'fr' => 'Lancer'],
@@ -238,15 +238,15 @@
 
                 <div class="p-6 sm:p-7">
 
-                    {{-- ═══════════ STEP 1 — "We See You" — Location ═══════════ --}}
+                    {{-- ═══════════ STEP 1 — Personalize ═══════════ --}}
                     @if($step === 1)
                     <div wire:key="step-1">
                         <h2 class="text-2xl font-extrabold text-slate-900"
-                            x-text="$store.lang.t('Where are you right now?', 'Où êtes-vous en ce moment ?')"></h2>
+                            x-text="$store.lang.t('Let’s personalize your experience', 'Personnalisons votre expérience')"></h2>
                         <p class="mt-1 text-sm text-slate-500"
                            x-text="$store.lang.t(
-                               'We\'ll connect you with Cameroonians nearby. Your exact location is never shared.',
-                               'Nous vous connecterons aux Camerounais proches. Votre position exacte n\'est jamais partagée.'
+                               'Tell us which community you’d like to join — you can change this anytime.',
+                               'Dites-nous à quelle communauté vous souhaitez vous joindre — modifiable à tout moment.'
                            )"></p>
 
                         <div class="mt-6 space-y-4">
@@ -264,7 +264,7 @@
                                     </div>
                                 </div>
                                 <span class="text-sm font-medium text-cm-green animate-pulse"
-                                      x-text="$store.lang.t('Finding your community...', 'Recherche de votre communauté...')"></span>
+                                      x-text="$store.lang.t('Setting things up for you...', 'Préparation de votre espace...')"></span>
                             </div>
 
                             {{-- Detected Success Banner --}}
@@ -275,7 +275,7 @@
                                 </div>
                                 <div>
                                     <p class="text-sm text-cm-green font-semibold">
-                                        <span x-text="$store.lang.t('Located! ', 'Localisé ! ')"></span>
+                                        <span x-text="$store.lang.t('Welcome! ', 'Bienvenue ! ')"></span>
                                         <span>{{ $current_region }}{{ $current_region && $current_country ? ', ' : '' }}{{ $current_country }}</span>
                                     </p>
                                     @if($this->communityStats['country_users'] > 0)
@@ -342,7 +342,7 @@
                             <button type="button" @click="detectLocation()" x-show="!detecting"
                                     class="text-xs text-cm-green font-medium hover:underline flex items-center gap-1.5">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-                                <span x-text="$store.lang.t('Re-detect my location', 'Relocaliser')"></span>
+                                <span x-text="$store.lang.t('Not your area? Refresh', 'Mauvaise zone ? Actualiser')"></span>
                             </button>
                         </div>
 

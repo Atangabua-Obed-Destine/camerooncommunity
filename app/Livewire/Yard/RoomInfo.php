@@ -8,10 +8,14 @@ use App\Models\YardJoinRequest;
 use App\Models\YardMessage;
 use App\Models\YardRoom;
 use App\Models\YardRoomMember;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class RoomInfo extends Component
 {
+    use WithFileUploads;
+
     public ?int $roomId = null;
     public bool $visible = false;
 
@@ -19,6 +23,10 @@ class RoomInfo extends Component
     public bool $addMemberOpen = false;
     public string $memberSearch = '';
     public array $selectedUsers = [];
+
+    // ── Avatar upload state ──
+    public $newAvatar = null;
+    public bool $avatarUploading = false;
 
     protected $listeners = [
         'show-room-info' => 'showInfo',
@@ -120,6 +128,80 @@ class RoomInfo extends Component
         }
 
         $this->closeAddMember();
+    }
+
+    /**
+     * Admin updates the group avatar (auto-saves on file selection).
+     */
+    public function updatedNewAvatar(): void
+    {
+        $this->validate([
+            'newAvatar' => 'image|mimes:jpg,jpeg,png,webp|max:4096',
+        ]);
+
+        $room = YardRoom::find($this->roomId);
+        if (!$room) {
+            return;
+        }
+
+        // Only the admin (creator) of a non-DM, non-system room can change the avatar
+        if (!$this->canEditRoom($room)) {
+            $this->newAvatar = null;
+            return;
+        }
+
+        $this->avatarUploading = true;
+
+        try {
+            // Delete old avatar if it exists and is in storage
+            if ($room->avatar && Storage::disk('public')->exists($room->avatar)) {
+                Storage::disk('public')->delete($room->avatar);
+            }
+
+            $path = $this->newAvatar->store('yard/rooms/' . $room->id, 'public');
+
+            $room->update(['avatar' => $path]);
+        } finally {
+            $this->newAvatar = null;
+            $this->avatarUploading = false;
+        }
+
+        $this->dispatch('room-updated');
+        $this->dispatch('room-avatar-updated', roomId: $room->id);
+    }
+
+    /**
+     * Admin removes the group avatar.
+     */
+    public function removeAvatar(): void
+    {
+        $room = YardRoom::find($this->roomId);
+        if (!$room || !$this->canEditRoom($room)) {
+            return;
+        }
+
+        if ($room->avatar && Storage::disk('public')->exists($room->avatar)) {
+            Storage::disk('public')->delete($room->avatar);
+        }
+
+        $room->update(['avatar' => null]);
+
+        $this->dispatch('room-updated');
+        $this->dispatch('room-avatar-updated', roomId: $room->id);
+    }
+
+    /**
+     * Determine whether the current user can edit this room's profile.
+     */
+    protected function canEditRoom(YardRoom $room): bool
+    {
+        if ($room->is_system_room) {
+            return false;
+        }
+        if (in_array($room->room_type->value, ['national', 'regional', 'city', 'direct_message'], true)) {
+            return false;
+        }
+        return $room->created_by === auth()->id();
     }
 
     /**

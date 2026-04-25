@@ -25,6 +25,17 @@ class Connections extends Component
         $this->search = '';
     }
 
+    /**
+     * Triggered from the global notifier when a new connection request
+     * arrives for this user — refresh computed lists so the badge/tab
+     * shows the new entry without a page reload.
+     */
+    #[On('connection-incoming')]
+    public function refreshIncoming(): void
+    {
+        unset($this->incomingRequests, $this->myConnections, $this->sentRequests);
+    }
+
     public function close(): void
     {
         $this->show = false;
@@ -194,6 +205,7 @@ class Connections extends Component
     |---------------------------------------------------------------
     */
 
+    #[On('connect-user')]
     public function sendRequest(int $userId): void
     {
         $other = User::find($userId);
@@ -203,17 +215,21 @@ class Connections extends Component
             $this->dispatch('toast', type: 'success', message: app()->getLocale() === 'fr'
                 ? 'Demande de connexion envoyée.'
                 : 'Connection request sent.');
+            $this->dispatch('connection-updated', userId: $userId, state: 'outgoing');
         } catch (\Throwable $e) {
             $this->dispatch('toast', type: 'error', message: $e->getMessage());
+            $this->dispatch('connection-failed', userId: $userId, message: $e->getMessage());
         }
     }
 
+    #[On('accept-user')]
     public function acceptRequest(int $userId): void
     {
         if (app(ConnectionService::class)->accept(auth()->user(), $userId)) {
             $this->dispatch('toast', type: 'success', message: app()->getLocale() === 'fr'
                 ? 'Connexion acceptée.'
                 : 'Connection accepted.');
+            $this->dispatch('connection-updated', userId: $userId, state: 'connected');
         }
     }
 

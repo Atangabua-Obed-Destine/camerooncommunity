@@ -78,6 +78,7 @@ class RoomList extends Component
             ->selectRaw('(SELECT COUNT(*) FROM yard_room_members WHERE room_id = yard_rooms.id) as members_count')
             ->selectRaw('(SELECT COALESCE(u.username, u.name) FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_name', [$user->id])
             ->selectRaw('(SELECT u.avatar FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_avatar', [$user->id])
+            ->selectRaw('(SELECT om.user_id FROM yard_room_members om WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_id', [$user->id])
             ->selectRaw('(SELECT COALESCE(u.username, u.name) FROM users u WHERE u.id = yard_rooms.last_message_user_id LIMIT 1) as last_message_sender_name');
 
         if ($this->search) {
