@@ -24,6 +24,7 @@ class OnboardingFlow extends Component
 
     // Room discovery state
     public array $selectedRoomIds = [];
+    public array $defaultRoomIds = [];
 
     // Profile polish
     public string $bio = '';
@@ -67,6 +68,10 @@ class OnboardingFlow extends Component
                 })
                 ->pluck('id')
                 ->all();
+
+            // Snapshot the auto-selected (default) rooms so the UI can prevent
+            // the user from un-selecting them.
+            $this->defaultRoomIds = $this->selectedRoomIds;
         }
 
         // Load Kamer AI welcome from session (set during registration), or create fresh
@@ -178,6 +183,11 @@ class OnboardingFlow extends Component
      */
     public function toggleRoom(int $roomId): void
     {
+        // Default (auto-selected) rooms are mandatory — ignore toggle attempts.
+        if (in_array($roomId, $this->defaultRoomIds, true)) {
+            return;
+        }
+
         if (in_array($roomId, $this->selectedRoomIds)) {
             $this->selectedRoomIds = array_values(array_diff($this->selectedRoomIds, [$roomId]));
         } else {

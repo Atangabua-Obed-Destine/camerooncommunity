@@ -102,16 +102,38 @@
                 @endif
             </div>
 
-            {{-- Quick reply chips --}}
-            @if(count($chatMessages) <= 2)
-            <div class="px-6 pb-3 flex flex-wrap gap-2">
-                @php
-                    $chips = [
+            {{-- Quick reply chips (rotate based on conversation depth) --}}
+            @php
+                $userMessageCount = collect($chatMessages)->where('role', 'user')->count();
+                $chipRounds = [
+                    // Round 0 — initial intent
+                    [
                         ['en' => '🤝 Connect with Cameroonians near me', 'fr' => '🤝 Retrouver des Camerounais près de moi'],
-                        ['en' => '🤲 Support the community', 'fr' => '🤲 Soutenir la communauté'],
-                        ['en' => '🔍 Just exploring', 'fr' => '🔍 Je découvre'],
-                    ];
-                @endphp
+                        ['en' => '🤲 Support the community',             'fr' => '🤲 Soutenir la communauté'],
+                        ['en' => '🔍 Just exploring',                    'fr' => '🔍 Je découvre'],
+                    ],
+                    // Round 1 — after first reply: focus area
+                    [
+                        ['en' => '💼 Find jobs & opportunities',          'fr' => '💼 Trouver du travail & opportunités'],
+                        ['en' => '🏠 Housing & accommodation',            'fr' => '🏠 Logement & hébergement'],
+                        ['en' => '🍲 Food & cultural events',             'fr' => '🍲 Cuisine & événements culturels'],
+                        ['en' => '📦 Send a parcel home',                 'fr' => '📦 Envoyer un colis au pays'],
+                    ],
+                    // Round 2 — engagement style
+                    [
+                        ['en' => '💬 I want to chat in The Yard',         'fr' => '💬 Je veux discuter dans Le Yard'],
+                        ['en' => '🎉 Show me upcoming events',            'fr' => '🎉 Montrez-moi les événements à venir'],
+                        ['en' => '❤️ Help someone in need',               'fr' => '❤️ Aider quelqu\'un dans le besoin'],
+                    ],
+                    // Round 3+ — closing prompts
+                    [
+                        ['en' => '🚀 I\'m ready, take me in!',            'fr' => '🚀 Je suis prêt, allons-y !'],
+                        ['en' => '❓ Tell me more about Kamer AI',        'fr' => '❓ Parlez-moi de Kamer AI'],
+                    ],
+                ];
+                $chips = $chipRounds[min($userMessageCount, count($chipRounds) - 1)];
+            @endphp
+            <div class="px-6 pb-3 flex flex-wrap gap-2" wire:key="chips-round-{{ $userMessageCount }}">
                 @foreach($chips as $chip)
                 <button wire:click="sendChat('{{ $chip['en'] }}')"
                         wire:loading.attr="disabled"
@@ -121,7 +143,6 @@
                 </button>
                 @endforeach
             </div>
-            @endif
 
             {{-- Chat input --}}
             <div class="border-t border-slate-100 px-4 py-3">
@@ -198,10 +219,12 @@
 
                 {{-- Discoverable rooms --}}
                 @forelse($this->discoverableRooms as $room)
+                @php $isDefault = in_array($room->id, $defaultRoomIds); @endphp
                 <div wire:key="discover-{{ $room->id }}"
-                     class="group border-2 rounded-xl p-4 transition-all duration-300 cursor-pointer
+                     class="group border-2 rounded-xl p-4 transition-all duration-300
+                            {{ $isDefault ? 'cursor-default' : 'cursor-pointer' }}
                             {{ in_array($room->id, $selectedRoomIds) ? 'border-cm-green bg-cm-green/5 shadow-md shadow-cm-green/10' : 'border-slate-200 hover:border-slate-300 bg-white' }}"
-                     wire:click="toggleRoom({{ $room->id }})">
+                     @if(! $isDefault) wire:click="toggleRoom({{ $room->id }})" @endif>
 
                     <div class="flex items-center gap-4">
                         {{-- Room icon --}}
@@ -212,7 +235,13 @@
 
                         {{-- Room info --}}
                         <div class="flex-1 min-w-0">
-                            <h3 class="font-bold text-slate-900">{{ $room->name }}</h3>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="font-bold text-slate-900">{{ $room->name }}</h3>
+                                @if($isDefault)
+                                <span class="text-[10px] font-bold uppercase tracking-wide text-cm-green bg-cm-green/10 rounded-full px-2 py-0.5"
+                                      x-text="$store.lang.t('Required', 'Requis')"></span>
+                                @endif
+                            </div>
                             <p class="text-xs text-slate-500 mt-0.5">{{ $room->description }}</p>
                             <div class="flex items-center gap-3 mt-2">
                                 <span class="text-[11px] text-slate-400 flex items-center gap-1">
@@ -231,8 +260,11 @@
                         {{-- Checkbox --}}
                         <div class="shrink-0">
                             <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-300
-                                 {{ in_array($room->id, $selectedRoomIds) ? 'border-cm-green bg-cm-green' : 'border-slate-300 group-hover:border-slate-400' }}">
-                                @if(in_array($room->id, $selectedRoomIds))
+                                 {{ in_array($room->id, $selectedRoomIds) ? 'border-cm-green bg-cm-green' : 'border-slate-300 group-hover:border-slate-400' }}"
+                                 @if($isDefault) title="{{ auth()->user()->language_pref?->value === 'fr' ? 'Salon par défaut — obligatoire' : 'Default room — required' }}" @endif>
+                                @if($isDefault)
+                                <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                @elseif(in_array($room->id, $selectedRoomIds))
                                 <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                                 @endif
                             </div>

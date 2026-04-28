@@ -96,7 +96,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 1 — HERO (full viewport)
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="relative z-0 min-h-screen flex items-center overflow-hidden">
+    <section class="relative z-0 min-h-screen flex items-center overflow-hidden pt-24 sm:pt-28 lg:pt-32">
         {{-- Background image --}}
         <div class="absolute inset-0 pointer-events-none">
             <img src="{{ asset('images/hero-bg.jpg') }}" alt="" class="h-full w-full object-cover">
@@ -158,19 +158,19 @@
                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-cm-yellow"></span>
                             </span>
                             <span x-text="$store.lang.t(
-                                'We detected you\'re in ' + country + ' — your community is here',
-                                'Nous détectons que vous êtes au ' + country + ' — votre communauté est ici'
+                                'Welcome — your ' + country + ' community is right here',
+                                'Bienvenue — votre communauté ' + country + ' est juste ici'
                             )"></span>
                         </div>
                     </div>
 
                     <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
-                        <span x-text="$store.lang.t('Connecting Cameroonians', 'Connecter les Camerounais')"></span>
+                        <span class="whitespace-nowrap" x-text="$store.lang.t('Connecting Cameroonians', 'Connecter les Camerounais')"></span>
                         <br>
                         <span class="text-cm-yellow" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
                     </h1>
 
-                    <p class="text-lg sm:text-xl text-slate-300 max-w-xl leading-relaxed"
+                    <p class="text-lg sm:text-xl text-slate-300 max-w-3xl leading-relaxed line-clamp-2"
                        x-text="$store.lang.t(
                            'Connect with Cameroonians in your city and country. Find housing, send packages home, get help — all in one place built just for you.',
                            'Connectez-vous avec les Camerounais de votre ville et pays. Trouvez un logement, envoyez des colis au pays, obtenez de l\'aide — tout en un seul endroit conçu pour vous.'
@@ -244,8 +244,8 @@
 
                         {{-- Typewriter Caption --}}
                         <div class="mb-4 h-8 flex items-center justify-center">
-                            <p class="text-sm text-cm-yellow font-medium tracking-wide">
-                                <span x-text="typed"></span><span class="inline-block w-0.5 h-4 bg-cm-yellow ml-0.5 align-middle" :class="typing ? 'animate-blink' : 'opacity-0'"></span>
+                            <p class="text-sm text-white font-bold tracking-wide">
+                                <span x-text="typed"></span><span class="inline-block w-0.5 h-4 bg-white ml-0.5 align-middle" :class="typing ? 'animate-blink' : 'opacity-0'"></span>
                             </p>
                         </div>
 

@@ -177,15 +177,14 @@
             {{-- ══ Progress Bar ══ --}}
             @php
                 $stepIcons = [
-                    1 => ['icon' => '�', 'en' => 'Welcome', 'fr' => 'Bienvenue'],
+                    1 => ['icon' => '👋', 'en' => 'Welcome', 'fr' => 'Bienvenue'],
                     2 => ['icon' => '👤', 'en' => 'Account', 'fr' => 'Compte'],
-                    3 => ['icon' => '🏠', 'en' => 'Roots', 'fr' => 'Origines'],
-                    4 => ['icon' => '🚀', 'en' => 'Launch', 'fr' => 'Lancer'],
+                    3 => ['icon' => '🚀', 'en' => 'Launch', 'fr' => 'Lancer'],
                 ];
             @endphp
             <div class="flex items-center justify-between mb-5 px-1">
                 @foreach($stepIcons as $i => $meta)
-                <div class="flex items-center {{ $i < 4 ? 'flex-1' : '' }}">
+                <div class="flex items-center {{ $i < 3 ? 'flex-1' : '' }}">
                     <div class="flex flex-col items-center gap-1">
                         <div class="flex h-9 w-9 items-center justify-center rounded-full text-sm transition-all duration-500
                             {{ $step > $i ? 'bg-cm-green text-white shadow-md shadow-cm-green/30' :
@@ -200,7 +199,7 @@
                         <span class="text-[10px] font-semibold hidden sm:block transition-colors {{ $step >= $i ? 'text-cm-green' : 'text-slate-400' }}"
                               x-text="$store.lang.t('{{ $meta['en'] }}', '{{ $meta['fr'] }}')"></span>
                     </div>
-                    @if($i < 4)
+                    @if($i < 3)
                     <div class="flex-1 mx-2 h-0.5 rounded-full transition-all duration-700 {{ $step > $i ? 'bg-cm-green' : 'bg-slate-200' }}"></div>
                     @endif
                 </div>
@@ -218,7 +217,7 @@
                 <div class="flex-1 relative bg-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm border border-slate-200/80">
                     <div class="absolute -left-2 top-3 w-2 h-2 bg-white border-l border-t border-slate-200/80 rotate-[-45deg]"></div>
                     <p class="text-sm text-slate-700 leading-relaxed font-medium"
-                       wire:key="ai-msg-{{ $step }}-{{ $current_country }}-{{ $username }}-{{ $home_region }}">
+                       wire:key="ai-msg-{{ $step }}-{{ $current_country }}-{{ $username }}">
                         {{ $aiMessage }}
                     </p>
                     <div class="mt-1 flex items-center gap-1.5">
@@ -291,7 +290,7 @@
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1"
                                        x-text="$store.lang.t('Current Country', 'Pays Actuel')"></label>
-                                <select wire:model.live="current_country" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed" {{ $gps_detected ? 'disabled' : '' }}>
+                                <select wire:model.live="current_country" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed" disabled>
                                     <option value="" x-text="$store.lang.t('Select country...', 'Sélectionnez un pays...')"></option>
                                     @if($current_country && !in_array($current_country, $countries))
                                         <option value="{{ $current_country }}" selected>{{ $current_country }}</option>
@@ -310,7 +309,7 @@
                                 <input wire:model="current_region" type="text"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed"
                                        placeholder="England, Bavaria, California..."
-                                       {{ $gps_detected ? 'readonly' : '' }}>
+                                       readonly>
                                 @error('current_region') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 
@@ -374,7 +373,7 @@
                                        x-text="$store.lang.t('Username', 'Nom d\'utilisateur')"></label>
                                 <input wire:model.live.debounce.500ms="username" type="text"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
-                                       placeholder="emmanuel">
+                                       placeholder="Calaan">
                                 @if($username)
                                     <p class="mt-1 text-xs text-slate-500">
                                         <span x-text="$store.lang.t('You\'ll be known as:', 'Vous serez connu sous:')"></span>
@@ -388,26 +387,29 @@
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1"
                                        x-text="$store.lang.t('Email Address', 'Adresse Email')"></label>
-                                <input wire:model.blur="email" type="email"
+                                <input wire:model.live.debounce.600ms="email" type="email"
+                                       x-on:input="$wire.clearEmailError()"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                                        placeholder="you@example.com">
                                 @error('email') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 
                             {{-- Password --}}
-                            <div x-data="{ show: false, strength: 0 }">
+                            <div x-data="{
+                                show: false,
+                                pwd: '',
+                                get reqLength() { return this.pwd.length >= 8; },
+                                get reqUpper()  { return /[A-Z]/.test(this.pwd); },
+                                get reqLower()  { return /[a-z]/.test(this.pwd); },
+                                get reqNumber() { return /[0-9]/.test(this.pwd); },
+                                get reqSymbol() { return /[^A-Za-z0-9]/.test(this.pwd); },
+                                get strength()  { return (this.reqLength?1:0) + (this.reqUpper?1:0) + (this.reqNumber?1:0) + (this.reqSymbol?1:0); }
+                            }">
                                 <label class="block text-sm font-medium text-slate-700 mb-1"
                                        x-text="$store.lang.t('Password', 'Mot de Passe')"></label>
                                 <div class="relative">
                                     <input wire:model.blur="password" :type="show ? 'text' : 'password'"
-                                        @input="
-                                            let v = $event.target.value;
-                                            strength = 0;
-                                            if (v.length >= 8) strength++;
-                                            if (/[A-Z]/.test(v)) strength++;
-                                            if (/[0-9]/.test(v)) strength++;
-                                            if (/[^A-Za-z0-9]/.test(v)) strength++;
-                                        "
+                                        x-model="pwd"
                                         class="w-full rounded-xl border border-slate-300 px-4 py-3 pr-12 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                                         placeholder="Min 8 chars, 1 uppercase, 1 number">
                                     <button type="button" @click="show = !show" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
@@ -424,6 +426,24 @@
                                 </div>
                                 <p class="mt-1 text-xs font-medium" :class="strength <= 1 ? 'text-cm-red' : (strength <= 2 ? 'text-cm-yellow-dark' : 'text-cm-green')"
                                    x-text="strength === 0 ? '' : (strength <= 1 ? $store.lang.t('Weak — like watered garri', 'Faible — comme du garri dilué') : (strength <= 2 ? $store.lang.t('Getting there...', 'On y arrive...') : (strength <= 3 ? $store.lang.t('Solid! 💪', 'Solide ! 💪') : $store.lang.t('Fort like ndolé! 🔥', 'Fort comme le ndolé ! 🔥'))))"></p>
+
+                                {{-- Live requirements checklist --}}
+                                <ul class="mt-2 space-y-1 text-xs">
+                                    <template x-for="req in [
+                                        { ok: reqLength, en: 'At least 8 characters',          fr: 'Au moins 8 caractères' },
+                                        { ok: reqUpper,  en: 'One uppercase letter (A-Z)',     fr: 'Une lettre majuscule (A-Z)' },
+                                        { ok: reqLower,  en: 'One lowercase letter (a-z)',     fr: 'Une lettre minuscule (a-z)' },
+                                        { ok: reqNumber, en: 'One number (0-9)',               fr: 'Un chiffre (0-9)' },
+                                        { ok: reqSymbol, en: 'One symbol (!@#$...)',           fr: 'Un symbole (!@#$...)' }
+                                    ]" :key="req.en">
+                                        <li class="flex items-center gap-2 transition-colors duration-200"
+                                            :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
+                                            <svg x-show="req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                            <svg x-show="!req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+                                            <span x-text="$store.lang.t(req.en, req.fr)"></span>
+                                        </li>
+                                    </template>
+                                </ul>
                                 @error('password') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 
@@ -433,18 +453,6 @@
                                        x-text="$store.lang.t('Confirm Password', 'Confirmer le Mot de Passe')"></label>
                                 <input wire:model.blur="password_confirmation" type="password"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green">
-                            </div>
-
-                            {{-- Phone --}}
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1">
-                                    <span x-text="$store.lang.t('Phone Number', 'Numéro de Téléphone')"></span>
-                                    <span class="text-slate-400 font-normal" x-text="$store.lang.t(' (optional)', ' (optionnel)')"></span>
-                                </label>
-                                <input wire:model.blur="phone" type="tel"
-                                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
-                                       placeholder="+44 7911 123456">
-                                @error('phone') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
                         </div>
 
@@ -467,83 +475,9 @@
                         </div>
                     </div>
 
-                    {{-- ═══════════ STEP 3 — "Your Roots" — Origin ═══════════ --}}
+                    {{-- ═══════════ STEP 3 — "Welcome Home" — Review & Register ═══════════ --}}
                     @elseif($step === 3)
                     <div wire:key="step-3">
-                        <h2 class="text-2xl font-extrabold text-slate-900"
-                            x-text="$store.lang.t('Your Cameroonian Roots', 'Vos Racines Camerounaises')"></h2>
-                        <p class="mt-1 text-sm text-slate-500"
-                           x-text="$store.lang.t('Where does your heart call home?', 'D\'où vient votre cœur ?')"></p>
-
-                        <div class="mt-6 space-y-4">
-                            {{-- Country of Origin --}}
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
-                                       x-text="$store.lang.t('Country of Origin', 'Pays d\'Origine')"></label>
-                                <select wire:model="country_of_origin"
-                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green bg-white">
-                                    <option value="Cameroon">🇨🇲 Cameroon</option>
-                                    <option value="Nigeria">🇳🇬 Nigeria</option>
-                                    <option value="Other">Other</option>
-                                </select>
-                            </div>
-
-                            {{-- Home Region (card grid for visual appeal) --}}
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-2"
-                                       x-text="$store.lang.t('Home Region', 'Région d\'Origine')"></label>
-                                @php
-                                    $regionEmojis = [
-                                        'Adamawa' => '🌅', 'Centre' => '💚', 'East' => '🌿',
-                                        'Far North' => '🎨', 'Littoral' => '🔥', 'North' => '☀️',
-                                        'Northwest' => '🌄', 'South' => '🌊', 'Southwest' => '🏖️', 'West' => '💪',
-                                    ];
-                                @endphp
-                                <div class="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
-                                    @foreach($regions as $key => $region)
-                                    <label class="relative cursor-pointer group">
-                                        <input wire:model.live="home_region" type="radio" value="{{ $region }}" class="peer sr-only">
-                                        <div class="rounded-xl border-2 px-3 py-2.5 text-center transition-all peer-checked:border-cm-green peer-checked:bg-cm-green/5 peer-checked:shadow-md peer-checked:shadow-cm-green/10 border-slate-200 hover:border-slate-300 group-hover:bg-slate-50">
-                                            <span class="text-lg block">{{ $regionEmojis[$region] ?? '📍' }}</span>
-                                            <span class="text-xs font-semibold text-slate-800">{{ $region }}</span>
-                                        </div>
-                                    </label>
-                                    @endforeach
-                                </div>
-                            </div>
-
-                            {{-- Home City --}}
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
-                                       x-text="$store.lang.t('Home City/Town', 'Ville/Village d\'Origine')"></label>
-                                <input wire:model="home_city" type="text"
-                                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
-                                       placeholder="Bamenda, Douala, Yaoundé...">
-                            </div>
-                        </div>
-
-                        <div class="mt-6 flex gap-3">
-                            <button wire:click="previousStep"
-                                    class="flex-1 rounded-xl border border-slate-300 py-3.5 text-sm font-bold text-slate-600 transition-colors hover:bg-slate-50">
-                                <span x-text="$store.lang.t('Back', 'Retour')"></span>
-                            </button>
-                            <button wire:click="nextStep"
-                                    class="flex-[2] rounded-xl bg-gradient-to-r from-cm-green to-blue-700 py-3.5 text-sm font-bold text-white shadow-lg shadow-cm-green/20 transition-all hover:shadow-xl hover:-translate-y-0.5 disabled:opacity-50"
-                                    wire:loading.attr="disabled">
-                                <span wire:loading.remove wire:target="nextStep" class="flex items-center justify-center gap-2">
-                                    <span x-text="$store.lang.t('Almost There!', 'Presque Fini !')"></span>
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                                </span>
-                                <span wire:loading wire:target="nextStep">
-                                    <svg class="inline w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {{-- ═══════════ STEP 4 — "Welcome Home" — Review & Register ═══════════ --}}
-                    @elseif($step === 4)
-                    <div wire:key="step-4">
                         <h2 class="text-2xl font-extrabold text-slate-900"
                             x-text="$store.lang.t('Welcome Home! 🎉', 'Bienvenue Chez Vous ! 🎉')"></h2>
                         <p class="mt-1 text-sm text-slate-500"
@@ -571,20 +505,6 @@
                                     <p class="text-xs text-slate-500 truncate">{{ $email }}</p>
                                 </div>
                                 <button wire:click="$set('step', 2)" class="text-xs text-cm-green font-medium hover:underline"
-                                        x-text="$store.lang.t('Edit', 'Modifier')"></button>
-                            </div>
-
-                            {{-- Roots --}}
-                            <div class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 border border-slate-100">
-                                <span class="text-xl">🏠</span>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-xs text-slate-500 font-medium" x-text="$store.lang.t('Roots', 'Origines')"></p>
-                                    <p class="text-sm font-semibold text-slate-900 truncate">
-                                        {{ $home_region ?: $country_of_origin }}{{ $home_city ? ", $home_city" : '' }}
-                                    </p>
-                                    <p class="text-xs text-slate-500">{{ $language_pref === 'fr' ? '🇫🇷 Français' : '🇬🇧 English' }}</p>
-                                </div>
-                                <button wire:click="$set('step', 3)" class="text-xs text-cm-green font-medium hover:underline"
                                         x-text="$store.lang.t('Edit', 'Modifier')"></button>
                             </div>
                         </div>

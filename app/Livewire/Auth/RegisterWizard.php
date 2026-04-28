@@ -27,7 +27,7 @@ class RegisterWizard extends Component
     |----------------------------------------------------------------------
     */
     public int $step = 1;
-    public int $totalSteps = 4;
+    public int $totalSteps = 3;
 
     // Step 1 — Location
     public string $current_country = '';
@@ -66,12 +66,6 @@ class RegisterWizard extends Component
                 'phone' => 'nullable|string|max:20',
             ],
             3 => [
-                'country_of_origin' => 'required|string|max:100',
-                'home_region' => 'nullable|string|max:100',
-                'home_city' => 'nullable|string|max:100',
-                'language_pref' => 'required|in:en,fr',
-            ],
-            4 => [
                 'terms' => 'accepted',
             ],
             default => [],
@@ -90,6 +84,11 @@ class RegisterWizard extends Component
     public function updated(string $property): void
     {
         $this->validateOnly($property);
+    }
+
+    public function clearEmailError(): void
+    {
+        $this->resetErrorBag('email');
     }
 
     public function nextStep(): void
@@ -150,8 +149,7 @@ class RegisterWizard extends Component
         return match ($this->step) {
             1 => $this->aiLocationMessage(),
             2 => $this->aiAccountMessage(),
-            3 => $this->aiOriginMessage(),
-            4 => $this->aiSummaryMessage(),
+            3 => $this->aiSummaryMessage(),
             default => '',
         };
     }

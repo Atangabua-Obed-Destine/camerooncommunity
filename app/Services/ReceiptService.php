@@ -59,15 +59,19 @@ class ReceiptService
 
         $allDelivered = $this->isAllDelivered($message);
 
-        broadcast(new MessageDelivered(
-            tenantId: $message->tenant_id,
-            senderId: $message->user_id,
-            messageId: $message->id,
-            roomId: $message->room_id,
-            byUserId: $userId,
-            deliveredAt: $now->toIso8601String(),
-            allDelivered: $allDelivered
-        ));
+        try {
+            broadcast(new MessageDelivered(
+                tenantId: $message->tenant_id,
+                senderId: $message->user_id,
+                messageId: $message->id,
+                roomId: $message->room_id,
+                byUserId: $userId,
+                deliveredAt: $now->toIso8601String(),
+                allDelivered: $allDelivered
+            ));
+        } catch (\Throwable $e) {
+            \Log::warning('Broadcast MessageDelivered failed: '.$e->getMessage());
+        }
     }
 
     /**
@@ -129,15 +133,19 @@ class ReceiptService
                 $allReadMap[$m->id] = $this->isAllRead($m);
             }
 
-            broadcast(new MessageRead(
-                tenantId: $msgs->first()->tenant_id,
-                senderId: (int) $senderId,
-                roomId: $room->id,
-                byUserId: $userId,
-                messageIds: $messageIds,
-                readAt: $now->toIso8601String(),
-                allReadMap: $allReadMap
-            ));
+            try {
+                broadcast(new MessageRead(
+                    tenantId: $msgs->first()->tenant_id,
+                    senderId: (int) $senderId,
+                    roomId: $room->id,
+                    byUserId: $userId,
+                    messageIds: $messageIds,
+                    readAt: $now->toIso8601String(),
+                    allReadMap: $allReadMap
+                ));
+            } catch (\Throwable $e) {
+                \Log::warning('Broadcast MessageRead failed: '.$e->getMessage());
+            }
         }
     }
 

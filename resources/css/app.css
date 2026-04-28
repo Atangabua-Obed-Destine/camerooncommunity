@@ -3357,7 +3357,7 @@
     align-items: center;
     gap: 20px;
     padding: 14px 16px;
-    background: var(--color-cm-green);
+    background: linear-gradient(135deg, #015083 0%, #01395e 100%);
     color: #fff;
     min-height: 52px;
 }
