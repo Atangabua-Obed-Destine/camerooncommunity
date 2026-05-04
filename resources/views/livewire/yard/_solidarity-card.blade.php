@@ -43,5 +43,10 @@
         <a href="#contribute-{{ $campaign->id }}" class="block w-full text-center rounded-lg bg-cm-green py-2 text-xs font-bold text-white hover:bg-cm-green-light transition-colors">
             <span x-text="$store.lang.t('Contribute Now', 'Contribuer Maintenant')"></span>
         </a>
+        <button type="button"
+                @click.stop="$dispatch('open-share-to-chat', { type: 'solidarity', id: {{ $campaign->id }} })"
+                class="mt-1.5 block w-full text-center rounded-lg border border-cm-green/30 bg-white py-1.5 text-[11px] font-semibold text-cm-green hover:bg-cm-green/10 transition-colors">
+            🔗 <span x-text="$store.lang.t('Share to chat', 'Partager au chat')"></span>
+        </button>
     </div>
 </div>

@@ -92,8 +92,9 @@
                         : ['What can I do here?', 'How does Solidarity work?', 'Help me find Cameroonians near me'];
                 @endphp
                 @foreach($suggestions as $s)
-                <button wire:click="$set('input', '{{ addslashes($s) }}'); $wire.send()"
-                        class="px-3 py-1.5 text-xs bg-cm-green/5 text-cm-green rounded-full border border-cm-green/20 hover:bg-cm-green/10 transition-colors">
+                <button wire:click="sendSuggestion(@js($s))"
+                        wire:loading.attr="disabled"
+                        class="px-3 py-1.5 text-xs bg-cm-green/5 text-cm-green rounded-full border border-cm-green/20 hover:bg-cm-green/10 transition-colors disabled:opacity-50">
                     {{ $s }}
                 </button>
                 @endforeach

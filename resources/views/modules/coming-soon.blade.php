@@ -1,5 +1,5 @@
 <x-layouts.app>
-    <x-slot:title>{{ $moduleName }} — Cameroon Community</x-slot:title>
+    <x-slot:title>{{ $moduleName }} — Cameroon Network</x-slot:title>
 
     <div class="min-h-[calc(100vh-8rem)] flex items-center justify-center py-12 px-4">
         <div class="max-w-lg w-full text-center" x-data="{ email: '', submitted: false, loading: false }">
@@ -32,7 +32,7 @@
             </p>
 
             <p class="text-slate-600 mb-8" x-text="$store.lang.t(
-                'We\\'re building something amazing for the Cameroon Community. Be the first to know when {{ $moduleName }} launches!',
+                'We\\'re building something amazing for the Cameroon Network. Be the first to know when {{ $moduleName }} launches!',
                 'Nous construisons quelque chose d\\'incroyable pour la communauté camerounaise. Soyez le premier informé du lancement de {{ $moduleName }} !'
             )"></p>
 

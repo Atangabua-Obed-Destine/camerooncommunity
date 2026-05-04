@@ -1,6 +1,6 @@
 {{--
     ═══════════════════════════════════════════════════════════════════
-    Cameroon Community — Interactive Registration Wizard (Split-Screen)
+    Cameroon Network — Interactive Registration Wizard (Split-Screen)
     Left:  Cameroon-themed branding panel with features & stats
     Right: 4-step wizard: Location → Account → Roots → Welcome Home
     ═══════════════════════════════════════════════════════════════════
@@ -30,9 +30,9 @@
         },
         async detectByIP() {
             try {
-                const resp = await fetch('http://ip-api.com/json/?fields=status,country,city,regionName,lat,lon');
+                const resp = await fetch('{{ route("geo.ip") }}');
                 const data = await resp.json();
-                if (data.status === 'success') $wire.setLocation(data.lat, data.lon, data.country, data.regionName || '');
+                if (!data.error) $wire.setLocation(data.latitude, data.longitude, data.country_name || '', data.region || '');
             } catch {}
             this.detecting = false;
         }
@@ -72,7 +72,7 @@
             <div>
                 <a href="{{ route('home') }}" class="inline-flex items-center group">
                     @if($__siteLogo ?? null)
-                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-[120px] object-contain transition-transform group-hover:scale-110">
+                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-[120px] object-contain transition-transform group-hover:scale-110">
                     @else
                         <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
                     @endif
@@ -167,7 +167,7 @@
             <div class="text-center mb-5 lg:hidden">
                 <a href="{{ route('home') }}" class="inline-flex items-center group">
                     @if($__siteLogo ?? null)
-                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-20 object-contain transition-transform group-hover:scale-110">
+                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-20 object-contain transition-transform group-hover:scale-110">
                     @else
                         <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
                     @endif
@@ -185,9 +185,13 @@
             <div class="flex items-center justify-between mb-5 px-1">
                 @foreach($stepIcons as $i => $meta)
                 <div class="flex items-center {{ $i < 3 ? 'flex-1' : '' }}">
-                    <div class="flex flex-col items-center gap-1">
+                    @php $clickable = $i < $step; @endphp
+                    <button type="button"
+                            @if($clickable) wire:click="goToStep({{ $i }})" @else disabled @endif
+                            class="flex flex-col items-center gap-1 group {{ $clickable ? 'cursor-pointer' : 'cursor-default' }}"
+                            @if($clickable) title="{{ __('Go back to') }} {{ $meta['en'] }}" @endif>
                         <div class="flex h-9 w-9 items-center justify-center rounded-full text-sm transition-all duration-500
-                            {{ $step > $i ? 'bg-cm-green text-white shadow-md shadow-cm-green/30' :
+                            {{ $step > $i ? 'bg-cm-green text-white shadow-md shadow-cm-green/30 group-hover:scale-110 group-hover:shadow-lg' :
                                ($step === $i ? 'bg-cm-green text-white shadow-lg shadow-cm-green/40 scale-110 ring-4 ring-cm-green/20' :
                                'bg-slate-100 text-slate-400') }}">
                             @if($step > $i)
@@ -196,9 +200,9 @@
                                 <span>{{ $meta['icon'] }}</span>
                             @endif
                         </div>
-                        <span class="text-[10px] font-semibold hidden sm:block transition-colors {{ $step >= $i ? 'text-cm-green' : 'text-slate-400' }}"
+                        <span class="text-[10px] font-semibold hidden sm:block transition-colors {{ $step >= $i ? 'text-cm-green' : 'text-slate-400' }} {{ $clickable ? 'group-hover:underline' : '' }}"
                               x-text="$store.lang.t('{{ $meta['en'] }}', '{{ $meta['fr'] }}')"></span>
-                    </div>
+                    </button>
                     @if($i < 3)
                     <div class="flex-1 mx-2 h-0.5 rounded-full transition-all duration-700 {{ $step > $i ? 'bg-cm-green' : 'bg-slate-200' }}"></div>
                     @endif
@@ -241,10 +245,10 @@
                     @if($step === 1)
                     <div wire:key="step-1">
                         <h2 class="text-2xl font-extrabold text-slate-900"
-                            x-text="$store.lang.t('Let’s personalize your experience', 'Personnalisons votre expérience')"></h2>
+                            x-text="$store.lang.t('Let's personalize your experience', 'Personnalisons votre expérience')"></h2>
                         <p class="mt-1 text-sm text-slate-500"
                            x-text="$store.lang.t(
-                               'Tell us which community you’d like to join — you can change this anytime.',
+                               'Tell us which community you'd like to join — you can change this anytime.',
                                'Dites-nous à quelle communauté vous souhaitez vous joindre — modifiable à tout moment.'
                            )"></p>
 
@@ -377,7 +381,7 @@
                                 @if($username)
                                     <p class="mt-1 text-xs text-slate-500">
                                         <span x-text="$store.lang.t('You\'ll be known as:', 'Vous serez connu sous:')"></span>
-                                        <span class="font-semibold text-cm-green">{{ strtolower(preg_replace('/\s+/', '', trim($username))) }}<span class="text-slate-400">*****</span></span>
+                                        <span class="font-semibold text-cm-green">{{ strtolower(preg_replace('/\s+/', '', trim($username))) }}-<span class="text-slate-400">*****</span></span>
                                     </p>
                                 @endif
                                 @error('username') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
@@ -388,16 +392,28 @@
                                 <label class="block text-sm font-medium text-slate-700 mb-1"
                                        x-text="$store.lang.t('Email Address', 'Adresse Email')"></label>
                                 <input wire:model.live.debounce.600ms="email" type="email"
-                                       x-on:input="$wire.clearEmailError()"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                                        placeholder="you@example.com">
-                                @error('email') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
+                                <div wire:loading wire:target="email" class="mt-1 text-xs text-slate-400"
+                                     x-text="$store.lang.t('Checking availability...', 'Vérification de la disponibilité...')"></div>
+                                @error('email')
+                                    <p class="mt-1 text-xs text-cm-red flex items-center gap-1">
+                                        <span>âš </span><span>{{ $message }}</span>
+                                    </p>
+                                @else
+                                    @if($email && filter_var($email, FILTER_VALIDATE_EMAIL))
+                                        <p class="mt-1 text-xs text-cm-green flex items-center gap-1" wire:loading.remove wire:target="email">
+                                            <span>✓</span>
+                                            <span x-text="$store.lang.t('Email is available', 'Email disponible')"></span>
+                                        </p>
+                                    @endif
+                                @enderror
                             </div>
 
                             {{-- Password --}}
                             <div x-data="{
                                 show: false,
-                                pwd: '',
+                                pwd: @js($password),
                                 get reqLength() { return this.pwd.length >= 8; },
                                 get reqUpper()  { return /[A-Z]/.test(this.pwd); },
                                 get reqLower()  { return /[a-z]/.test(this.pwd); },
@@ -448,11 +464,31 @@
                             </div>
 
                             {{-- Confirm Password --}}
-                            <div>
+                            <div x-data="{ confirm: @js($password_confirmation), pwd: @js($password) }"
+                                 x-init="$watch('confirm', v => $wire.set('password_confirmation', v, false))">
                                 <label class="block text-sm font-medium text-slate-700 mb-1"
                                        x-text="$store.lang.t('Confirm Password', 'Confirmer le Mot de Passe')"></label>
-                                <input wire:model.blur="password_confirmation" type="password"
-                                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green">
+                                <input x-model="confirm"
+                                       @input="pwd = $wire.password"
+                                       type="password"
+                                       class="w-full rounded-xl border px-4 py-3 text-sm outline-none transition-colors focus:ring-1"
+                                       :class="confirm.length === 0
+                                           ? 'border-slate-300 focus:border-cm-green focus:ring-cm-green'
+                                           : (confirm === pwd
+                                               ? 'border-cm-green focus:border-cm-green focus:ring-cm-green'
+                                               : 'border-cm-red focus:border-cm-red focus:ring-cm-red')">
+                                <template x-if="confirm.length > 0 && confirm !== pwd">
+                                    <p class="mt-1 text-xs text-cm-red flex items-center gap-1">
+                                        <span>âš </span>
+                                        <span x-text="$store.lang.t('Passwords do not match', 'Les mots de passe ne correspondent pas')"></span>
+                                    </p>
+                                </template>
+                                <template x-if="confirm.length > 0 && confirm === pwd">
+                                    <p class="mt-1 text-xs text-cm-green flex items-center gap-1">
+                                        <span>✓</span>
+                                        <span x-text="$store.lang.t('Passwords match', 'Les mots de passe correspondent')"></span>
+                                    </p>
+                                </template>
                             </div>
                         </div>
 
@@ -492,8 +528,8 @@
                                     <p class="text-xs text-slate-500 font-medium" x-text="$store.lang.t('Location', 'Position')"></p>
                                     <p class="text-sm font-semibold text-slate-900 truncate">{{ $current_region ? "$current_region, " : '' }}{{ $current_country }}</p>
                                 </div>
-                                <button wire:click="$set('step', 1)" class="text-xs text-cm-green font-medium hover:underline"
-                                        x-text="$store.lang.t('Edit', 'Modifier')"></button>
+                                <span class="text-[10px] uppercase tracking-wide text-slate-400 font-medium"
+                                      x-text="$store.lang.t('Auto', 'Auto')"></span>
                             </div>
 
                             {{-- Account --}}
@@ -501,7 +537,7 @@
                                 <span class="text-xl">👤</span>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-xs text-slate-500 font-medium" x-text="$store.lang.t('Account', 'Compte')"></p>
-                                    <p class="text-sm font-semibold text-slate-900 truncate">@ {{ strtolower(preg_replace('/\s+/', '', trim($username))) }}****</p>
+                                    <p class="text-sm font-semibold text-slate-900 truncate">@ {{ strtolower(preg_replace('/\s+/', '', trim($username))) }}-****</p>
                                     <p class="text-xs text-slate-500 truncate">{{ $email }}</p>
                                 </div>
                                 <button wire:click="$set('step', 2)" class="text-xs text-cm-green font-medium hover:underline"

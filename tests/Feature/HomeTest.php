@@ -25,7 +25,7 @@ class HomeTest extends TestCase
     public function test_landing_page_contains_platform_name(): void
     {
         $response = $this->get('/');
-        $response->assertSee('Cameroon Community');
+        $response->assertSee('Cameroon Network');
     }
 
     public function test_coming_soon_modules_load(): void

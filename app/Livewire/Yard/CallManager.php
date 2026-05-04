@@ -94,8 +94,14 @@ class CallManager extends Component
         $this->callStatus = 'outgoing';
         $this->refreshParticipants();
 
-        // Broadcast to room
-        $this->broadcastToOthers(new CallStarted($call, $user->username ?? $user->name));
+        // Broadcast to room (each recipient resolves their own nickname for
+            // the caller client-side; here we send the *raw* name so other
+            // contexts that haven't saved a nickname still see something useful)
+        $this->broadcastToOthers(new CallStarted(
+            $call,
+            $user->username ?? $user->name,
+            $user->avatar ? asset('storage/' . $user->avatar) : null,
+        ));
 
         // Get the other participant info for the call UI
         $otherUser = $room->members()
@@ -108,8 +114,8 @@ class CallManager extends Component
             'callId' => $call->id,
             'callType' => $type,
             'roomId' => $roomId,
-            'calleeName' => $otherUser?->username ?? $otherUser?->name ?? $room->name,
-            'calleeAvatar' => $otherUser?->avatar ?? null,
+            'calleeName' => $otherUser ? $user->displayNameFor($otherUser) : $room->name,
+            'calleeAvatar' => $otherUser?->avatar ? asset('storage/' . $otherUser->avatar) : null,
             'calleeOnline' => $otherUser?->last_active_at && $otherUser->last_active_at->gt(now()->subMinutes(5)),
             'isInitiator' => true,
         ]);
@@ -272,7 +278,22 @@ class CallManager extends Component
         $user = Auth::user();
         $call = YardCall::where('uuid', $callUuid)->first();
 
-        if (! $call || ! $call->isActive()) {
+        if (! $call) {
+            \Log::warning("CallManager.sendSignal: call {$callUuid} not found", [
+                'from' => $user?->id, 'to' => $toUserId, 'type' => $signalType,
+            ]);
+            return;
+        }
+
+        // ICE candidates may legitimately arrive moments after a call ends —
+        // dropping them silently used to mask real connection failures, so log
+        // when this happens to make diagnosis possible.
+        if (! $call->isActive()) {
+            \Log::info("CallManager.sendSignal: dropping {$signalType} on inactive call {$callUuid}", [
+                'status' => $call->status,
+                'from'   => $user?->id,
+                'to'     => $toUserId,
+            ]);
             return;
         }
 
@@ -316,14 +337,15 @@ class CallManager extends Component
             return;
         }
 
+        $viewer = Auth::user();
         $this->participants = YardCallParticipant::where('call_id', $this->activeCallId)
             ->with('user:id,name,username,avatar,last_active_at')
             ->get()
             ->map(fn ($p) => [
                 'user_id' => $p->user_id,
-                'name' => $p->user->username ?? $p->user->name ?? 'Unknown',
-                'initial' => strtoupper(substr($p->user->username ?? $p->user->name ?? 'U', 0, 1)),
-                'avatar' => $p->user->avatar ?? null,
+                'name' => $viewer ? $viewer->displayNameFor($p->user) : ($p->user->username ?? $p->user->name ?? 'Unknown'),
+                'initial' => strtoupper(substr($viewer ? $viewer->displayNameFor($p->user) : ($p->user->username ?? $p->user->name ?? 'U'), 0, 1)),
+                'avatar' => $p->user->avatar ? asset('storage/' . $p->user->avatar) : null,
                 'is_online' => $p->user->last_active_at && $p->user->last_active_at->gt(now()->subMinutes(5)),
                 'status' => $p->status,
                 'is_muted' => $p->is_muted,

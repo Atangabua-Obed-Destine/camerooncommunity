@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class RegisterWizard extends Component
@@ -26,6 +27,7 @@ class RegisterWizard extends Component
     |  4 — "Welcome Home" — Review, terms, register
     |----------------------------------------------------------------------
     */
+    #[Url(as: 'step', except: 1, history: true)]
     public int $step = 1;
     public int $totalSteps = 3;
 
@@ -83,18 +85,33 @@ class RegisterWizard extends Component
 
     public function updated(string $property): void
     {
-        $this->validateOnly($property);
-    }
+        // Clamp the URL-bound step to a valid range so a manual ?step=99
+        // can't break the wizard rendering.
+        if ($property === 'step') {
+            $this->step = max(1, min($this->step, $this->totalSteps));
+            return;
+        }
 
-    public function clearEmailError(): void
-    {
-        $this->resetErrorBag('email');
+        $this->validateOnly($property);
     }
 
     public function nextStep(): void
     {
         $this->validate();
         $this->step = min($this->step + 1, $this->totalSteps);
+    }
+
+    /**
+     * Jump backward to an earlier step via the progress indicator.
+     * Only allows going to a step the user has already completed —
+     * forward navigation must still go through nextStep() so validation runs.
+     */
+    public function goToStep(int $target): void
+    {
+        $target = max(1, min($target, $this->totalSteps));
+        if ($target < $this->step) {
+            $this->step = $target;
+        }
     }
 
     public function previousStep(): void
@@ -254,15 +271,16 @@ class RegisterWizard extends Component
             'language_pref' => 'required|in:en,fr',
         ]);
 
-        // Generate unique username: join words, lowercase, append 4 random alphanumeric chars (guaranteed mix)
+        // Generate unique username: join words, lowercase, append a hyphen
+        // and 5 random alphanumeric chars (guaranteed mix of letters/digits)
         $baseUsername = strtolower(preg_replace('/\s+/', '', trim($this->username)));
         $suffix = chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122)); // e.g. a3k7b
-        $finalUsername = $baseUsername . $suffix;
+        $finalUsername = $baseUsername . '-' . $suffix;
 
         // Ensure uniqueness (extremely unlikely collision but be safe)
         while (User::withoutGlobalScopes()->where('username', $finalUsername)->exists()) {
             $suffix = chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122));
-            $finalUsername = $baseUsername . $suffix;
+            $finalUsername = $baseUsername . '-' . $suffix;
         }
 
         $tenant = Tenant::first();

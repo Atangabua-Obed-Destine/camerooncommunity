@@ -270,4 +270,55 @@ class YardController extends Controller
 
         return response()->json(['status' => 'ok', 'connection_state' => 'connected']);
     }
+
+    /**
+     * Save (or clear) a per-viewer nickname for another user — WhatsApp-style
+     * "Save contact as...". Pass an empty `nickname` to delete it.
+     */
+    public function saveNickname(Request $request)
+    {
+        $data = $request->validate([
+            'user_id'  => 'required|integer|exists:users,id|different:_self',
+            'nickname' => 'nullable|string|max:60',
+        ]);
+
+        $user = $request->user();
+        $targetId = (int) $data['user_id'];
+        if ($targetId === $user->id) {
+            return response()->json(['error' => 'cannot_rename_self'], 422);
+        }
+
+        $nickname = trim((string) ($data['nickname'] ?? ''));
+
+        if ($nickname === '') {
+            \App\Models\UserContactName::where('owner_user_id', $user->id)
+                ->where('contact_user_id', $targetId)
+                ->delete();
+            \Cache::driver('array')->forget("ucn.{$user->id}.{$targetId}");
+            return response()->json(['status' => 'cleared', 'nickname' => null]);
+        }
+
+        \App\Models\UserContactName::updateOrCreate(
+            ['owner_user_id' => $user->id, 'contact_user_id' => $targetId],
+            ['tenant_id' => $user->tenant_id, 'nickname' => $nickname],
+        );
+        \Cache::driver('array')->forget("ucn.{$user->id}.{$targetId}");
+
+        return response()->json(['status' => 'saved', 'nickname' => $nickname]);
+    }
+
+    /**
+     * Lightweight lookup: return the saved nickname (if any) the current
+     * viewer has for another user. Used by the call engine so an incoming
+     * call shows the saved contact name instead of the raw username.
+     */
+    public function getNickname(Request $request, int $userId)
+    {
+        $viewer = $request->user();
+        if (!$viewer || $userId === $viewer->id) {
+            return response()->json(['nickname' => null]);
+        }
+        $nickname = $viewer->nicknameFor($userId);
+        return response()->json(['nickname' => $nickname]);
+    }
 }

@@ -51,7 +51,7 @@
                     <div class="md:col-span-2">
                         <input type="text" name="site_name" value="{{ old('site_name', $branding['site_name']) }}" required maxlength="100"
                                class="w-full max-w-md rounded-lg border-slate-300 text-sm focus:ring-cm-green focus:border-cm-green"
-                               placeholder="Cameroon Community">
+                               placeholder="Cameroon Network">
                     </div>
                 </div>
 

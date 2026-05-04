@@ -40,6 +40,9 @@ class YardMessage extends Model
         'pinned_by',
         'is_forwarded',
         'solidarity_campaign_id',
+        'mentioned_user_ids',
+        'shareable_type',
+        'shareable_id',
     ];
 
     protected function casts(): array
@@ -50,6 +53,7 @@ class YardMessage extends Model
             'translated_content' => 'array',
             'ai_moderation_detail' => 'array',
             'reactions_count' => 'array',
+            'mentioned_user_ids' => 'array',
             'is_edited' => 'boolean',
             'is_deleted' => 'boolean',
             'is_flagged' => 'boolean',

@@ -27,6 +27,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'phone',
         'password',
         'avatar',
+        'cover_photo',
         'bio',
         'country_of_origin',
         'home_region',
@@ -149,5 +150,22 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $c = $this->connectionWith($otherUserId);
         return $c !== null && $c->status === UserConnection::STATUS_BLOCKED;
+    }
+
+    /**
+     * The custom name *this* user has saved for `$otherUserId`, or null.
+     */
+    public function nicknameFor(int $otherUserId): ?string
+    {
+        return UserContactName::nickname($this->id, $otherUserId);
+    }
+
+    /**
+     * Display name for `$other` from this user's perspective:
+     * nickname if saved, else username, else name.
+     */
+    public function displayNameFor(?User $other): string
+    {
+        return UserContactName::displayName($this->id, $other);
     }
 }

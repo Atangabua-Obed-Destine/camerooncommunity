@@ -18,7 +18,7 @@ return [
     'discover' => 'Discover',
 
     // Hero
-    'hero_title' => 'Your Cameroon Community. Wherever You Are.',
+    'hero_title' => 'Your Cameroon Network. Wherever You Are.',
     'hero_subtitle' => 'Connect with Cameroonians in your city and country. Find housing, send packages home, get help — all in one place built just for you.',
     'gps_detected' => 'We detected you\'re in :country — your community is here',
     'members_connected' => ':count Cameroonians already connected',
@@ -32,7 +32,7 @@ return [
     'problem_2_solve' => 'KamerNest has verified listings',
     'problem_3' => 'Sending things home costs too much',
     'problem_3_solve' => 'EasyGoParcel connects travellers',
-    'problem_transition' => 'Cameroon Community was built because these problems are real.',
+    'problem_transition' => 'Cameroon Network was built because these problems are real.',
 
     // Module preview
     'modules_title' => 'Everything a Cameroonian needs. In one place.',
@@ -69,7 +69,7 @@ return [
 
     // CTA
     'cta_title' => 'Your community is already waiting for you.',
-    'cta_button' => 'Join Cameroon Community — It\'s Free',
+    'cta_button' => 'Join Cameroon Network — It\'s Free',
     'cta_subtext' => 'No credit card. No fees. Just your community.',
 
     // Footer
@@ -120,7 +120,7 @@ return [
     'city_room_prompt' => ':count Cameroonians are already in the :city Room. Want to join?',
     'join' => 'Join',
     'maybe_later' => 'Maybe Later',
-    'kamer_welcome' => 'Hi :name! I\'m Kamer, your guide on Cameroon Community. What would you like to explore first?',
+    'kamer_welcome' => 'Hi :name! I\'m Kamer, your guide on Cameroon Network. What would you like to explore first?',
 
     // Yard
     'search_rooms' => 'Search rooms...',

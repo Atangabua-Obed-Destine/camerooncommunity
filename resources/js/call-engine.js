@@ -1,5 +1,5 @@
 /**
- * Cameroon Community — WebRTC Call Engine (Alpine.js component)
+ * Cameroon Network — WebRTC Call Engine (Alpine.js component)
  * Handles peer connections, media streams, and signaling via Livewire + Echo.
  */
 document.addEventListener('alpine:init', () => {
@@ -58,13 +58,19 @@ document.addEventListener('alpine:init', () => {
         _iceReady: false,
 
         init() {
-            // Fetch TURN credentials from Metered
-            this.fetchTurnServers();
+            // Fetch TURN credentials FIRST so any immediate call has a full ICE
+            // server list. Without this, an immediately-initiated call falls
+            // back to STUN-only and silently fails to connect across NATs.
+            // Wrapped so init() stays sync-friendly for Alpine.
+            (async () => {
+                try { await this.fetchTurnServers(); } catch (e) { /* falls back to STUN */ }
+            })();
 
             // Subscribe to user-specific call channel so we receive
             // incoming calls regardless of which room is currently open
             if (window.Echo) {
                 const userCallChannel = `tenant.${tenantId}.user.${currentUserId}.calls`;
+                this._userCallChannelName = userCallChannel;
                 this._userCallChannel = window.Echo.channel(userCallChannel);
                 this._userCallChannel.listen('.CallStarted', (data) => {
                     if (data.initiated_by !== currentUserId) {
@@ -80,19 +86,37 @@ document.addEventListener('alpine:init', () => {
             // (needed for CallSignal and CallUpdated during active calls)
             window.addEventListener('room-selected', (e) => {
                 const roomId = e.detail?.roomId;
-                if (roomId) this.subscribeToRoom(roomId);
+                if (roomId) {
+                    this.subscribeToRoom(roomId);
+                } else {
+                    this.unsubscribeRoom();
+                }
+            });
+
+            // When the user logs out / leaves the page, drop the user channel too.
+            window.addEventListener('pagehide', () => {
+                try { if (this._userCallChannel && window.Echo && this._userCallChannelName) window.Echo.leave(this._userCallChannelName); } catch(_) {}
+                this.unsubscribeRoom();
             });
         },
 
-        subscribeToRoom(roomId) {
-            if (this._echoChannel) {
-                // Already subscribed — skip if same room
-                if (this._echoChannel._roomId === roomId) return;
+        unsubscribeRoom() {
+            if (this._echoChannel && this._echoChannelName && window.Echo) {
+                try { window.Echo.leave(this._echoChannelName); } catch (_) {}
             }
+            this._echoChannel = null;
+            this._echoChannelName = null;
+        },
 
+        subscribeToRoom(roomId) {
             const channelName = `tenant.${tenantId}.room.${roomId}`;
+            // Same room — no-op.
+            if (this._echoChannelName === channelName) return;
+            // Different room — leave the previous one before subscribing.
+            this.unsubscribeRoom();
 
             if (window.Echo) {
+                this._echoChannelName = channelName;
                 this._echoChannel = window.Echo.channel(channelName);
                 this._echoChannel._roomId = roomId;
 
@@ -170,11 +194,36 @@ document.addEventListener('alpine:init', () => {
                 callType: data.call_type,
                 roomId: data.room_id,
                 callerName: data.caller_name,
+                callerAvatar: data.caller_avatar || null,
                 roomName: data.caller_name, // for DMs
             };
             this.callUuid = data.call_uuid;
             this.callType = data.call_type;
             this.callRoomId = data.room_id;
+            // Use the caller avatar as the "other side" avatar so the active
+            // call UI keeps the same profile picture once we accept.
+            this.calleeAvatar = data.caller_avatar || null;
+            this.calleeName = data.caller_name || '';
+
+            // Resolve the saved contact nickname (if the recipient has one)
+            // so the incoming-call card shows the personalized name instead
+            // of the raw username broadcast by the initiator.
+            if (data.initiated_by) {
+                fetch(`/camerooncommunity/public/yard/contacts/nickname/${data.initiated_by}`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin',
+                })
+                    .then(r => r.ok ? r.json() : null)
+                    .then(j => {
+                        if (j && j.nickname && this.incomingCall && this.incomingCall.callUuid === data.call_uuid) {
+                            this.incomingCall.callerName = j.nickname;
+                            this.incomingCall.roomName  = j.nickname;
+                            this.calleeName = j.nickname;
+                            this.callerName = j.nickname;
+                        }
+                    })
+                    .catch(() => { /* fall back to broadcast name */ });
+            }
 
             // Subscribe to the room channel immediately so we receive
             // CallUpdated (ended/declined) even before accepting the call
@@ -237,6 +286,15 @@ document.addEventListener('alpine:init', () => {
             if (data.user_id === currentUserId) return;
 
             if (data.action === 'joined') {
+                // Glare avoidance: when both peers receive each other's `joined`
+                // event ~simultaneously they would both create offers, racing on
+                // the same connection. We deterministically nominate the peer
+                // with the LOWER user id as the offerer (the one who joined
+                // first by id). The initiator of the call is always the offerer
+                // toward newcomers (callState === 'outgoing').
+                const isInitiator = (this.callState === 'outgoing');
+                const shouldOffer = isInitiator ? true : (currentUserId < data.user_id);
+
                 // Someone answered — transition to active
                 if (this.callState === 'outgoing') {
                     this.callState = 'active';
@@ -250,10 +308,10 @@ document.addEventListener('alpine:init', () => {
                     });
 
                     // Create peer connection to the joined user
-                    this.createPeerConnection(data.user_id, data.user_name, true);
+                    this.createPeerConnection(data.user_id, data.user_name, shouldOffer);
                 } else if (this.callState === 'active') {
                     // Additional person joining group call
-                    this.createPeerConnection(data.user_id, data.user_name, true);
+                    this.createPeerConnection(data.user_id, data.user_name, shouldOffer);
                     this.$wire.call('refreshParticipants').then(() => {
                         this.callParticipants = this.$wire.get('participants') || [];
                     });
@@ -440,6 +498,17 @@ document.addEventListener('alpine:init', () => {
             if (!pc.remoteDescription || !pc.remoteDescription.type) {
                 if (!this._pendingCandidates[peerId]) {
                     this._pendingCandidates[peerId] = [];
+                    // Safety net: if no offer/answer arrives within 15s the
+                    // buffered candidates are stale — drop them so the next
+                    // negotiation cycle (e.g. ICE restart) starts clean and
+                    // we don't leak unbounded memory.
+                    setTimeout(() => {
+                        const stillPc = this.peers[peerId];
+                        if (stillPc && (!stillPc.remoteDescription || !stillPc.remoteDescription.type)) {
+                            console.warn('[CallEngine] Dropping ICE buffer for peer ' + peerId + ' — no remote description after 15s');
+                            delete this._pendingCandidates[peerId];
+                        }
+                    }, 15000);
                 }
                 this._pendingCandidates[peerId].push(data.candidate);
                 return;

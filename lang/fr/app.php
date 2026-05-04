@@ -32,7 +32,7 @@ return [
     'problem_2_solve' => 'KamerNest a des annonces vérifiées',
     'problem_3' => 'Envoyer des choses au pays coûte trop cher',
     'problem_3_solve' => 'EasyGoParcel connecte les voyageurs',
-    'problem_transition' => 'Cameroon Community a été créé parce que ces problèmes sont réels.',
+    'problem_transition' => 'Cameroon Network a été créé parce que ces problèmes sont réels.',
 
     // Module preview
     'modules_title' => 'Tout ce dont un Camerounais a besoin. En un seul endroit.',
@@ -69,7 +69,7 @@ return [
 
     // CTA
     'cta_title' => 'Votre communauté vous attend déjà.',
-    'cta_button' => 'Rejoignez Cameroon Community — C\'est gratuit',
+    'cta_button' => 'Rejoignez Cameroon Network — C\'est gratuit',
     'cta_subtext' => 'Pas de carte de crédit. Pas de frais. Juste votre communauté.',
 
     // Footer
@@ -120,7 +120,7 @@ return [
     'city_room_prompt' => ':count Camerounais sont déjà dans le salon de :city. Voulez-vous rejoindre ?',
     'join' => 'Rejoindre',
     'maybe_later' => 'Peut-être plus tard',
-    'kamer_welcome' => 'Salut :name ! Je suis Kamer, votre guide sur Cameroon Community. Que souhaitez-vous explorer en premier ?',
+    'kamer_welcome' => 'Salut :name ! Je suis Kamer, votre guide sur Cameroon Network. Que souhaitez-vous explorer en premier ?',
 
     // Yard
     'search_rooms' => 'Rechercher des salons...',

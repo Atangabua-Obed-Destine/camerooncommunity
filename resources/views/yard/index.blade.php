@@ -1,7 +1,7 @@
 <x-layouts.app :yardMode="true">
-    <x-slot:title>The Yard — Cameroon Community</x-slot:title>
+    <x-slot:title>The Yard — Cameroon Network</x-slot:title>
 
-    <div class="yard-container" x-data="yardApp()" @room-selected.window="onRoomSelected($event.detail)" @toggle-room-info.window="toggleInfo()" @room-type-changed.window="activeRoomType = $event.detail.roomType"
+    <div class="yard-container" x-data="yardApp()" @room-selected.window="onRoomSelected($event.detail)" @yard-back.window="goBack()" @yard-open-new-chat.window="openNewChat()" @toggle-room-info.window="toggleInfo()" @room-type-changed.window="activeRoomType = $event.detail.roomType"
          @open-dm.window="startDmWith($event.detail.userId)"
          @connection-updated.window="syncConnectionState($event.detail)"
          @connection-failed.window="rollbackConnectionState($event.detail)"
@@ -10,154 +10,7 @@
         {{-- ══════════════════════════════════════════════════════
              WHATSAPP-STYLE ICON SIDEBAR (desktop only)
         ══════════════════════════════════════════════════════ --}}
-        <aside class="yard-icon-sidebar" x-data="{ expanded: true, tooltip: '' }" :class="{ 'yard-icon-sidebar--expanded': expanded }">
-            {{-- Top section: Logo + main nav --}}
-            <div class="yard-icon-sidebar__top">
-                {{-- Sidebar title --}}
-                <div class="yard-icon-sidebar__title"><span style="color:#009639">KA</span><span class="kamer-m" style="color:var(--color-cm-red)">M<span class="kamer-star kamer-star--1">★</span><span class="kamer-star kamer-star--2">★</span></span><span style="color:var(--color-cm-yellow)">ER</span></div>
-
-                {{-- The Yard (Chats) --}}
-                <a href="{{ route('yard') }}"
-                   class="yard-icon-sidebar__item yard-icon-sidebar__item--active"
-                   @mouseenter="tooltip = $store.lang.t('The Yard', 'Le Yard')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                    <span class="yard-icon-sidebar__label" x-text="$store.lang.t('The Yard', 'Le Yard')"></span>
-                </a>
-
-                {{-- Solidarity --}}
-                <a href="#"
-                   class="yard-icon-sidebar__item"
-                   @mouseenter="tooltip = $store.lang.t('Solidarity', 'Solidarité')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
-                    <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Solidarity', 'Solidarité')"></span>
-                </a>
-
-                {{-- Discover / Explore --}}
-                <a href="#"
-                   class="yard-icon-sidebar__item"
-                   @mouseenter="tooltip = $store.lang.t('Discover', 'Découvrir')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418"/></svg>
-                    <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Discover', 'Découvrir')"></span>
-                </a>
-
-                {{-- Kamer AI --}}
-                <a href="#"
-                   class="yard-icon-sidebar__item"
-                   @mouseenter="tooltip = 'Kamer AI'" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z"/></svg>
-                    <span class="yard-icon-sidebar__label">Kamer AI</span>
-                </a>
-
-                {{-- ── Coming Soon Divider ── --}}
-                <div class="yard-icon-sidebar__divider">
-                    <span class="yard-icon-sidebar__divider-label" x-text="$store.lang.t('Coming Soon', 'Bientôt')"></span>
-                </div>
-
-                {{-- Marketplace --}}
-                <div class="yard-icon-sidebar__item yard-icon-sidebar__item--soon"
-                     @mouseenter="tooltip = $store.lang.t('Marketplace — Coming Soon', 'Marketplace — Bientôt')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
-                    <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Marketplace', 'Marketplace')"></span>
-                    <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
-                </div>
-
-                {{-- EasyGoParcel --}}
-                <div class="yard-icon-sidebar__item yard-icon-sidebar__item--soon"
-                     @mouseenter="tooltip = $store.lang.t('EasyGoParcel — Coming Soon', 'EasyGoParcel — Bientôt')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/></svg>
-                    <span class="yard-icon-sidebar__label">EasyGoParcel</span>
-                    <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
-                </div>
-
-                {{-- RoadFam --}}
-                <div class="yard-icon-sidebar__item yard-icon-sidebar__item--soon"
-                     @mouseenter="tooltip = $store.lang.t('RoadFam — Coming Soon', 'RoadFam — Bientôt')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
-                    <span class="yard-icon-sidebar__label">RoadFam</span>
-                    <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
-                </div>
-
-                {{-- WorkConnect --}}
-                <div class="yard-icon-sidebar__item yard-icon-sidebar__item--soon"
-                     @mouseenter="tooltip = $store.lang.t('WorkConnect — Coming Soon', 'WorkConnect — Bientôt')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
-                    <span class="yard-icon-sidebar__label">WorkConnect</span>
-                    <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
-                </div>
-            </div>
-
-            {{-- Bottom section: Settings + Profile --}}
-            <div class="yard-icon-sidebar__bottom">
-                {{-- Language Toggle --}}
-                <button @click="$store.lang.toggle()"
-                        class="yard-icon-sidebar__item"
-                        @mouseenter="tooltip = $store.lang.isEn ? 'Français' : 'English'" @mouseleave="tooltip = ''">
-                    <span class="text-[11px] font-extrabold leading-none shrink-0" x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
-                    <span class="yard-icon-sidebar__label" x-text="$store.lang.isEn ? 'Français' : 'English'"></span>
-                </button>
-
-                {{-- Settings --}}
-                <a href="#"
-                   class="yard-icon-sidebar__item"
-                   @mouseenter="tooltip = $store.lang.t('Settings', 'Paramètres')" @mouseleave="tooltip = ''">
-                    <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                    <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Settings', 'Paramètres')"></span>
-                </a>
-
-                {{-- Profile avatar --}}
-                <div x-data="{ profileOpen: false }" class="relative">
-                    <button @click="profileOpen = !profileOpen"
-                            class="yard-icon-sidebar__profile"
-                            @mouseenter="tooltip = '{{ auth()->user()->username ?? auth()->user()->name }}'" @mouseleave="tooltip = ''">
-                        <span class="yard-icon-sidebar__avatar {{ auth()->user()->avatar ? 'p-0 overflow-hidden' : '' }}">
-                            @if(auth()->user()->avatar)
-                                <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
-                            @else
-                                {{ substr(auth()->user()->username ?? auth()->user()->name ?? 'U', 0, 1) }}
-                            @endif
-                        </span>
-                        <span class="yard-icon-sidebar__profile-info">
-                            <span class="yard-icon-sidebar__profile-name">{{ auth()->user()->username ?? auth()->user()->name }}</span>
-                            <span class="yard-icon-sidebar__profile-email">{{ auth()->user()->email }}</span>
-                        </span>
-                    </button>
-
-                    {{-- Profile dropdown (pops right) --}}
-                    <div x-show="profileOpen" @click.away="profileOpen = false" x-transition
-                         class="absolute left-full bottom-0 ml-2 w-52 rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl z-50">
-                        <div class="px-4 py-2 border-b border-slate-100">
-                            <p class="text-sm font-bold text-slate-900 truncate">{{ auth()->user()->username ?? auth()->user()->name }}</p>
-                            <p class="text-[11px] text-slate-500 truncate">{{ auth()->user()->email }}</p>
-                        </div>
-                        <a href="{{ route('profile') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                           x-text="$store.lang.t('Profile', 'Profil')"></a>
-                        @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('admin'))
-                        <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                           x-text="$store.lang.t('Admin Panel', 'Panneau admin')"></a>
-                        @endif
-                        <hr class="my-1 border-slate-100">
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="block w-full px-4 py-2 text-left text-sm text-cm-red hover:bg-red-50 transition-colors"
-                                    x-text="$store.lang.t('Logout', 'Déconnexion')"></button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Tooltip --}}
-            <div x-show="tooltip" x-transition.opacity.duration.150ms
-                 class="yard-icon-sidebar__tooltip"
-                 :style="''"
-                 x-text="tooltip" x-cloak></div>
-
-            {{-- Edge expand/collapse handle --}}
-            <button @click="expanded = !expanded"
-                    class="yard-icon-sidebar__edge-handle"
-                    :title="expanded ? $store.lang.t('Collapse', 'Réduire') : $store.lang.t('Expand', 'Agrandir')">
-                <svg class="w-3 h-3 transition-transform duration-300" :class="expanded ? 'rotate-180' : ''" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
-            </button>
-        </aside>
+        @include('yard.partials.icon-sidebar', ['active' => 'yard'])
 
         {{-- ══════════════════════════════════════════════════════
              PANEL 1 — ROOM LIST
@@ -174,7 +27,7 @@
                     </button>
                     <h1 class="yard-header__title" x-text="$store.lang.t('The Yard', 'Le Yard')"></h1>
                     <div class="flex items-center gap-1">
-                        <button @click="Livewire.dispatch('$refresh'); $dispatch('yard-refresh')" class="yard-header__btn" :title="$store.lang.t('Refresh', 'Actualiser')">
+                        <button @click="Livewire.dispatch('refreshRoomList'); Livewire.dispatch('room-updated'); window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'success', message: $store.lang.t('Refreshed', 'Actualisé') } }))" class="yard-header__btn" :title="$store.lang.t('Refresh', 'Actualiser')">
                             <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992"/></svg>
                         </button>
                         <div class="relative" x-data="{ newOpen: false }">
@@ -186,20 +39,35 @@
                             </button>
                             <div x-show="newOpen" @click.away="newOpen = false" x-transition
                                  class="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
-                                <button @click="newOpen = false; openNewChat()" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
-                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
-                                    <span x-text="$store.lang.t('New Chat', 'Nouveau Chat')"></span>
-                                </button>
-                                <button @click="newOpen = false; Livewire.dispatch('open-communities')" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
-                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
-                                    <span x-text="$store.lang.t('New Group', 'Nouveau Groupe')"></span>
-                                </button>
                                 <button @click="newOpen = false; Livewire.dispatch('open-connections', { tab: 'requests' })" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
                                     <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
                                     <span x-text="$store.lang.t('Connections', 'Connexions')"></span>
                                     @auth
                                         <livewire:yard.connections-badge :variant="'pill'" />
                                     @endauth
+                                </button>
+                                <button @click="newOpen = false; openNewChat()" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                                    <span x-text="$store.lang.t('Chat', 'Discussion')"></span>
+                                </button>
+                                <button @click="newOpen = false; Livewire.dispatch('open-communities')" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>
+                                    <span x-text="$store.lang.t('Group', 'Groupe')"></span>
+                                </button>
+                            </div>
+                        </div>
+                        {{-- Three-dot overflow menu (Archived, etc.) --}}
+                        <div class="relative" x-data="{ moreOpen: false }">
+                            <button @click="moreOpen = !moreOpen" class="yard-header__btn" :title="$store.lang.t('More', 'Plus')" aria-label="More options">
+                                <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
+                                </svg>
+                            </button>
+                            <div x-show="moreOpen" @click.away="moreOpen = false" x-transition x-cloak
+                                 class="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
+                                <button @click="moreOpen = false; Livewire.dispatch('open-archived')" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M6 8l1 11a2 2 0 002 2h6a2 2 0 002-2l1-11M10 12h4M4 4h16v4H4z"/></svg>
+                                    <span x-text="$store.lang.t('Archived', 'Archivés')"></span>
                                 </button>
                             </div>
                         </div>
@@ -394,11 +262,16 @@
                     'Choisissez une conversation dans la barre latérale, ou rejoignez vos salles nationales et régionales pour discuter avec vos compatriotes.'
                 )"></p>
                 @if(auth()->user()->current_country)
-                <p class="mt-3 text-sm text-slate-500">
-                    📍 <span x-text="$store.lang.t(
-                        'Your location: {{ auth()->user()->current_region ? auth()->user()->current_region . ', ' : '' }}{{ auth()->user()->current_country }}',
-                        'Votre position : {{ auth()->user()->current_region ? auth()->user()->current_region . ', ' : '' }}{{ auth()->user()->current_country }}'
-                    )"></span>
+                <p class="mt-3 text-sm text-slate-500"
+                   x-data="{
+                        country: @js(auth()->user()->current_country),
+                        region: @js(auth()->user()->current_region ?? ''),
+                   }"
+                   x-on:location-changed.window="
+                        country = $event.detail?.country || $event.detail?.[0]?.country || country;
+                        region  = $event.detail?.region  || $event.detail?.[0]?.region  || region;
+                   ">
+                    📍 <span x-text="$store.lang.t('Your location: ', 'Votre position : ') + (region ? region + ', ' : '') + country"></span>
                 </p>
                 @endif
             </div>
@@ -429,55 +302,7 @@
         {{-- ══════════════════════════════════════════════════════
              PANEL 4 — SPONSORED ADS SIDEBAR (desktop only)
         ══════════════════════════════════════════════════════ --}}
-        <aside class="yard-panel yard-panel--ads" x-data="yardAds()" x-cloak>
-            <div class="yard-ads__header">
-                <span class="yard-ads__label" x-text="$store.lang.t('Sponsored', 'Sponsorisé')"></span>
-            </div>
-
-            <div class="yard-ads__scroll">
-                <template x-for="ad in ads" :key="ad.id">
-                    <div class="yard-ads__card">
-                        {{-- YouTube Video --}}
-                        <div class="yard-ads__card-video" x-show="ad.video">
-                            <iframe :src="ad.video ? (ad.video + '?autoplay=1&mute=1&loop=1&playlist=' + ad.video.split('/').pop()) : ''" frameborder="0"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowfullscreen loading="lazy"></iframe>
-                        </div>
-
-                        {{-- Image (when no video) --}}
-                        <a :href="'{{ url('/') }}/ad/' + ad.id + '/click'"
-                           target="_blank" rel="noopener noreferrer"
-                           x-show="!ad.video && ad.image" class="yard-ads__card-img">
-                            <img :src="ad.image" :alt="ad.title" loading="lazy">
-                        </a>
-                        <div class="yard-ads__card-img yard-ads__card-img--placeholder" x-show="!ad.video && !ad.image">
-                            <span>📢</span>
-                        </div>
-
-                        {{-- Body --}}
-                        <a :href="'{{ url('/') }}/ad/' + ad.id + '/click'"
-                           target="_blank" rel="noopener noreferrer"
-                           class="yard-ads__card-body">
-                            <p class="yard-ads__card-title" x-text="ad.title"></p>
-                            <p class="yard-ads__card-desc" x-text="ad.description" x-show="ad.description"></p>
-                            <div class="yard-ads__card-footer">
-                                <span class="yard-ads__card-advertiser" x-text="ad.advertiser" x-show="ad.advertiser"></span>
-                                <span class="yard-ads__card-cta" x-text="ad.cta || 'Learn More'"></span>
-                            </div>
-                        </a>
-
-                        {{-- Sponsored badge --}}
-                        <div class="yard-ads__badge">Ad</div>
-                    </div>
-                </template>
-
-                {{-- Empty state --}}
-                <div x-show="ads.length === 0" class="yard-ads__empty">
-                    <span class="text-3xl">📢</span>
-                    <p x-text="$store.lang.t('No ads right now', 'Aucune annonce')"></p>
-                </div>
-            </div>
-        </aside>
+        @include('yard.partials.ads-sidebar')
 
         {{-- Drawer backdrop --}}
         <div class="yard-backdrop" x-show="menuOpen" x-transition.opacity @click="menuOpen = false" x-cloak></div>
@@ -660,6 +485,44 @@
         </div>
     </div>
 
+    {{-- ═══ In-app message toasts (top-right) ══════════════════════════ --}}
+    {{-- Self-contained x-data so it works even outside yardApp scope. --}}
+    <div class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"
+         x-data="yardToasts()" x-cloak>
+        <template x-for="t in toasts" :key="t.id">
+            <button @click="t.roomId ? openRoom(t) : dismiss(t.id)"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 translate-x-4"
+                    x-transition:enter-end="opacity-100 translate-x-0"
+                    x-transition:leave="transition ease-in duration-150"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="pointer-events-auto bg-white shadow-lg rounded-xl border px-4 py-3 w-72 text-left hover:bg-slate-50 transition flex items-start gap-3"
+                    :class="{
+                        'border-slate-200': !t.kind || t.kind === 'info',
+                        'border-emerald-200': t.kind === 'success',
+                        'border-amber-200': t.kind === 'warning',
+                        'border-rose-200': t.kind === 'error',
+                    }">
+                <div class="flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center"
+                     :class="{
+                         'bg-cm-green/10 text-cm-green': !t.kind || t.kind === 'info',
+                         'bg-emerald-100 text-emerald-600': t.kind === 'success',
+                         'bg-amber-100 text-amber-600': t.kind === 'warning',
+                         'bg-rose-100 text-rose-600': t.kind === 'error',
+                     }">
+                    <svg x-show="!t.kind || t.kind === 'info'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg>
+                    <svg x-show="t.kind === 'success'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+                    <svg x-show="t.kind === 'warning' || t.kind === 'error'" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-semibold text-slate-900" x-text="t.title"></p>
+                    <p x-show="t.body" class="text-xs text-slate-500 truncate" x-text="t.body"></p>
+                </div>
+            </button>
+        </template>
+    </div>
+
     @push('scripts')
     <script>
         function yardApp() {
@@ -695,6 +558,59 @@
                             window.dispatchEvent(new CustomEvent('chatroom-exited'));
                         }
                     });
+
+                    // ── In-app message toast + chime ──
+                    // RoomList dispatches 'yard-incoming-message' (via Livewire) when a
+                    // message arrives in a room the user is NOT currently viewing.
+                    window.addEventListener('yard-incoming-message', (e) => {
+                        const d = (e && e.detail) || {};
+                        // Livewire wraps event payloads in an array — unwrap when needed.
+                        const data = Array.isArray(d) ? d[0] : d;
+                        if (!data || !data.roomId) return;
+                        if (this.activeRoom && Number(this.activeRoom) === Number(data.roomId)) return;
+
+                        this.pushToast({
+                            roomId: data.roomId,
+                            title: data.senderName || data.roomName || 'New message',
+                            body: data.preview || '',
+                        });
+                        this.playChime();
+                    });
+
+                    // ── Generic Livewire 'toast' events are handled directly by
+                    // the yardToasts() component below — do NOT subscribe here too,
+                    // or each notification would render twice.
+                },
+
+                // ── Toast queue is owned by the separate yardToasts() component
+                // (mounted on a sibling element) so it can live outside this DOM
+                // subtree without losing scope. We just dispatch events here.
+                pushToast(t) {
+                    window.dispatchEvent(new CustomEvent('yard-toast', { detail: t }));
+                },
+
+                // Soft web-audio chime (no asset required, won't 404).
+                playChime() {
+                    try {
+                        const Ctx = window.AudioContext || window.webkitAudioContext;
+                        if (!Ctx) return;
+                        if (!this._audioCtx) this._audioCtx = new Ctx();
+                        const ctx = this._audioCtx;
+                        // Some browsers suspend AudioContext until a user gesture; ignore failures.
+                        if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+                        const now = ctx.currentTime;
+                        const o = ctx.createOscillator();
+                        const g = ctx.createGain();
+                        o.type = 'sine';
+                        o.frequency.setValueAtTime(880, now);
+                        o.frequency.exponentialRampToValueAtTime(1320, now + 0.12);
+                        g.gain.setValueAtTime(0.0001, now);
+                        g.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+                        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+                        o.connect(g).connect(ctx.destination);
+                        o.start(now);
+                        o.stop(now + 0.4);
+                    } catch (_) { /* noop */ }
                 },
 
                 onRoomSelected(detail) {
@@ -974,6 +890,54 @@
                 }
             };
         }
+
+        // ── Standalone Alpine component for in-app toasts ──
+        // Lives outside yardApp() scope so it survives DOM moves and is reachable
+        // even when the yard root is teleported by Livewire morphs.
+        function yardToasts() {
+            return {
+                toasts: [],
+                _id: 0,
+                init() {
+                    // Generic toast event from yardApp.pushToast() (and anywhere else).
+                    window.addEventListener('yard-toast', (e) => {
+                        const raw = (e && e.detail) || {};
+                        const data = Array.isArray(raw) ? raw[0] : raw;
+                        if (!data) return;
+                        this._enqueue(data);
+                    });
+                    // Direct Livewire dispatch('toast', { message, type })
+                    window.addEventListener('toast', (e) => {
+                        const raw = (e && e.detail) || {};
+                        const data = Array.isArray(raw) ? raw[0] : raw;
+                        if (!data || !data.message) return;
+                        this._enqueue({
+                            roomId: null,
+                            title: data.message,
+                            body: '',
+                            kind: data.type || 'info',
+                        });
+                    });
+                },
+                _enqueue(t) {
+                    const id = ++this._id;
+                    this.toasts.push({ id, ...t });
+                    if (this.toasts.length > 3) this.toasts.shift();
+                    setTimeout(() => this.dismiss(id), 5000);
+                },
+                dismiss(id) {
+                    this.toasts = this.toasts.filter(x => x.id !== id);
+                },
+                openRoom(t) {
+                    this.dismiss(t.id);
+                    if (t.roomId) {
+                        window.dispatchEvent(new CustomEvent('room-selected', {
+                            detail: { roomId: t.roomId },
+                        }));
+                    }
+                },
+            };
+        }
     </script>
     @endpush
 
@@ -1006,5 +970,6 @@
     {{-- ── Call Manager (WebRTC voice/video overlay) ── --}}
     @auth
     <livewire:yard.call-manager />
+    <livewire:yard.share-to-chat />
     @endauth
 </x-layouts.app>

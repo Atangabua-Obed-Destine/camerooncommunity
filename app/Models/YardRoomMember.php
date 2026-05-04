@@ -25,6 +25,8 @@ class YardRoomMember extends Model
         'notification_pref',
         'auto_archived_at',
         'notification_pref_before_archive',
+        'archived_at',
+        'auto_translate_lang',
     ];
 
     protected function casts(): array
@@ -36,6 +38,7 @@ class YardRoomMember extends Model
             'last_read_at' => 'datetime',
             'muted_until' => 'datetime',
             'auto_archived_at' => 'datetime',
+            'archived_at' => 'datetime',
             'is_muted' => 'boolean',
             'is_favorited' => 'boolean',
         ];

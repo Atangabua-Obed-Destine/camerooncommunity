@@ -100,7 +100,55 @@ class ChatRoom extends Component
             ->limit($this->perPage)
             ->get()
             ->reverse()
-            ->values();
+            ->values()
+            ->map(function (YardMessage $m) {
+                $m->display_content = $this->resolveDisplayContent($m);
+                return $m;
+            });
+    }
+
+    /**
+     * If the current user enabled auto-translate for this room and the
+     * message has a cached translation in the target language, expose it
+     * as `display_content` on the message instance so the view renders it
+     * inline. Falls back to the original content otherwise.
+     */
+    protected function resolveDisplayContent(YardMessage $m): ?string
+    {
+        $original = $m->content;
+
+        if (!is_string($original) || $original === '') {
+            return $original;
+        }
+        if ($m->user_id === auth()->id()) {
+            return $original; // never translate the viewer's own messages
+        }
+
+        $target = $this->autoTranslateLang;
+        if (!$target) {
+            return $original;
+        }
+
+        $cached = is_array($m->translated_content) ? ($m->translated_content[$target] ?? null) : null;
+        if ($cached) {
+            return $cached;
+        }
+
+        // Lazy-translate via the AI service (cached 30 days inside the service).
+        try {
+            $translated = app(\App\Services\AIService::class)->translate($original, $target);
+            if ($translated && $translated !== $original) {
+                // Persist into the JSON column so other viewers reuse it.
+                $bag = is_array($m->translated_content) ? $m->translated_content : [];
+                $bag[$target] = $translated;
+                YardMessage::where('id', $m->id)->update(['translated_content' => $bag]);
+                return $translated;
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Auto-translate failed: ' . $e->getMessage());
+        }
+
+        return $original;
     }
 
     #[Computed]
@@ -202,6 +250,32 @@ class ChatRoom extends Component
         unset($this->dmConnectionState);
     }
 
+    /**
+     * Re-evaluate the DM connection banner when the global notifier reports
+     * a state change (declined / cancelled / disconnected / blocked / unblocked
+     * / accepted). Wired from connection-notifier.blade.php which dispatches
+     * `connection-updated` after each .connection.* echo event.
+     */
+    #[On('connection-updated')]
+    public function refreshDmConnectionState(): void
+    {
+        unset($this->dmConnectionState);
+    }
+
+    /**
+     * Reload the active room's metadata (avatar, name, members_count) when
+     * a `RoomUpdated` echo event fires or when RoomInfo dispatches
+     * `room-updated` locally. Keeps the chat header in sync without a refresh.
+     */
+    #[On('room-updated')]
+    public function refreshRoomMetadata(): void
+    {
+        if (isset($this->room) && $this->room->exists) {
+            $this->room = $this->room->fresh();
+            unset($this->roomMessages, $this->pinnedMessages);
+        }
+    }
+
     #[Computed]
     public function forwardRooms()
     {
@@ -221,6 +295,9 @@ class ChatRoom extends Component
     public function loadMore()
     {
         $this->perPage += 50;
+        // Tell the front-end to restore scroll position after the morph,
+        // so the user stays anchored at the message they were reading.
+        $this->dispatch('messages-prepended');
     }
 
     // ─── SEND MESSAGE ───
@@ -271,6 +348,9 @@ class ChatRoom extends Component
             'message_type' => MessageType::Text,
             'content' => $this->newMessage,
         ]);
+
+        // Parse @mentions, persist mentioned_user_ids, broadcast MessageMentioned.
+        app(\App\Services\MentionService::class)->processMessageMentions($message, $user);
 
         $this->updateRoomMeta($this->newMessage);
 
@@ -553,6 +633,16 @@ class ChatRoom extends Component
         $poll->update(['is_closed' => true]);
         unset($this->roomMessages);
         $this->dispatch('poll-closed', pollId: $poll->id);
+
+        // Rebroadcast the host message so all viewers see the closed badge.
+        try {
+            $msg = YardMessage::find($poll->message_id);
+            if ($msg) {
+                broadcast(new \App\Events\MessageSent($msg))->toOthers();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Poll close broadcast failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -647,6 +737,13 @@ class ChatRoom extends Component
                 'is_edited' => true,
                 'edited_at' => now(),
             ]);
+
+            // Rebroadcast so other clients refresh the message text in real time.
+            try {
+                broadcast(new \App\Events\MessageSent($message))->toOthers();
+            } catch (\Throwable $e) {
+                \Log::warning('Edit broadcast failed: ' . $e->getMessage());
+            }
         }
 
         unset($this->roomMessages);
@@ -687,6 +784,13 @@ class ChatRoom extends Component
         }
 
         unset($this->roomMessages, $this->pinnedMessages);
+
+        // Rebroadcast so other clients refresh the pin badge & pinned panel.
+        try {
+            broadcast(new \App\Events\MessageSent($message->fresh()))->toOthers();
+        } catch (\Throwable $e) {
+            \Log::warning('Pin broadcast failed: ' . $e->getMessage());
+        }
     }
 
     // ─── DELETE ───
@@ -763,6 +867,16 @@ class ChatRoom extends Component
 
         // Sync reaction counts from source of truth
         $this->refreshReactionCount($messageId);
+
+        // Rebroadcast so other clients see the reaction badge update live.
+        try {
+            $msg = YardMessage::find($messageId);
+            if ($msg) {
+                broadcast(new \App\Events\MessageSent($msg))->toOthers();
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('Reaction broadcast failed: ' . $e->getMessage());
+        }
     }
 
     protected function refreshReactionCount(int $messageId): void
@@ -811,12 +925,23 @@ class ChatRoom extends Component
     {
         try {
             $user = auth()->user();
-            broadcast(new \App\Events\UserTyping(
-                roomId: $this->room->id,
-                userId: $user->id,
-                userName: $user->name,
-                tenantId: $user->tenant_id,
-            ))->toOthers();
+            if (!$user || !$this->room) {
+                $this->skipRender();
+                return;
+            }
+
+            // Server-side throttle: at most one typing broadcast per
+            // (user, room) every 2 seconds. Protects Reverb against a
+            // misbehaving / malicious client that ignores the JS debounce.
+            $key = "yard:typing:{$this->room->id}:{$user->id}";
+            if (\Illuminate\Support\Facades\Cache::add($key, 1, now()->addSeconds(2))) {
+                broadcast(new \App\Events\UserTyping(
+                    roomId: $this->room->id,
+                    userId: $user->id,
+                    userName: $user->name,
+                    tenantId: $user->tenant_id,
+                ))->toOthers();
+            }
         } catch (\Throwable $e) {
             // Typing indicator is non-critical
         }
@@ -999,6 +1124,56 @@ class ChatRoom extends Component
     }
 
     // ─── HELPERS ───
+
+    /**
+     * Return matching room members for an in-progress @mention.
+     * Called from the chat input's autocomplete dropdown.
+     *
+     * @return array<int, array{id:int,name:string,username:?string,avatar:?string}>
+     */
+    public function mentionSuggest(string $query = ''): array
+    {
+        if (!isset($this->room) || !$this->room->exists) {
+            return [];
+        }
+        return app(\App\Services\MentionService::class)
+            ->suggest($this->room->id, $query, 8)
+            ->all();
+    }
+
+    /**
+     * Set the per-room auto-translate target language for the current user.
+     * Pass null/empty to disable; otherwise 'en' or 'fr'.
+     */
+    public function setAutoTranslate(?string $lang = null): void
+    {
+        if (!isset($this->room) || !$this->room->exists) {
+            return;
+        }
+
+        $lang = in_array($lang, ['en', 'fr'], true) ? $lang : null;
+
+        YardRoomMember::where('room_id', $this->room->id)
+            ->where('user_id', auth()->id())
+            ->update(['auto_translate_lang' => $lang]);
+
+        unset($this->roomMessages, $this->autoTranslateLang);
+
+        $this->dispatch('toast', type: 'success', message: $lang
+            ? __('Auto-translate enabled.')
+            : __('Auto-translate disabled.'));
+    }
+
+    #[Computed]
+    public function autoTranslateLang(): ?string
+    {
+        if (!isset($this->room) || !$this->room->exists) {
+            return null;
+        }
+        return YardRoomMember::where('room_id', $this->room->id)
+            ->where('user_id', auth()->id())
+            ->value('auto_translate_lang');
+    }
 
     protected function markAsRead()
     {

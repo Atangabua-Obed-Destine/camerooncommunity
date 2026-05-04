@@ -3,6 +3,7 @@
 namespace App\Livewire\AI;
 
 use App\Services\AIService;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class KamerChat extends Component
@@ -27,8 +28,8 @@ class KamerChat extends Component
             $this->messages[] = [
                 'role' => 'assistant',
                 'content' => $lang === 'fr'
-                    ? "Salut {$name} ! 👋 Je suis Kamer, ton guide sur Cameroon Community. Comment puis-je t'aider aujourd'hui ?"
-                    : "Hi {$name}! 👋 I'm Kamer, your guide on Cameroon Community. What would you like to explore today?",
+                    ? "Salut {$name} ! 👋 Je suis Kamer, ton guide sur Cameroon Network. Comment puis-je t'aider aujourd'hui ?"
+                    : "Hi {$name}! 👋 I'm Kamer, your guide on Cameroon Network. What would you like to explore today?",
             ];
         }
     }
@@ -38,6 +39,7 @@ class KamerChat extends Component
         $this->isOpen = !$this->isOpen;
     }
 
+    #[On('open-kamer-ai')]
     public function open()
     {
         $this->isOpen = true;
@@ -58,7 +60,6 @@ class KamerChat extends Component
         $this->input = '';
         $this->messages[] = ['role' => 'user', 'content' => $input];
         $this->isLoading = true;
-
         $aiService = app(AIService::class);
         $user = auth()->user();
         $language = $user?->language_pref === 'fr' ? 'French' : 'English';
@@ -78,6 +79,15 @@ class KamerChat extends Component
 
         // Persist conversation to session (keep last 50 messages)
         session(['kamer_chat_history' => array_slice($this->messages, -50)]);
+    }
+
+    /**
+     * Quick-suggestion pill handler — pre-fills the input then routes through send().
+     */
+    public function sendSuggestion(string $text): void
+    {
+        $this->input = $text;
+        $this->send();
     }
 
     public function clearHistory()

@@ -3,7 +3,7 @@
 return [
     /*
     |--------------------------------------------------------------------------
-    | Cameroon Community — Platform Configuration
+    | Cameroon Network — Platform Configuration
     |--------------------------------------------------------------------------
     */
 
@@ -14,7 +14,7 @@ return [
     ],
 
     'platform' => [
-        'name' => 'Cameroon Community',
+        'name' => 'Cameroon Network',
         'tagline' => 'Connecting Cameroonians. Wherever They Are.',
         'domain' => 'camerooncommunity.net',
         'pilot_market' => 'United Kingdom',
@@ -85,20 +85,23 @@ return [
     */
     'seeded_regions' => [
         'CM' => ['Adamawa', 'Centre', 'East', 'Far North', 'Littoral', 'North', 'Northwest', 'South', 'Southwest', 'West'],
-        // For the UK we use major cities/areas across all four constituent
-        // countries instead of England/Scotland/Wales/NI — this matches how
-        // diaspora communities actually cluster (by city, not by nation).
+        // Official ITL1 regions of the United Kingdom: 9 English regions
+        // + Scotland + Wales + Northern Ireland. We treat the UK as a single
+        // unified country (no per-nation split) — diaspora users are routed
+        // to the correct region using the city→region map below.
         'GB' => [
-            // England
-            'London', 'Birmingham', 'Manchester', 'Liverpool', 'Leeds', 'Sheffield',
-            'Bristol', 'Newcastle', 'Nottingham', 'Leicester', 'Coventry', 'Southampton',
-            'Reading', 'Oxford', 'Cambridge', 'Brighton', 'Milton Keynes',
-            // Scotland
-            'Glasgow', 'Edinburgh', 'Aberdeen', 'Dundee', 'Livingston', 'Stirling',
-            // Wales
-            'Cardiff', 'Swansea', 'Newport',
-            // Northern Ireland
-            'Belfast', 'Derry',
+            'London',
+            'South East',
+            'South West',
+            'East of England',
+            'East Midlands',
+            'West Midlands',
+            'Yorkshire and the Humber',
+            'North West',
+            'North East',
+            'Scotland',
+            'Wales',
+            'Northern Ireland',
         ],
         'FR' => ['Île-de-France', 'Auvergne-Rhône-Alpes', 'Provence-Alpes-Côte d\'Azur', 'Occitanie', 'Nouvelle-Aquitaine', 'Grand Est'],
         'DE' => ['Bavaria', 'Berlin', 'North Rhine-Westphalia', 'Baden-Württemberg', 'Hesse', 'Lower Saxony'],
@@ -108,12 +111,181 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | UK city → ITL1 region map
+    | Used to normalize UK locations: a user detected in "Birmingham" is
+    | routed to "West Midlands"; "Cardiff" → "Wales"; "Glasgow" → "Scotland".
+    | Keys are lowercased city names. Anything not listed defaults via the
+    | `gb_region_aliases` map below (when ipapi returns a country/county).
+    |--------------------------------------------------------------------------
+    */
+    'gb_city_to_region' => [
+        // London
+        'london' => 'London', 'city of london' => 'London', 'westminster' => 'London',
+        'croydon' => 'London', 'bromley' => 'London', 'ealing' => 'London',
+        'enfield' => 'London', 'barnet' => 'London', 'wandsworth' => 'London',
+        'lambeth' => 'London', 'southwark' => 'London', 'lewisham' => 'London',
+        'greenwich' => 'London', 'hackney' => 'London', 'islington' => 'London',
+        'camden' => 'London', 'haringey' => 'London', 'newham' => 'London',
+        'tower hamlets' => 'London', 'redbridge' => 'London', 'waltham forest' => 'London',
+        'hounslow' => 'London', 'brent' => 'London', 'harrow' => 'London',
+        'hillingdon' => 'London', 'kingston' => 'London', 'kingston upon thames' => 'London',
+        'merton' => 'London', 'sutton' => 'London',
+        // South East
+        'brighton' => 'South East', 'reading' => 'South East', 'oxford' => 'South East',
+        'milton keynes' => 'South East', 'southampton' => 'South East',
+        'portsmouth' => 'South East', 'slough' => 'South East', 'crawley' => 'South East',
+        'hastings' => 'South East', 'eastbourne' => 'South East', 'guildford' => 'South East',
+        'maidstone' => 'South East', 'canterbury' => 'South East', 'medway' => 'South East',
+        'high wycombe' => 'South East', 'basingstoke' => 'South East', 'aylesbury' => 'South East',
+        'worthing' => 'South East', 'chichester' => 'South East', 'dover' => 'South East',
+        // South West
+        'bristol' => 'South West', 'plymouth' => 'South West', 'exeter' => 'South West',
+        'bournemouth' => 'South West', 'poole' => 'South West', 'gloucester' => 'South West',
+        'cheltenham' => 'South West', 'bath' => 'South West', 'swindon' => 'South West',
+        'torquay' => 'South West', 'taunton' => 'South West', 'truro' => 'South West',
+        'salisbury' => 'South West', 'weston-super-mare' => 'South West',
+        // East of England
+        'cambridge' => 'East of England', 'norwich' => 'East of England',
+        'ipswich' => 'East of England', 'luton' => 'East of England',
+        'peterborough' => 'East of England', 'chelmsford' => 'East of England',
+        'colchester' => 'East of England', 'southend-on-sea' => 'East of England',
+        'southend' => 'East of England', 'basildon' => 'East of England',
+        'st albans' => 'East of England', 'watford' => 'East of England',
+        'bedford' => 'East of England', 'stevenage' => 'East of England',
+        'harlow' => 'East of England',
+        // East Midlands
+        'nottingham' => 'East Midlands', 'leicester' => 'East Midlands',
+        'derby' => 'East Midlands', 'lincoln' => 'East Midlands',
+        'northampton' => 'East Midlands', 'mansfield' => 'East Midlands',
+        'chesterfield' => 'East Midlands', 'kettering' => 'East Midlands',
+        'corby' => 'East Midlands', 'loughborough' => 'East Midlands',
+        // West Midlands
+        'birmingham' => 'West Midlands', 'coventry' => 'West Midlands',
+        'wolverhampton' => 'West Midlands', 'stoke-on-trent' => 'West Midlands',
+        'stoke' => 'West Midlands', 'walsall' => 'West Midlands',
+        'dudley' => 'West Midlands', 'sandwell' => 'West Midlands',
+        'solihull' => 'West Midlands', 'worcester' => 'West Midlands',
+        'shrewsbury' => 'West Midlands', 'telford' => 'West Midlands',
+        'hereford' => 'West Midlands', 'stafford' => 'West Midlands',
+        // Yorkshire and the Humber
+        'leeds' => 'Yorkshire and the Humber', 'sheffield' => 'Yorkshire and the Humber',
+        'bradford' => 'Yorkshire and the Humber', 'hull' => 'Yorkshire and the Humber',
+        'kingston upon hull' => 'Yorkshire and the Humber',
+        'york' => 'Yorkshire and the Humber', 'wakefield' => 'Yorkshire and the Humber',
+        'huddersfield' => 'Yorkshire and the Humber', 'doncaster' => 'Yorkshire and the Humber',
+        'rotherham' => 'Yorkshire and the Humber', 'barnsley' => 'Yorkshire and the Humber',
+        'halifax' => 'Yorkshire and the Humber', 'grimsby' => 'Yorkshire and the Humber',
+        // North West
+        'manchester' => 'North West', 'liverpool' => 'North West',
+        'preston' => 'North West', 'blackpool' => 'North West',
+        'blackburn' => 'North West', 'bolton' => 'North West',
+        'oldham' => 'North West', 'rochdale' => 'North West',
+        'salford' => 'North West', 'stockport' => 'North West',
+        'warrington' => 'North West', 'wigan' => 'North West',
+        'lancaster' => 'North West', 'chester' => 'North West',
+        'crewe' => 'North West', 'birkenhead' => 'North West',
+        'st helens' => 'North West', 'bury' => 'North West',
+        // North East
+        'newcastle' => 'North East', 'newcastle upon tyne' => 'North East',
+        'sunderland' => 'North East', 'middlesbrough' => 'North East',
+        'gateshead' => 'North East', 'durham' => 'North East',
+        'darlington' => 'North East', 'hartlepool' => 'North East',
+        'stockton-on-tees' => 'North East', 'stockton' => 'North East',
+        'south shields' => 'North East', 'north shields' => 'North East',
+        // Scotland
+        'glasgow' => 'Scotland', 'edinburgh' => 'Scotland', 'aberdeen' => 'Scotland',
+        'dundee' => 'Scotland', 'inverness' => 'Scotland', 'stirling' => 'Scotland',
+        'perth' => 'Scotland', 'paisley' => 'Scotland', 'livingston' => 'Scotland',
+        'east kilbride' => 'Scotland', 'cumbernauld' => 'Scotland', 'dunfermline' => 'Scotland',
+        'kirkcaldy' => 'Scotland', 'kilmarnock' => 'Scotland',
+        'greenock' => 'Scotland', 'ayr' => 'Scotland',
+        // Wales
+        'cardiff' => 'Wales', 'swansea' => 'Wales', 'newport' => 'Wales',
+        'wrexham' => 'Wales', 'barry' => 'Wales', 'caerphilly' => 'Wales',
+        'merthyr tydfil' => 'Wales', 'aberystwyth' => 'Wales',
+        'bangor' => 'Wales', 'llandudno' => 'Wales', 'rhyl' => 'Wales',
+        // Northern Ireland
+        'belfast' => 'Northern Ireland', 'derry' => 'Northern Ireland',
+        'londonderry' => 'Northern Ireland', 'lisburn' => 'Northern Ireland',
+        'newry' => 'Northern Ireland', 'armagh' => 'Northern Ireland',
+        'bangor (ni)' => 'Northern Ireland', 'craigavon' => 'Northern Ireland',
+        'antrim' => 'Northern Ireland', 'ballymena' => 'Northern Ireland',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | UK region aliases — when the geo provider returns a country/county
+    | name instead of an ITL1 region, we map it to the right one.
+    |--------------------------------------------------------------------------
+    */
+    'gb_region_aliases' => [
+        // ipapi sometimes returns "England" for any English address — this
+        // is a last-resort fallback when no city match is found.
+        'england' => null, // handled by city map; leave untouched if no city
+        'scotland' => 'Scotland',
+        'wales' => 'Wales',
+        'cymru' => 'Wales',
+        'northern ireland' => 'Northern Ireland',
+        // Common county / metropolitan returns
+        'greater london' => 'London',
+        'greater manchester' => 'North West',
+        'merseyside' => 'North West',
+        'lancashire' => 'North West',
+        'cheshire' => 'North West',
+        'cumbria' => 'North West',
+        'tyne and wear' => 'North East',
+        'county durham' => 'North East',
+        'northumberland' => 'North East',
+        'south yorkshire' => 'Yorkshire and the Humber',
+        'west yorkshire' => 'Yorkshire and the Humber',
+        'north yorkshire' => 'Yorkshire and the Humber',
+        'east riding of yorkshire' => 'Yorkshire and the Humber',
+        'derbyshire' => 'East Midlands',
+        'nottinghamshire' => 'East Midlands',
+        'leicestershire' => 'East Midlands',
+        'lincolnshire' => 'East Midlands',
+        'northamptonshire' => 'East Midlands',
+        'rutland' => 'East Midlands',
+        'west midlands (county)' => 'West Midlands',
+        'staffordshire' => 'West Midlands',
+        'warwickshire' => 'West Midlands',
+        'worcestershire' => 'West Midlands',
+        'herefordshire' => 'West Midlands',
+        'shropshire' => 'West Midlands',
+        'norfolk' => 'East of England',
+        'suffolk' => 'East of England',
+        'essex' => 'East of England',
+        'cambridgeshire' => 'East of England',
+        'bedfordshire' => 'East of England',
+        'hertfordshire' => 'East of England',
+        'kent' => 'South East',
+        'surrey' => 'South East',
+        'east sussex' => 'South East',
+        'west sussex' => 'South East',
+        'hampshire' => 'South East',
+        'isle of wight' => 'South East',
+        'berkshire' => 'South East',
+        'oxfordshire' => 'South East',
+        'buckinghamshire' => 'South East',
+        'gloucestershire' => 'South West',
+        'wiltshire' => 'South West',
+        'somerset' => 'South West',
+        'dorset' => 'South West',
+        'devon' => 'South West',
+        'cornwall' => 'South West',
+        'bristol, city of' => 'South West',
+    ],
+
+
+    /*
+    |--------------------------------------------------------------------------
     | Major cities pre-seeded per pilot country
     | These get City Rooms at seeder time so early users land in populated rooms
     |--------------------------------------------------------------------------
     */
     'seeded_cities' => [
-        'GB' => ['London', 'Manchester', 'Birmingham', 'Leeds', 'Glasgow', 'Liverpool', 'Bristol', 'Edinburgh', 'Sheffield', 'Nottingham'],
+        // NOTE: UK is intentionally NOT seeded by city. UK uses the 12 ITL1
+        // regions (see `seeded_regions.GB`) as the sub-national grouping.
         'FR' => ['Paris', 'Lyon', 'Marseille', 'Toulouse', 'Nice', 'Bordeaux', 'Lille', 'Strasbourg'],
         'DE' => ['Berlin', 'Munich', 'Hamburg', 'Frankfurt', 'Cologne', 'Düsseldorf', 'Stuttgart'],
         'US' => ['New York', 'Houston', 'Washington DC', 'Dallas', 'Atlanta', 'Los Angeles', 'Chicago', 'Philadelphia', 'Baltimore', 'Miami'],

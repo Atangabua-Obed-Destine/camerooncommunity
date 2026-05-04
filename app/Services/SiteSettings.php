@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Cache;
 class SiteSettings
 {
     protected static array $defaults = [
-        'site_name' => 'Cameroon Community',
+        'site_name' => 'Cameroon Network',
         'site_logo' => null,
         'site_favicon' => null,
     ];
@@ -46,7 +46,7 @@ class SiteSettings
 
     public static function name(): string
     {
-        return static::get('site_name', 'Cameroon Community');
+        return static::get('site_name', 'Cameroon Network');
     }
 
     public static function clearCache(): void

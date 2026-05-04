@@ -231,6 +231,15 @@ class AdminController extends Controller
     {
         foreach ($request->input('settings', []) as $key => $value) {
             \App\Models\PlatformSetting::setValue($key, $value);
+
+            // Notify all connected clients in real-time so the change
+            // takes effect without a page reload (e.g. Location Detection
+            // Mode flips between GPS and IP across all open tabs).
+            try {
+                broadcast(new \App\Events\PlatformSettingUpdated($key, $value));
+            } catch (\Throwable $e) {
+                \Log::warning('Broadcast PlatformSettingUpdated failed: '.$e->getMessage());
+            }
         }
 
         SiteSettings::clearCache();

@@ -17,7 +17,12 @@
                     {{-- Header row --}}
                     <div class="flex items-center gap-4 mb-5">
                         <div class="yard-call-modal__avatar">
-                            <span x-text="incomingCall?.callerName?.charAt(0)?.toUpperCase() || '?'"></span>
+                            <template x-if="incomingCall?.callerAvatar">
+                                <img :src="incomingCall.callerAvatar" alt="" class="w-full h-full rounded-full object-cover">
+                            </template>
+                            <template x-if="!incomingCall?.callerAvatar">
+                                <span x-text="incomingCall?.callerName?.charAt(0)?.toUpperCase() || '?'"></span>
+                            </template>
                             <div class="yard-call-modal__pulse"></div>
                         </div>
                         <div class="flex-1 min-w-0">
@@ -166,7 +171,15 @@
                                 </div>
                             </template>
                         </div>
-                        <div class="yard-call-modal__local-pip" x-show="!isVideoOff" x-transition>
+                        {{--
+                            Local PIP: we use :style display rather than x-show so the
+                            <video> element is always present in the DOM. Some browsers
+                            (notably Safari/iOS WebKit) refuse to start playback if the
+                            element is created hidden when srcObject is assigned, leaving
+                            the user's own preview frozen on a black frame.
+                        --}}
+                        <div class="yard-call-modal__local-pip"
+                             :style="{ visibility: isVideoOff ? 'hidden' : 'visible' }">
                             <video id="local-video" autoplay playsinline muted class="w-full h-full object-cover rounded-xl"></video>
                         </div>
                     </div>

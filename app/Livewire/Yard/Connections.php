@@ -31,6 +31,7 @@ class Connections extends Component
      * shows the new entry without a page reload.
      */
     #[On('connection-incoming')]
+    #[On('connection-updated')]
     public function refreshIncoming(): void
     {
         unset($this->incomingRequests, $this->myConnections, $this->sentRequests);
@@ -230,22 +231,28 @@ class Connections extends Component
                 ? 'Connexion acceptée.'
                 : 'Connection accepted.');
             $this->dispatch('connection-updated', userId: $userId, state: 'connected');
+            // The accept() flow now also creates the 1:1 DM room — refresh the
+            // chat list so it appears immediately on the accepter's side.
+            $this->dispatch('refreshRoomList');
         }
     }
 
     public function declineRequest(int $userId): void
     {
         app(ConnectionService::class)->decline(auth()->user(), $userId);
+        $this->dispatch('connection-updated', userId: $userId, state: 'none');
     }
 
     public function cancelRequest(int $userId): void
     {
         app(ConnectionService::class)->cancel(auth()->user(), $userId);
+        $this->dispatch('connection-updated', userId: $userId, state: 'none');
     }
 
     public function disconnect(int $userId): void
     {
         app(ConnectionService::class)->disconnect(auth()->user(), $userId);
+        $this->dispatch('connection-updated', userId: $userId, state: 'none');
     }
 
     public function block(int $userId): void
@@ -254,11 +261,13 @@ class Connections extends Component
         $this->dispatch('toast', type: 'success', message: app()->getLocale() === 'fr'
             ? 'Utilisateur bloqué.'
             : 'User blocked.');
+        $this->dispatch('connection-updated', userId: $userId, state: 'blocked-by-me');
     }
 
     public function unblock(int $userId): void
     {
         app(ConnectionService::class)->unblock(auth()->user(), $userId);
+        $this->dispatch('connection-updated', userId: $userId, state: 'none');
     }
 
     /**

@@ -1,5 +1,5 @@
 <x-layouts.app>
-    <x-slot:title>{{ __('Welcome') }} — Cameroon Community</x-slot:title>
+    <x-slot:title>{{ __('Welcome') }} — Cameroon Network</x-slot:title>
 
     {{-- Confetti canvas for founding members --}}
     @if(auth()->user()->is_founding_member)
@@ -43,8 +43,8 @@
                             )"></span>
                         </h1>
                         <p class="text-white/80 text-lg" x-text="$store.lang.t(
-                            'You\\'re now part of the Cameroon Community family.',
-                            'Vous faites maintenant partie de la famille Cameroon Community.'
+                            'You\\'re now part of the Cameroon Network family.',
+                            'Vous faites maintenant partie de la famille Cameroon Network.'
                         )"></p>
                     </div>
                 </div>
@@ -262,8 +262,8 @@
                     <div class="w-20 h-20 mx-auto rounded-2xl bg-cm-yellow/20 flex items-center justify-center text-4xl mb-4">🤖</div>
                     <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('Meet Kamer AI', 'Découvrez Kamer AI')"></h2>
                     <p class="text-slate-600 max-w-md mx-auto" x-text="$store.lang.t(
-                        'Your personal guide to everything Cameroon Community. Ask Kamer anything — from navigating the platform to understanding UK immigration rules.',
-                        'Votre guide personnel pour tout ce qui concerne Cameroon Community. Demandez n\\'importe quoi à Kamer — de la navigation sur la plateforme aux règles d\\'immigration.'
+                        'Your personal guide to everything Cameroon Network. Ask Kamer anything — from navigating the platform to understanding UK immigration rules.',
+                        'Votre guide personnel pour tout ce qui concerne Cameroon Network. Demandez n\\'importe quoi à Kamer — de la navigation sur la plateforme aux règles d\\'immigration.'
                     )"></p>
                 </div>
 
@@ -274,8 +274,8 @@
                             <div class="w-8 h-8 rounded-full bg-cm-yellow flex items-center justify-center text-sm shrink-0">🤖</div>
                             <div class="bg-white rounded-xl rounded-tl-none p-3 border border-slate-200">
                                 <p class="text-sm text-slate-700" x-text="$store.lang.t(
-                                    'Hi ' + username + '! I\\'m Kamer, your guide on Cameroon Community. What would you like to explore first?',
-                                    'Salut ' + username + ' ! Je suis Kamer, votre guide sur Cameroon Community. Que souhaitez-vous explorer en premier ?'
+                                    'Hi ' + username + '! I\\'m Kamer, your guide on Cameroon Network. What would you like to explore first?',
+                                    'Salut ' + username + ' ! Je suis Kamer, votre guide sur Cameroon Network. Que souhaitez-vous explorer en premier ?'
                                 )"></p>
                             </div>
                         </div>

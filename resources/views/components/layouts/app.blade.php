@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? ($__siteName ?? 'Cameroon Community') }}</title>
+    <title>{{ $title ?? ($__siteName ?? 'Cameroon Network') }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -14,7 +14,9 @@
     @if($__siteFavicon ?? null)
     <link rel="icon" type="image/png" href="{{ $__siteFavicon }}">
     @else
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🇨🇲</text></svg>">
+    {{-- Default: Cameroon flag SVG (vector, scales perfectly in any browser) --}}
+    <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
+    <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
     @endif
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -34,10 +36,72 @@
 
         {{-- Location strip (seamless, no border) --}}
         @auth
-        <div class="hidden sm:flex h-7 items-center justify-end px-4 lg:px-6">
+        <div class="hidden sm:flex h-7 items-center justify-end px-4 lg:px-6"
+             x-data="{
+                country: @js(auth()->user()->current_country ?? ''),
+                region: @js(auth()->user()->current_region ?? ''),
+             }"
+             x-on:location-changed.window="
+                country = $event.detail?.country || $event.detail?.[0]?.country || country;
+                region  = $event.detail?.region  || $event.detail?.[0]?.region  || region;
+             ">
             <div class="flex items-center gap-1.5 text-[11px] font-medium text-white/70">
                 <span>🇨🇲</span>
-                <span>{{ auth()->user()->current_region ? auth()->user()->current_region . ', ' : '' }}{{ auth()->user()->current_country ?? __('Unknown') }}</span>
+                <span x-text="(region ? region + ', ' : '') + (country || $store.lang.t('Detecting…', 'Détection…'))"></span>
+            </div>
+        </div>
+        @else
+        <div class="hidden sm:flex h-7 items-center justify-end px-4 lg:px-6"
+             x-data="{
+                loc: localStorage.getItem('guest_location') || '',
+                mode: @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps')),
+                async detect() {
+                    if (this.loc) return;
+                    if (this.mode === 'gps' && navigator.geolocation) {
+                        try {
+                            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+                            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en`);
+                            const d = await r.json();
+                            const a = d.address || {};
+                            const parts = [];
+                            if (a.state) parts.push(a.state);
+                            if (a.country) parts.push(a.country);
+                            if (parts.length) {
+                                this.loc = parts.join(', ');
+                                localStorage.setItem('guest_location', this.loc);
+                                return;
+                            }
+                        } catch(e) { /* fall through to IP */ }
+                    }
+                    try {
+                        const r = await fetch('{{ route("geo.ip") }}');
+                        const d = await r.json();
+                        if (!d.error) {
+                            const parts = [];
+                            if (d.region) parts.push(d.region);
+                            if (d.country_name) parts.push(d.country_name);
+                            this.loc = parts.join(', ') || (d.country_name || '');
+                            localStorage.setItem('guest_location', this.loc);
+                        }
+                    } catch(e) {}
+                }
+             }"
+             x-init="
+                detect();
+                if (window.Echo) {
+                    window.Echo.channel('platform-settings').listen('.setting.updated', (e) => {
+                        if (e.key === 'location_detection_mode') {
+                            mode = e.value;
+                            loc = '';
+                            try { localStorage.removeItem('guest_location'); } catch {}
+                            detect();
+                        }
+                    });
+                }
+             ">
+            <div class="flex items-center gap-1.5 text-[11px] font-medium text-white/70">
+                <span>🌍</span>
+                <span x-text="loc || $store.lang.t('Detecting location…', 'Détection de la localisation…')"></span>
             </div>
         </div>
         @endauth
@@ -59,8 +123,9 @@
                     </div>
 
                     {{-- Language Toggle --}}
-                    <button @click="$store.lang.toggle()" class="flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 transition-colors hover:border-white/40 hover:text-white ml-2">
-                        <span x-text="$store.lang.isEn ? 'EN' : 'FR'"></span>
+                    <button @click="$store.lang.toggle()" class="flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 transition-colors hover:border-white/40 hover:text-white ml-2"
+                            :title="$store.lang.isEn ? 'Passer en français' : 'Switch to English'">
+                        <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
                     </button>
 
@@ -123,7 +188,7 @@
     </nav>
 
     {{-- Main Content --}}
-    <main class="{{ auth()->check() ? 'pt-[92px]' : 'pt-16' }} pb-14 lg:pb-0">
+    <main class="pt-[92px] sm:pt-[92px] pb-14 lg:pb-0">
         {{ $slot }}
     </main>
 
@@ -132,11 +197,14 @@
         @livewire('location-tracker')
     @endauth
 
-    {{-- Kamer AI Assistant --}}
+    {{-- Kamer AI Assistant (mounted on every authenticated page so the sidebar button works in The Yard too) --}}
     @auth
-        @unless($yardMode)
-            @livewire('a-i.kamer-chat')
-        @endunless
+        @livewire('a-i.kamer-chat')
+    @endauth
+
+    {{-- Discover modal — teaser of live + upcoming KAMER features --}}
+    @auth
+        @include('partials.discover-modal')
     @endauth
 
     {{-- Real-time connection request / accept notifier (toast + chime + confetti) --}}

@@ -64,12 +64,49 @@
             window.addEventListener('location-switch-completed', () => {
                 this.dismiss();
             });
+
+            {{-- Real-time platform-setting updates (admin flips a toggle) --}}
+            if (window.Echo) {
+                window.Echo.channel('platform-settings')
+                    .listen('.setting.updated', (e) => {
+                        if (e.key === 'location_detection_mode') {
+                            this.config.mode = e.value;
+                            {{-- Bust cache and re-detect under the new mode --}}
+                            try { sessionStorage.removeItem('cc_location'); } catch {}
+                            this.detect();
+                        }
+                    });
+            }
         },
 
         {{-- ─── Main detection flow ─── --}}
         async detect() {
             const CACHE_KEY = 'cc_location';
             const CACHE_TTL = 30 * 60 * 1000; {{-- 30 minutes --}}
+
+            {{-- Check live GPS permission state. If the user has explicitly
+                 denied/turned off location, bust any cached GPS result and
+                 force an immediate IP fallback — don't wait for the cache
+                 TTL to expire. --}}
+            let gpsDenied = false;
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    const perm = await navigator.permissions.query({ name: 'geolocation' });
+                    gpsDenied = (perm.state === 'denied');
+                    {{-- Re-detect immediately if permission state flips later --}}
+                    if (! perm._ccBound) {
+                        perm.addEventListener('change', () => {
+                            sessionStorage.removeItem(CACHE_KEY);
+                            this.detect();
+                        });
+                        perm._ccBound = true;
+                    }
+                }
+            } catch { /* permissions API unsupported — fall through */ }
+
+            if (gpsDenied) {
+                sessionStorage.removeItem(CACHE_KEY);
+            }
 
             {{-- IP mode is meant for VPN/testing — always re-detect so a
                  VPN switch is reflected immediately. In GPS mode we still
@@ -80,12 +117,12 @@
                 cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) || 'null');
             } catch { cached = null; }
 
-            if (this.config.mode !== 'ip' && cached && (Date.now() - cached.ts) < CACHE_TTL) {
+            if (! gpsDenied && this.config.mode !== 'ip' && cached && (Date.now() - cached.ts) < CACHE_TTL) {
                 {{-- Cheap IP check to bust the cache when network changed (VPN on/off) --}}
                 try {
-                    const ipResp = await fetch('http://ip-api.com/json/?fields=status,query');
+                    const ipResp = await fetch('{{ route("geo.ip") }}');
                     const ipData = await ipResp.json();
-                    if (ipData.status === 'success' && cached.ip && ipData.query === cached.ip) {
+                    if (!ipData.error && cached.ip && ipData.ip === cached.ip) {
                         return; {{-- Same IP, cached result still valid --}}
                     }
                 } catch { return; /* network down — keep cached result */ }
@@ -94,7 +131,7 @@
             try {
                 let result = null;
 
-                if (this.config.mode === 'ip') {
+                if (this.config.mode === 'ip' || gpsDenied) {
                     result = await this.detectByIP();
                 } else {
                     result = await this.detectByGPS();
@@ -139,13 +176,20 @@
             } catch { return null; }
         },
 
-        {{-- ─── IP-based Detection (ip-api.com) ─── --}}
+        {{-- ─── IP-based Detection (ipapi.co) ─── --}}
         async detectByIP() {
             try {
-                const resp = await fetch('http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon,query');
+                const resp = await fetch('{{ route("geo.ip") }}');
                 const data = await resp.json();
-                if (data.status !== 'success') return null;
-                return { lat: data.lat, lng: data.lon, country: data.country, region: data.regionName || '', city: data.city || '', ip: data.query || '' };
+                if (data.error) return null;
+                return {
+                    lat: data.latitude,
+                    lng: data.longitude,
+                    country: data.country_name || '',
+                    region: data.region || '',
+                    city: data.city || '',
+                    ip: data.ip || ''
+                };
             } catch { return null; }
         },
 

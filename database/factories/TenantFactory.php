@@ -13,7 +13,7 @@ class TenantFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => 'Cameroon Community',
+            'name' => 'Cameroon Network',
             'slug' => 'cameroon-community',
             'domain' => 'camerooncommunity.net',
             'country' => 'Cameroon',

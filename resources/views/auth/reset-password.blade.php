@@ -1,12 +1,12 @@
 <x-layouts.guest>
-    <x-slot:title>Reset Password — Cameroon Community</x-slot:title>
+    <x-slot:title>Reset Password — Cameroon Network</x-slot:title>
 
     <div class="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4">
         <div class="w-full max-w-md">
             <div class="text-center mb-8">
                 <a href="{{ route('home') }}" class="inline-flex items-center">
                     @if($__siteLogo ?? null)
-                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-14 object-contain">
+                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain">
                     @else
                         <span class="text-3xl">🇨🇲</span>
                     @endif

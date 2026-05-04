@@ -2,11 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\RoomType;
 use App\Events\ConnectionAccepted;
 use App\Events\ConnectionRequested;
+use App\Events\ConnectionStateChanged;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UserConnection;
+use App\Models\YardRoom;
+use App\Models\YardRoomMember;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -87,8 +91,16 @@ class ConnectionService
             'accepted_at' => now(),
         ]);
 
-        // Notify the original requester — DB row + realtime push.
+        // Get the original requester so we can both notify them and ensure a
+        // DM room exists for both sides — so the conversation appears in each
+        // user's room list immediately, even before the first message is sent.
         $requester = User::find($c->requested_by);
+        $dmRoomId = null;
+        if ($requester) {
+            $dmRoomId = $this->ensureDmRoom($accepter, $requester);
+        }
+
+        // Notify the original requester — DB row + realtime push.
         if ($requester) {
             $notifId = $this->writeNotification(
                 user: $requester,
@@ -96,7 +108,7 @@ class ConnectionService
                 actor: $accepter,
                 title: '🎉 Connection accepted',
                 body: ($accepter->username ?: $accepter->name) . ' accepted your connection request.',
-                extra: ['action_url' => route('yard')],
+                extra: ['action_url' => route('yard'), 'room_id' => $dmRoomId],
             );
 
             try {
@@ -109,6 +121,54 @@ class ConnectionService
         return true;
     }
 
+    /**
+     * Get-or-create the 1:1 DM room between two now-connected users so it
+     * shows up in both of their chat lists straight away.
+     *
+     * Returns the room id (or null on failure).
+     */
+    protected function ensureDmRoom(User $a, User $b): ?int
+    {
+        try {
+            $existing = YardRoom::where('room_type', RoomType::DirectMessage)
+                ->whereHas('members', fn ($q) => $q->where('user_id', $a->id))
+                ->whereHas('members', fn ($q) => $q->where('user_id', $b->id))
+                ->first();
+
+            if ($existing) {
+                return (int) $existing->id;
+            }
+
+            return DB::transaction(function () use ($a, $b) {
+                $tenantId = $a->tenant_id ?? $b->tenant_id;
+                $room = YardRoom::create([
+                    'tenant_id'      => $tenantId,
+                    'name'           => ($a->username ?: $a->name) . ' & ' . ($b->username ?: $b->name),
+                    'slug'           => 'dm-' . Str::uuid()->toString(),
+                    'country'        => $a->current_country ?? $b->current_country ?? 'Cameroon',
+                    'room_type'      => RoomType::DirectMessage,
+                    'created_by'     => $a->id,
+                    'is_system_room' => false,
+                    'members_count'  => 2,
+                ]);
+
+                foreach ([$a->id, $b->id] as $memberId) {
+                    YardRoomMember::create([
+                        'tenant_id' => $tenantId,
+                        'room_id'   => $room->id,
+                        'user_id'   => $memberId,
+                        'role'      => 'member',
+                    ]);
+                }
+
+                return (int) $room->id;
+            });
+        } catch (\Throwable $e) {
+            Log::warning('ensureDmRoom failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
     /** Decline a pending request (recipient only). */
     public function decline(User $decliner, int $otherUserId): bool
     {
@@ -119,7 +179,11 @@ class ConnectionService
         if ($c->requested_by === $decliner->id) {
             return false;
         }
+        $requesterId = $c->requested_by;
         $c->delete();
+
+        // Notify the original requester so their UI flips from "Pending" → "Connect".
+        $this->pushStateChange($decliner, $requesterId, 'declined');
         return true;
     }
 
@@ -134,6 +198,9 @@ class ConnectionService
             return false;
         }
         $c->delete();
+
+        // Notify the recipient so their incoming-request badge clears.
+        $this->pushStateChange($requester, $otherUserId, 'cancelled');
         return true;
     }
 
@@ -145,6 +212,9 @@ class ConnectionService
             return false;
         }
         $c->delete();
+
+        // Notify the other party so their "Connected" state flips.
+        $this->pushStateChange($user, $otherUserId, 'disconnected');
         return true;
     }
 
@@ -160,7 +230,7 @@ class ConnectionService
 
         [$x, $y] = UserConnection::canonicalPair($blocker->id, $otherUserId);
 
-        return DB::transaction(function () use ($blocker, $x, $y) {
+        $row = DB::transaction(function () use ($blocker, $x, $y) {
             $c = UserConnection::where('user_a_id', $x)
                 ->where('user_b_id', $y)
                 ->lockForUpdate()
@@ -183,6 +253,10 @@ class ConnectionService
                 'user_b_id' => $y,
             ], $payload));
         });
+
+        // Notify the blocked user so their UI removes the connection silently.
+        $this->pushStateChange($blocker, $otherUserId, 'blocked');
+        return $row;
     }
 
     /** Unblock — only the user who placed the block may lift it. */
@@ -196,7 +270,26 @@ class ConnectionService
             return false;
         }
         $c->delete();
+
+        // Let the other party's UI refresh (no toast, just a state sync).
+        $this->pushStateChange($unblocker, $otherUserId, 'unblocked');
         return true;
+    }
+
+    /**
+     * Helper: broadcast a ConnectionStateChanged event to the target user.
+     * Swallows broadcast errors so user-facing actions never fail because
+     * Reverb is down.
+     */
+    private function pushStateChange(User $actor, int $targetUserId, string $kind): void
+    {
+        $target = User::find($targetUserId);
+        if (! $target) return;
+        try {
+            broadcast(new ConnectionStateChanged($actor, $target, $kind))->toOthers();
+        } catch (\Throwable $e) {
+            Log::warning("ConnectionStateChanged({$kind}) broadcast failed: " . $e->getMessage());
+        }
     }
 
     /**

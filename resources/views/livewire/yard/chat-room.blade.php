@@ -1,9 +1,37 @@
 <div class="yard-chat"
      x-data="chatUi()"
-     x-on:message-sent.window="optimistic=[]; scrollToBottom()"
-     x-on:optimistic-msg.window="optimistic.push({ id: ++_optId, text: $event.detail.text }); scrollToBottom()"
+     x-on:message-sent.window="setTimeout(() => { optimistic = optimistic.filter(o => o.kind !== 'text' && o.kind !== undefined); scrollToBottom(); }, 350)"
+     x-on:media-sent.window="setTimeout(() => {
+         optimistic.filter(o => (o.kind === 'image' || o.kind === 'document') && o.url).forEach(o => { try { URL.revokeObjectURL(o.url); } catch(_) {} });
+         optimistic = optimistic.filter(o => o.kind !== 'image' && o.kind !== 'document');
+         scrollToBottom();
+     }, 350)"
+     x-on:optimistic-msg.window="optimistic.push({ id: ++_optId, kind: 'text', text: $event.detail.text }); scrollToBottom()"
+     x-on:optimistic-media.window="optimistic.push({ id: ++_optId, kind: $event.detail.kind, url: $event.detail.url, fileName: $event.detail.fileName, fileSize: $event.detail.fileSize, fileIcon: $event.detail.fileIcon, caption: $event.detail.caption }); scrollToBottom()"
      x-on:focus-edit-input.window="$nextTick(() => { if($refs.editInput) $refs.editInput.focus() })"
      x-on:echo-subscribe.window="subscribeEcho($event.detail.channel)"
+     x-on:messages-prepended.window="
+         // Use a double rAF so layout has settled (images, lazy content) before
+         // we measure scrollHeight. Otherwise the anchor jumps when assets load.
+         requestAnimationFrame(() => requestAnimationFrame(() => {
+             const el = $refs.chatMessages;
+             if (!el || _prevScrollHeight == null) { _prevScrollHeight = null; _prevScrollTop = null; return; }
+             const delta = el.scrollHeight - _prevScrollHeight;
+             el.scrollTop = _prevScrollTop + delta;
+             _prevScrollHeight = null;
+             _prevScrollTop = null;
+             // Briefly highlight the row that used to be the topmost so the user's
+             // eye finds their place after loading older messages.
+             const top = el.scrollTop;
+             for (const r of el.children) {
+                 if (r.offsetTop >= top - 4 && !r.classList.contains('yard-chat__date')) {
+                     r.classList.add('yard-msg-anchor-pulse');
+                     setTimeout(() => r.classList.remove('yard-msg-anchor-pulse'), 1400);
+                     break;
+                 }
+             }
+         }));
+     "
      @keydown.escape.window="ctxClose()"
      x-init="@if(isset($room) && $room->exists) subscribeEcho('{{ 'tenant.' . $room->tenant_id . '.room.' . $room->id }}') @endif">
 
@@ -17,7 +45,8 @@
     {{-- ── Chat Header ── --}}
     <header class="yard-chat__header">
         <button class="yard-chat__back"
-                @click="$dispatch('room-selected', { roomId: null }); if (window.innerWidth < 768) history.back()">
+                @click="$dispatch('yard-back')"
+                :aria-label="$store.lang.t('Back', 'Retour')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
         </button>
 
@@ -58,8 +87,11 @@
         <div class="yard-chat__header-info" @click="$dispatch('toggle-room-info')">
             <h2 class="yard-chat__header-name">
                 @if($room->room_type === \App\Enums\RoomType::DirectMessage)
-                    @php $dmUser = $room->members()->where('user_id', '!=', auth()->id())->first()?->user; @endphp
-                    {{ $dmUser?->username ?? $dmUser?->name ?? $room->name }}
+                    @php
+                        $dmUser = $room->members()->where('user_id', '!=', auth()->id())->first()?->user;
+                        $dmDisplayName = $dmUser ? auth()->user()->displayNameFor($dmUser) : $room->name;
+                    @endphp
+                    {{ $dmDisplayName }}
                 @else
                     {{ $room->name }}
                 @endif
@@ -98,6 +130,29 @@
             <button class="yard-chat__header-btn" wire:click="toggleSearch" title="Search">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
             </button>
+            {{-- Auto-translate toggle --}}
+            <div class="yard-chat__translate" x-data="{ open: false }" @click.away="open = false">
+                <button type="button" class="yard-chat__header-btn"
+                        :class="{{ $this->autoTranslateLang ? 'true' : 'false' }} ? 'yard-chat__header-btn--on' : ''"
+                        @click="open = !open"
+                        :title="$store.lang.t('Auto-translate', 'Traduction auto')">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+                </button>
+                <div x-show="open" x-transition x-cloak class="yard-chat__translate-menu">
+                    <button type="button" class="yard-chat__translate-opt {{ $this->autoTranslateLang === null ? 'is-active' : '' }}"
+                            wire:click="setAutoTranslate(null)" @click="open = false">
+                        {{ __('Off') }}
+                    </button>
+                    <button type="button" class="yard-chat__translate-opt {{ $this->autoTranslateLang === 'en' ? 'is-active' : '' }}"
+                            wire:click="setAutoTranslate('en')" @click="open = false">
+                        🇬🇧 {{ __('English') }}
+                    </button>
+                    <button type="button" class="yard-chat__translate-opt {{ $this->autoTranslateLang === 'fr' ? 'is-active' : '' }}"
+                            wire:click="setAutoTranslate('fr')" @click="open = false">
+                        🇫🇷 {{ __('Français') }}
+                    </button>
+                </div>
+            </div>
             {{-- Refresh --}}
             <button class="yard-chat__header-btn" @click="$wire.$refresh(); Livewire.dispatch('refreshRoomList')" title="Refresh">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992"/></svg>
@@ -172,12 +227,33 @@
     {{-- ── Messages Area ── --}}
     <div class="yard-chat__messages" id="chat-messages"
          x-ref="chatMessages"
-         x-init="scrollToBottom()">
+         x-init="scrollToBottom()"
+         @scroll.passive="
+             // Telegram-style infinite scroll: when the user scrolls within
+             // 80px of the top, auto-trigger loadMore (debounced via the flag).
+             if (!$wire.hasMore || _autoLoading) return;
+             if ($el.scrollTop < 80) {
+                 _autoLoading = true;
+                 _prevScrollHeight = $el.scrollHeight;
+                 _prevScrollTop    = $el.scrollTop;
+                 $wire.loadMore().finally(() => { setTimeout(() => { _autoLoading = false; }, 400); });
+             }
+         ">
 
         @if($hasMore && $roomMessages->count() >= $perPage)
         <div class="text-center py-3">
-            <button wire:click="loadMore" class="yard-chat__load-more">
-                <span x-text="$store.lang.t('Load older messages', 'Charger les anciens messages')"></span>
+            <button type="button"
+                    @click="
+                        const el = $refs.chatMessages;
+                        $data._prevScrollHeight = el ? el.scrollHeight : 0;
+                        $data._prevScrollTop    = el ? el.scrollTop    : 0;
+                        $wire.loadMore();
+                    "
+                    wire:loading.attr="disabled"
+                    wire:target="loadMore"
+                    class="yard-chat__load-more">
+                <span wire:loading.remove wire:target="loadMore" x-text="$store.lang.t('Load older messages', 'Charger les anciens messages')"></span>
+                <span wire:loading wire:target="loadMore" x-text="$store.lang.t('Loading…', 'Chargement…')"></span>
             </button>
         </div>
         @endif
@@ -276,11 +352,16 @@
 
                     {{-- Avatar (other users only) --}}
                     @unless($isOwn)
-                    <button class="yard-msg__avatar {{ $msg->user?->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . ($msg->user_id ?? $msg->user?->name ?? '?')) }}" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msg->user?->username ?? $msg->user?->name ?? '?') }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}')">
+                    @php
+                        $msgDisplayName = $msg->user ? auth()->user()->displayNameFor($msg->user) : ($msg->user?->name ?? '?');
+                        $msgRealUsername = $msg->user?->username ?? $msg->user?->name ?? '?';
+                        $msgNickname = $msg->user ? auth()->user()->nicknameFor($msg->user->id) : null;
+                    @endphp
+                    <button class="yard-msg__avatar {{ $msg->user?->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . ($msg->user_id ?? $msg->user?->name ?? '?')) }}" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msgDisplayName) }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}', '{{ e($msgRealUsername) }}', {{ $msgNickname ? "'" . e($msgNickname) . "'" : 'null' }})">
                         @if($msg->user?->avatar)
                             <img src="{{ asset('storage/' . $msg->user->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
-                            {{ strtoupper(substr($msg->user?->username ?? $msg->user?->name ?? '?', 0, 1)) }}
+                            {{ strtoupper(substr($msgDisplayName, 0, 1)) }}
                         @endif
                     </button>
                     @endunless
@@ -288,7 +369,7 @@
                     <div class="yard-msg__content {{ $isOwn ? 'items-end' : 'items-start' }}">
                         {{-- Sender name --}}
                         @unless($isOwn)
-                        <button class="yard-msg__sender" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msg->user?->username ?? $msg->user?->name ?? '?') }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}')">{{ $msg->user?->username ?? $msg->user?->name ?? 'Unknown' }}</button>
+                        <button class="yard-msg__sender" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msgDisplayName) }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}', '{{ e($msgRealUsername) }}', {{ $msgNickname ? "'" . e($msgNickname) . "'" : 'null' }})">{{ $msgDisplayName }}</button>
                         @endunless
 
                         {{-- Reply preview --}}
@@ -368,9 +449,33 @@
                             @endif
 
                             {{-- Content by type --}}
+                            @php
+                                $myId = auth()->id();
+                                $isMentioned = is_array($msg->mentioned_user_ids) && in_array($myId, $msg->mentioned_user_ids);
+                                // Apply auto-translate if available, otherwise show original.
+                                $shownText = $msg->display_content ?? $msg->content;
+                                $wasTranslated = is_string($shownText) && is_string($msg->content) && $shownText !== $msg->content;
+                                $renderText = function ($text) {
+                                    if (!is_string($text) || $text === '') return '';
+                                    $escaped = e($text);
+                                    // Highlight @mentions
+                                    $escaped = preg_replace(
+                                        '/(?<![\w@])@([a-zA-Z0-9_]{3,32})/',
+                                        '<a class="yard-msg__mention" data-username="$1">@$1</a>',
+                                        $escaped
+                                    );
+                                    return nl2br($escaped);
+                                };
+                            @endphp
+                            @if($isMentioned)
+                                <div class="yard-msg__mention-flag">@ {{ __('You were mentioned') }}</div>
+                            @endif
                             @switch($msg->message_type)
                                 @case(\App\Enums\MessageType::Text)
-                                    <p class="whitespace-pre-wrap">{!! nl2br(e($msg->content)) !!}</p>
+                                    <p class="whitespace-pre-wrap">{!! $renderText($shownText) !!}</p>
+                                    @if($wasTranslated)
+                                        <div class="yard-msg__translated-tag">{{ __('Translated') }}</div>
+                                    @endif
                                     @break
                                 @case(\App\Enums\MessageType::Image)
                                     @if($msg->media_path)
@@ -451,6 +556,9 @@
                                     @if($msg->solidarityCampaign)
                                         @include('livewire.yard._solidarity-card', ['campaign' => $msg->solidarityCampaign])
                                     @endif
+                                    @break
+                                @case(\App\Enums\MessageType::ShareCard)
+                                    @include('livewire.yard._share-card', ['msg' => $msg])
                                     @break
                                 @case(\App\Enums\MessageType::Poll)
                                     @php
@@ -581,7 +689,31 @@
                 <div class="yard-msg__row">
                     <div class="yard-msg__content">
                         <div class="yard-msg__bubble yard-msg--own__bubble opacity-70">
-                            <p class="yard-msg__text whitespace-pre-wrap" x-text="om.text"></p>
+                            {{-- Image preview --}}
+                            <template x-if="om.kind === 'image'">
+                                <div class="relative">
+                                    <img :src="om.url" class="rounded-lg max-w-[260px] max-h-[320px] object-cover" alt="Uploading">
+                                    <div class="absolute inset-0 bg-black/30 flex items-center justify-center rounded-lg">
+                                        <div class="yard-upload-spinner yard-upload-spinner--light"></div>
+                                    </div>
+                                    <p x-show="om.caption" class="yard-msg__text whitespace-pre-wrap mt-1" x-text="om.caption"></p>
+                                </div>
+                            </template>
+                            {{-- Document preview --}}
+                            <template x-if="om.kind === 'document'">
+                                <div class="flex items-center gap-2 min-w-[220px]">
+                                    <div class="text-2xl" x-text="om.fileIcon || '📄'"></div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-xs font-medium text-slate-700 truncate" x-text="om.fileName"></p>
+                                        <p class="text-[10px] text-slate-500" x-text="om.fileSize"></p>
+                                    </div>
+                                    <div class="yard-upload-spinner" style="width:18px;height:18px;border-width:2px"></div>
+                                </div>
+                            </template>
+                            {{-- Text (default) --}}
+                            <template x-if="!om.kind || om.kind === 'text'">
+                                <p class="yard-msg__text whitespace-pre-wrap" x-text="om.text"></p>
+                            </template>
                         </div>
                         <div class="yard-msg__meta">
                             <span class="yard-msg__time text-slate-400">
@@ -801,9 +933,35 @@
                           :placeholder="$store.lang.t('Type a message', 'Tapez un message')"
                           class="yard-chat__textarea"
                           rows="1"
-                          x-on:input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,120)+'px'; onTyping()"
-                          x-on:keydown.enter.prevent="if(!$event.shiftKey && msgText.trim()){ let t=msgText; msgText=''; $el.value=''; $el.style.height='auto'; window.dispatchEvent(new CustomEvent('optimistic-msg',{detail:{text:t}})); $wire.sendMessage(t) }"
+                          x-on:input="$el.style.height='auto'; $el.style.height=Math.min($el.scrollHeight,120)+'px'; onTyping(); checkMention()"
+                          x-on:keydown="if(mentionKey($event)) return; if($event.key==='Enter' && !$event.shiftKey && msgText.trim()){ $event.preventDefault(); let t=msgText; msgText=''; $el.value=''; $el.style.height='auto'; window.dispatchEvent(new CustomEvent('optimistic-msg',{detail:{text:t}})); $wire.sendMessage(t) }"
                           maxlength="4000"></textarea>
+
+                {{-- @mention autocomplete dropdown --}}
+                <div x-show="mentionOpen" x-cloak x-transition.opacity
+                     class="yard-mention-pop"
+                     @click.away="mentionOpen = false">
+                    <template x-for="(u, i) in mentionResults" :key="u.id">
+                        <button type="button"
+                                class="yard-mention-pop__item"
+                                :class="i === mentionIndex && 'yard-mention-pop__item--active'"
+                                @mousedown.prevent="pickMention(i)"
+                                @mouseenter="mentionIndex = i">
+                            <span class="yard-mention-pop__avatar">
+                                <template x-if="u.avatar">
+                                    <img :src="'/storage/' + u.avatar" alt="">
+                                </template>
+                                <template x-if="!u.avatar">
+                                    <span x-text="(u.name || '?').charAt(0).toUpperCase()"></span>
+                                </template>
+                            </span>
+                            <span class="yard-mention-pop__meta">
+                                <span class="yard-mention-pop__name" x-text="u.name"></span>
+                                <span class="yard-mention-pop__handle" x-text="'@' + (u.username || '')"></span>
+                            </span>
+                        </button>
+                    </template>
+                </div>
 
                 {{-- Mic button inside pill (only when no text) --}}
                 <button type="button" class="yard-chat__mic-btn"
@@ -855,9 +1013,19 @@
         </div>
 
         {{-- Upload progress (for audio uploads, which bypass preview) --}}
-        <div wire:loading wire:target="mediaUpload" x-show="recording" class="yard-chat__upload-progress">
-            <div class="yard-upload-spinner"></div>
-            <span class="text-xs text-slate-500" x-text="$store.lang.t('Uploading...', 'Envoi...')"></span>
+        <div x-show="voiceUploading" x-cloak x-transition.opacity class="yard-chat__upload-progress yard-chat__upload-progress--voice">
+            <div class="yard-voice-upload">
+                <div class="yard-voice-upload__row">
+                    <svg class="w-4 h-4 text-cm-green shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 006-6v-1.5m-6 7.5a6 6 0 01-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 01-3-3V4.5a3 3 0 116 0v8.25a3 3 0 01-3 3z"/>
+                    </svg>
+                    <span class="yard-voice-upload__label" x-text="$store.lang.t('Sending voice note', 'Envoi du message vocal')"></span>
+                    <span class="yard-voice-upload__pct" x-text="voiceProgress + '%'"></span>
+                </div>
+                <div class="yard-voice-upload__track">
+                    <div class="yard-voice-upload__fill" :style="`width: ${voiceProgress}%`"></div>
+                </div>
+            </div>
         </div>
 
         {{-- ══ Poll Builder Modal (WhatsApp-style) ══ --}}
@@ -1180,11 +1348,63 @@
                 </template>
             </div>
             <h3 class="text-lg font-bold text-slate-900 mt-3" x-text="profileUser.name"></h3>
+            {{-- Real username shown subtly when a nickname is in effect --}}
+            <template x-if="profileUser.nickname && profileUser.username && profileUser.username !== profileUser.name">
+                <p class="text-xs text-slate-400 mt-0.5">@<span x-text="profileUser.username"></span></p>
+            </template>
+
+            {{-- Nickname editor (WhatsApp-style "Save as...") --}}
+            <div class="w-full mt-3 px-1">
+                <template x-if="!nicknameEditing">
+                    <button type="button"
+                            @click="nicknameEditing = true; nicknameDraft = profileUser.nickname || ''; $nextTick(() => $refs.nickInput?.focus())"
+                            class="yard-nickname-trigger">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l11.932-11.93z"/>
+                        </svg>
+                        <span x-text="profileUser.nickname
+                            ? $store.lang.t('Edit saved name', 'Modifier le nom enregistré')
+                            : $store.lang.t('Save as a contact', 'Enregistrer comme contact')"></span>
+                    </button>
+                </template>
+                <template x-if="nicknameEditing">
+                    <div class="yard-nickname-edit">
+                        <input x-ref="nickInput" type="text" maxlength="60"
+                               x-model="nicknameDraft"
+                               @keydown.enter.prevent="saveNickname()"
+                               @keydown.escape="nicknameEditing = false"
+                               :placeholder="$store.lang.t('Enter a name you\'ll recognize', 'Entrez un nom familier')"
+                               class="yard-nickname-input">
+                        <div class="flex items-center gap-2 mt-2">
+                            <button type="button" @click="saveNickname()" :disabled="nicknameSaving"
+                                    class="yard-nickname-save"
+                                    x-text="nicknameSaving
+                                        ? $store.lang.t('Saving...', 'Enregistrement...')
+                                        : $store.lang.t('Save', 'Enregistrer')"></button>
+                            <template x-if="profileUser.nickname">
+                                <button type="button" @click="nicknameDraft = ''; saveNickname()" :disabled="nicknameSaving"
+                                        class="yard-nickname-clear"
+                                        x-text="$store.lang.t('Remove', 'Supprimer')"></button>
+                            </template>
+                            <button type="button" @click="nicknameEditing = false" class="yard-nickname-cancel"
+                                    x-text="$store.lang.t('Cancel', 'Annuler')"></button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <button @click="startDm(profileUser.id); profileOpen = false"
                     class="yard-user-profile__dm-btn">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 <span x-text="$store.lang.t('Send Message', 'Envoyer un message')"></span>
             </button>
+            <template x-if="profileUser.username">
+                <a :href="'{{ url('/u') }}/' + profileUser.username"
+                   class="mt-2 inline-flex items-center justify-center gap-1.5 text-sm font-medium text-cm-green hover:underline">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                    <span x-text="$store.lang.t('View full profile', 'Voir le profil complet')"></span>
+                </a>
+            </template>
             <button @click="profileOpen = false" class="mt-2 text-xs text-slate-400 hover:text-slate-600">
                 <span x-text="$store.lang.t('Close', 'Fermer')"></span>
             </button>
@@ -1283,6 +1503,9 @@
                 typingUsers: [],
                 profileOpen: false,
                 profileUser: {},
+                nicknameDraft: '',
+                nicknameEditing: false,
+                nicknameSaving: false,
                 lightboxOpen: false,
                 lightboxSrc: '',
                 _typingTimers: {},
@@ -1292,6 +1515,9 @@
                 _echoChannelName: null,
                 _receiptsChannelName: null,
                 _statusPoll: null,
+                _prevScrollHeight: null,
+                _prevScrollTop: null,
+                _autoLoading: false,
 
                 init() {
                     // Hydrate the global msgStatus store with server-computed statuses
@@ -1310,9 +1536,16 @@
                 },
                 destroy() {
                     if (this._statusPoll) clearInterval(this._statusPoll);
-                    if (this._receiptsChannelName && window.Echo) {
-                        window.Echo.leave(this._receiptsChannelName);
-                        this._receiptsChannelName = null;
+                    if (window.Echo) {
+                        if (this._receiptsChannelName) {
+                            try { window.Echo.leave(this._receiptsChannelName); } catch (_) {}
+                            this._receiptsChannelName = null;
+                        }
+                        if (this._echoChannelName) {
+                            try { window.Echo.leave(this._echoChannelName); } catch (_) {}
+                            this._echoChannelName = null;
+                            this._echoChannel = null;
+                        }
                     }
                 },
 
@@ -1513,6 +1746,25 @@
                         .listen('.JoinRequestReceived', (e) => {
                             // Refresh room-info panel so admin sees the pending request
                             window.dispatchEvent(new CustomEvent('join-request-received', { detail: e }));
+                        })
+                        .listen('.room.updated', (e) => {
+                            // Membership / avatar / name change in this room.
+                            // Refresh both the chat header (member count, avatar)
+                            // and the room-info side panel (member roster).
+                            try {
+                                if (window.Livewire) {
+                                    window.Livewire.dispatch('room-updated');
+                                }
+                                window.dispatchEvent(new CustomEvent('room-updated', { detail: e }));
+
+                                // If the current user was the one removed, kick them back to the list.
+                                const myId = {{ auth()->id() ?? 'null' }};
+                                if (e && e.kind === 'member_removed' && e.payload && e.payload.user_id === myId) {
+                                    window.dispatchEvent(new CustomEvent('room-selected', { detail: { roomId: null } }));
+                                }
+                            } catch (err) {
+                                console.warn('room.updated handler failed', err);
+                            }
                         });
                 },
 
@@ -1529,9 +1781,57 @@
                     return this.typingUsers.length + ' people are typing...';
                 },
 
-                showUserProfile(id, name, avatar) {
-                    this.profileUser = { id, name, avatar: avatar || null };
+                showUserProfile(id, name, avatar, username, savedNickname) {
+                    this.profileUser = {
+                        id,
+                        name,
+                        avatar: avatar || null,
+                        username: username || name,
+                        nickname: savedNickname || '',
+                    };
+                    this.nicknameDraft = savedNickname || '';
+                    this.nicknameSaving = false;
+                    this.nicknameEditing = false;
                     this.profileOpen = true;
+                },
+
+                async saveNickname() {
+                    if (!this.profileUser.id) return;
+                    this.nicknameSaving = true;
+                    try {
+                        const res = await fetch('{{ route("yard.contacts.nickname") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
+                            },
+                            body: JSON.stringify({
+                                user_id: this.profileUser.id,
+                                nickname: this.nicknameDraft || '',
+                            }),
+                        });
+                        if (!res.ok) throw new Error('save failed');
+                        const data = await res.json();
+                        this.profileUser.nickname = data.nickname || '';
+                        this.profileUser.name = data.nickname || this.profileUser.username;
+                        this.nicknameEditing = false;
+                        window.dispatchEvent(new CustomEvent('toast', { detail: {
+                            type: 'success',
+                            message: data.nickname
+                                ? this.$store.lang.t('Saved as ' + data.nickname, 'Enregistré sous ' + data.nickname)
+                                : this.$store.lang.t('Custom name removed', 'Nom personnalisé supprimé'),
+                        }}));
+                        // Force the chat room to refresh so message sender chips update.
+                        if (window.Livewire) window.Livewire.dispatch('refreshChat');
+                    } catch (e) {
+                        window.dispatchEvent(new CustomEvent('toast', { detail: {
+                            type: 'error',
+                            message: this.$store.lang.t('Could not save name', "Impossible d'enregistrer"),
+                        }}));
+                    } finally {
+                        this.nicknameSaving = false;
+                    }
                 },
 
                 startDm(userId) {
@@ -1583,7 +1883,76 @@
                 _animFrame: null,
                 _analyser: null,
                 _stream: null,
+                voiceUploading: false,
+                voiceProgress: 0,
                 msgText: @js($newMessage ?? ''),
+
+                // ── @mention autocomplete ──
+                mentionOpen: false,
+                mentionResults: [],
+                mentionIndex: 0,
+                mentionQuery: '',
+                _mentionAnchor: -1,
+                _mentionDebounce: null,
+
+                /** Detect an @ token at the caret and ask the server for matches. */
+                checkMention() {
+                    const ta = this.$refs.msgInput;
+                    if (!ta) { this.mentionOpen = false; return; }
+                    const caret = ta.selectionStart || 0;
+                    const upToCaret = (this.msgText || '').slice(0, caret);
+                    // Match the trailing "@username" token (or "@" alone), allowing it at the
+                    // start of input or after whitespace.
+                    const m = upToCaret.match(/(?:^|\s)@([a-zA-Z0-9_]{0,32})$/);
+                    if (!m) {
+                        this.mentionOpen = false;
+                        this._mentionAnchor = -1;
+                        return;
+                    }
+                    this._mentionAnchor = caret - m[1].length - 1; // position of '@'
+                    this.mentionQuery = m[1];
+                    if (this._mentionDebounce) clearTimeout(this._mentionDebounce);
+                    this._mentionDebounce = setTimeout(async () => {
+                        try {
+                            const res = await this.$wire.mentionSuggest(this.mentionQuery);
+                            this.mentionResults = Array.isArray(res) ? res : [];
+                            this.mentionIndex = 0;
+                            this.mentionOpen = this.mentionResults.length > 0;
+                        } catch (e) {
+                            this.mentionOpen = false;
+                        }
+                    }, 120);
+                },
+                /** Replace the current "@token" with "@username " and close picker. */
+                pickMention(idx) {
+                    if (!this.mentionResults[idx]) return;
+                    const user = this.mentionResults[idx];
+                    const username = user.username || user.name || '';
+                    if (!username) { this.mentionOpen = false; return; }
+                    const ta = this.$refs.msgInput;
+                    if (!ta || this._mentionAnchor < 0) { this.mentionOpen = false; return; }
+                    const before = (this.msgText || '').slice(0, this._mentionAnchor);
+                    const after = (this.msgText || '').slice(ta.selectionStart || 0);
+                    const inserted = '@' + username + ' ';
+                    this.msgText = before + inserted + after;
+                    this.mentionOpen = false;
+                    this._mentionAnchor = -1;
+                    this.mentionQuery = '';
+                    this.$nextTick(() => {
+                        ta.value = this.msgText;
+                        const newPos = before.length + inserted.length;
+                        ta.selectionStart = ta.selectionEnd = newPos;
+                        ta.focus();
+                    });
+                },
+                mentionKey(e) {
+                    if (!this.mentionOpen) return false;
+                    if (e.key === 'ArrowDown') { e.preventDefault(); this.mentionIndex = Math.min(this.mentionIndex + 1, this.mentionResults.length - 1); return true; }
+                    if (e.key === 'ArrowUp') { e.preventDefault(); this.mentionIndex = Math.max(this.mentionIndex - 1, 0); return true; }
+                    if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); this.pickMention(this.mentionIndex); return true; }
+                    if (e.key === 'Escape') { e.preventDefault(); this.mentionOpen = false; return true; }
+                    return false;
+                },
 
                 // ── Poll Builder state ──
                 pollOpen: false,
@@ -1700,6 +2069,22 @@
                     const type = this.preview.type;
                     const caption = this.preview.caption;
 
+                    // Push optimistic message into the chat list immediately so the
+                    // user sees their image/document right away. The placeholder will
+                    // be cleared when 'media-sent' fires after the server responds.
+                    window.dispatchEvent(new CustomEvent('optimistic-media', { detail: {
+                        kind: type,
+                        url: this.preview.url,
+                        fileName: this.preview.fileName,
+                        fileSize: this.preview.fileSize,
+                        fileIcon: this.preview.fileIcon,
+                        caption: caption,
+                    }}));
+
+                    // Hand ownership of the object URL to the optimistic bubble so that
+                    // closePreview() (fired by media-sent) doesn't revoke it underneath us.
+                    this.preview.url = '';
+
                     // Set caption on Livewire before sending
                     this.$wire.set('mediaCaption', caption).then(() => {
                         this.$wire.sendMedia(type);
@@ -1736,6 +2121,15 @@
                 },
 
                 onTyping() {
+                    // Don't broadcast typing for empty / whitespace-only input.
+                    // Reset the debounce so the next real keystroke fires immediately.
+                    if (!this.msgText || !this.msgText.trim()) {
+                        if (this._typingTimeout) {
+                            clearTimeout(this._typingTimeout);
+                            this._typingTimeout = null;
+                        }
+                        return;
+                    }
                     if (this._typingTimeout) return;
                     this.$wire.sendTyping();
                     this._typingTimeout = setTimeout(() => { this._typingTimeout = null; }, 2500);
@@ -1827,11 +2221,30 @@
                                 const ext = actual.includes('mp4') ? 'm4a' : actual.includes('ogg') ? 'ogg' : 'webm';
                                 const blob = new Blob(this.audioChunks, { type: actual });
                                 const file = new File([blob], 'voice-' + Date.now() + '.' + ext, { type: blob.type });
-                                this.$wire.upload('mediaUpload', file, () => {
-                                    this.$wire.sendMedia('audio');
-                                }, () => {
-                                    console.error('Voice upload failed');
-                                });
+                                this.voiceUploading = true;
+                                this.voiceProgress = 0;
+                                this.$wire.upload('mediaUpload', file,
+                                    // success
+                                    () => {
+                                        this.voiceProgress = 100;
+                                        this.$wire.sendMedia('audio');
+                                        // Hide the bar shortly after sendMedia resolves
+                                        setTimeout(() => { this.voiceUploading = false; this.voiceProgress = 0; }, 350);
+                                    },
+                                    // error
+                                    () => {
+                                        console.error('Voice upload failed');
+                                        this.voiceUploading = false;
+                                        this.voiceProgress = 0;
+                                        window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: 'Voice upload failed.' } }));
+                                    },
+                                    // progress
+                                    (event) => {
+                                        if (event && typeof event.detail?.progress === 'number') {
+                                            this.voiceProgress = Math.min(99, event.detail.progress);
+                                        }
+                                    }
+                                );
                             }
                             this._shouldSend = false;
                         };

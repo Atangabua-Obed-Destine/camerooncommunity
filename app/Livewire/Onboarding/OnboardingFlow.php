@@ -214,14 +214,6 @@ class OnboardingFlow extends Component
     }
 
     /**
-     * Skip room joining — proceed without joining.
-     */
-    public function skipRooms(): void
-    {
-        $this->step = 3;
-    }
-
-    /**
      * Save bio and proceed.
      */
     public function saveBio(): void
@@ -281,10 +273,10 @@ class OnboardingFlow extends Component
         $lang = $user->language_pref?->value ?? 'en';
 
         if ($lang === 'fr') {
-            return "Salut **{$name}** ! 🎉 Je suis **Kamer**, ton guide personnel sur Cameroon Community.\n\nJe suis vraiment content(e) de te voir ici ! Avant de plonger dans le Yard, dis-moi un peu — qu'est-ce qui t'amène sur la plateforme ?";
+            return "Salut **{$name}** ! 🎉 Je suis **Kamer**, ton guide personnel sur Cameroon Network.\n\nJe suis vraiment content(e) de te voir ici ! Avant de plonger dans le Yard, dis-moi un peu — qu'est-ce qui t'amène sur la plateforme ?";
         }
 
-        return "Hey **{$name}**! 🎉 I'm **Kamer**, your personal guide to Cameroon Community.\n\nSo glad you're here! Before we dive into The Yard, tell me — what brings you to the platform?";
+        return "Hey **{$name}**! 🎉 I'm **Kamer**, your personal guide to Cameroon Network.\n\nSo glad you're here! Before we dive into The Yard, tell me — what brings you to the platform?";
     }
 
     /**

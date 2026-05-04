@@ -1,5 +1,5 @@
 <x-layouts.guest>
-    <x-slot:title>Cameroon Community — Connecting Cameroonians. Wherever They Are.</x-slot:title>
+    <x-slot:title>Cameroon Network — Connecting Cameroonians. Wherever They Are.</x-slot:title>
 
     {{-- ═══════════════════════════════════════════════════════════════
          STICKY NAVBAR
@@ -11,19 +11,82 @@
         {{-- Logo — absolutely positioned, centered across full header height --}}
         <a href="{{ route('home') }}" class="absolute left-6 sm:left-10 lg:left-12 top-1/2 -translate-y-1/2 z-10 flex items-center">
             @if($__siteLogo ?? null)
-            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-[120px] object-contain">
+            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-[120px] object-contain">
             @else
             <span class="text-5xl">🇨🇲</span>
             @endif
         </a>
 
-        {{-- Location strip for logged-in users --}}
+        {{-- Location strip --}}
         @auth
         <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300"
-             :class="scrolled ? 'text-slate-500' : 'text-white/70'">
+             :class="scrolled ? 'text-slate-500' : 'text-white/70'"
+             x-data="{
+                country: @js(auth()->user()->current_country ?? ''),
+                region: @js(auth()->user()->current_region ?? ''),
+             }"
+             x-on:location-changed.window="
+                country = $event.detail?.country || $event.detail?.[0]?.country || country;
+                region  = $event.detail?.region  || $event.detail?.[0]?.region  || region;
+             ">
             <div class="flex items-center gap-1.5 text-[11px] font-medium">
                 <span>🇨🇲</span>
-                <span>{{ auth()->user()->current_region ? auth()->user()->current_region . ', ' : '' }}{{ auth()->user()->current_country ?? __('Unknown') }}</span>
+                <span x-text="(region ? region + ', ' : '') + (country || $store.lang.t('Detecting…', 'Détection…'))"></span>
+            </div>
+        </div>
+        @else
+        <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300"
+             :class="scrolled ? 'text-slate-500' : 'text-white/70'"
+             x-data="{
+                loc: localStorage.getItem('guest_location') || '',
+                mode: @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps')),
+                async detect() {
+                    if (this.loc) return;
+                    if (this.mode === 'gps' && navigator.geolocation) {
+                        try {
+                            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
+                            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en`);
+                            const d = await r.json();
+                            const a = d.address || {};
+                            const parts = [];
+                            if (a.state) parts.push(a.state);
+                            if (a.country) parts.push(a.country);
+                            if (parts.length) {
+                                this.loc = parts.join(', ');
+                                localStorage.setItem('guest_location', this.loc);
+                                return;
+                            }
+                        } catch(e) { /* fall through to IP */ }
+                    }
+                    try {
+                        const r = await fetch('{{ route("geo.ip") }}');
+                        const d = await r.json();
+                        if (!d.error) {
+                            const parts = [];
+                            if (d.region) parts.push(d.region);
+                            if (d.country_name) parts.push(d.country_name);
+                            this.loc = parts.join(', ') || (d.country_name || '');
+                            localStorage.setItem('guest_location', this.loc);
+                        }
+                    } catch(e) {}
+                }
+             }"
+             x-init="
+                detect();
+                if (window.Echo) {
+                    window.Echo.channel('platform-settings').listen('.setting.updated', (e) => {
+                        if (e.key === 'location_detection_mode') {
+                            mode = e.value;
+                            loc = '';
+                            try { localStorage.removeItem('guest_location'); } catch {}
+                            detect();
+                        }
+                    });
+                }
+             ">
+            <div class="flex items-center gap-1.5 text-[11px] font-medium">
+                <span>🌍</span>
+                <span x-text="loc || $store.lang.t('Detecting location…', 'Détection de la localisation…')"></span>
             </div>
         </div>
         @endauth
@@ -138,9 +201,9 @@
                         const locMode = @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps'));
                         if (locMode === 'ip') {
                             try {
-                                const resp = await fetch('http://ip-api.com/json/?fields=status,country');
+                                const resp = await fetch('{{ route("geo.ip") }}');
                                 const data = await resp.json();
-                                if (data.status === 'success') country = data.country;
+                                if (!data.error) country = data.country_name;
                             } catch(e) {}
                         } else if (navigator.geolocation) {
                             navigator.geolocation.getCurrentPosition(async (pos) => {
@@ -554,8 +617,8 @@
 
             <p class="mt-12 text-center text-lg text-slate-600 italic"
                x-text="$store.lang.t(
-                   'Cameroon Community was built because these problems are real.',
-                   'Cameroon Community a été construit parce que ces problèmes sont réels.'
+                   'Cameroon Network was built because these problems are real.',
+                   'Cameroon Network a été construit parce que ces problèmes sont réels.'
                )"></p>
         </div>
     </section>
@@ -932,8 +995,8 @@
                         x-text="$store.lang.t('Built for Cameroon. Designed for Africa.', 'Construit pour le Cameroun. Conçu pour l\'Afrique.')"></h2>
                     <p class="text-lg text-slate-300 leading-relaxed"
                        x-text="$store.lang.t(
-                           'Cameroon Community is just the beginning. Our vision is to connect every African diaspora community with the tools they need to thrive abroad — while staying connected to home.',
-                           'Cameroon Community n\'est que le début. Notre vision est de connecter chaque communauté de la diaspora africaine avec les outils nécessaires pour prospérer à l\'étranger — tout en restant connecté au pays.'
+                           'Cameroon Network is just the beginning. Our vision is to connect every African diaspora community with the tools they need to thrive abroad — while staying connected to home.',
+                           'Cameroon Network n\'est que le début. Notre vision est de connecter chaque communauté de la diaspora africaine avec les outils nécessaires pour prospérer à l\'étranger — tout en restant connecté au pays.'
                        )"></p>
 
                     <div class="flex flex-wrap gap-3">
@@ -995,7 +1058,7 @@
                 x-text="$store.lang.t('Your community is already waiting for you.', 'Votre communauté vous attend déjà.')"></h2>
             <div class="mt-8">
                 <a href="{{ route('register') }}" class="inline-flex items-center gap-2 rounded-xl bg-cm-yellow px-10 py-5 text-lg font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:-translate-y-0.5">
-                    <span x-text="$store.lang.t('Join Cameroon Community — It\'s Free', 'Rejoignez Cameroon Community — C\'est Gratuit')"></span>
+                    <span x-text="$store.lang.t('Join Cameroon Network — It\'s Free', 'Rejoignez Cameroon Network — C\'est Gratuit')"></span>
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                 </a>
             </div>
@@ -1016,7 +1079,7 @@
                 <div class="md:col-span-2">
                     <div class="flex items-center gap-2 mb-4">
                         @if($__siteLogo ?? null)
-                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-14 object-contain">
+                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain">
                         @else
                             <span class="text-3xl">🇨🇲</span>
                         @endif
@@ -1076,7 +1139,28 @@
     {{-- ═══════════════════════════════════════════════════════════════
          KAMER AI — Floating Chat Bubble
          ═══════════════════════════════════════════════════════════════ --}}
-    <div x-data="{ open: false, messages: [], input: '', loading: false }" class="fixed bottom-6 right-6 z-50">
+    <div x-data="{
+            open: false,
+            messages: [],
+            input: '',
+            loading: false,
+            send(text) {
+                const question = (text ?? this.input).trim();
+                if (!question || this.loading) return;
+                this.messages.push({ role: 'user', content: question });
+                this.input = '';
+                this.loading = true;
+                fetch('{{ route('kamer.chat.public') }}', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
+                    body: JSON.stringify({ message: question, lang: this.$store.lang.current })
+                })
+                .then(r => r.json())
+                .then(data => { this.messages.push({ role: 'assistant', content: data.reply || 'Sorry, I could not process that.' }); })
+                .catch(() => { this.messages.push({ role: 'assistant', content: this.$store.lang.t('I\'m temporarily unavailable. Please try again later.', 'Je suis temporairement indisponible. Veuillez réessayer plus tard.') }); })
+                .finally(() => { this.loading = false; });
+            }
+         }" class="fixed bottom-6 right-6 z-50">
         {{-- Chat Panel --}}
         <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-4 scale-95"
              class="mb-4 w-80 sm:w-96 rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
@@ -1101,8 +1185,8 @@
                     <div class="w-7 h-7 rounded-full bg-cm-yellow shrink-0 flex items-center justify-center text-xs font-bold text-cm-green-dark">K</div>
                     <div class="bg-slate-100 rounded-lg rounded-tl-none px-3 py-2 max-w-[85%]">
                         <p class="text-sm text-slate-700" x-text="$store.lang.t(
-                            'Hi! I\'m Kamer, your guide to Cameroon Community. Ask me anything — what is this platform? How does it work? Is it available in your city?',
-                            'Salut ! Je suis Kamer, votre guide pour Cameroon Community. Posez-moi vos questions — c\'est quoi cette plateforme ? Comment ça marche ? C\'est disponible dans votre ville ?'
+                            'Hi! I\'m Kamer, your guide to Cameroon Network. Ask me anything — what is this platform? How does it work? Is it available in your city?',
+                            'Salut ! Je suis Kamer, votre guide pour Cameroon Network. Posez-moi vos questions — c\'est quoi cette plateforme ? Comment ça marche ? C\'est disponible dans votre ville ?'
                         )"></p>
                     </div>
                 </div>
@@ -1137,28 +1221,35 @@
                 </div>
             </div>
 
+            {{-- Quick suggestions (visible until conversation gets going) --}}
+            <div class="px-3 pt-2 pb-1" x-show="messages.length < 2">
+                <p class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-1.5"
+                   x-text="$store.lang.t('Try asking', 'Essayez de demander')"></p>
+                <div class="flex flex-wrap gap-1.5">
+                    <template x-for="s in (
+                        $store.lang.current === 'fr'
+                            ? ['C\'est quoi cette plateforme ?', 'Comment fonctionne la Solidarité ?', 'C\'est gratuit ?', 'Disponible dans ma ville ?']
+                            : ['What is this platform?', 'How does Solidarity work?', 'Is it free?', 'Available in my city?']
+                    )" :key="s">
+                        <button type="button"
+                                @click="send(s)"
+                                class="px-3 py-1.5 text-xs bg-cm-green/5 text-cm-green rounded-full border border-cm-green/20 hover:bg-cm-green/10 transition-colors"
+                                x-text="s"></button>
+                    </template>
+                </div>
+            </div>
+
             {{-- Input --}}
             <div class="border-t border-slate-200 px-3 py-3 flex gap-2">
-                <input x-model="input" @keydown.enter="
-                    if (!input.trim() || loading) return;
-                    messages.push({ role: 'user', content: input.trim() });
-                    let question = input.trim();
-                    input = '';
-                    loading = true;
-                    fetch('/api/kamer/chat', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
-                        body: JSON.stringify({ message: question, lang: $store.lang.current })
-                    })
-                    .then(r => r.json())
-                    .then(data => { messages.push({ role: 'assistant', content: data.reply || 'Sorry, I couldn\'t process that.' }); })
-                    .catch(() => { messages.push({ role: 'assistant', content: $store.lang.t('I\'m temporarily unavailable. Please try again later.', 'Je suis temporairement indisponible. Veuillez réessayer plus tard.') }); })
-                    .finally(() => { loading = false; });
-                "
-                    type="text"
-                    class="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm outline-none focus:border-cm-green focus:ring-1 focus:ring-cm-green"
-                    :placeholder="$store.lang.t('Ask Kamer anything...', 'Demandez à Kamer...')">
-                <button @click="$refs.chatInput && $refs.chatInput.dispatchEvent(new KeyboardEvent('keydown', {key: 'Enter'}))" class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cm-green text-white hover:bg-cm-green-light transition-colors">
+                <input x-ref="chatInput" x-model="input"
+                       @keydown.enter.prevent="send()"
+                       type="text"
+                       class="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm outline-none focus:border-cm-green focus:ring-1 focus:ring-cm-green"
+                       :placeholder="$store.lang.t('Ask Kamer anything...', 'Demandez à Kamer...')"
+                       :disabled="loading">
+                <button type="button" @click="send()"
+                        :disabled="loading || !input.trim()"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cm-green text-white hover:bg-cm-green-light transition-colors disabled:opacity-50">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                 </button>
             </div>

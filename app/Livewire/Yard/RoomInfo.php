@@ -28,9 +28,31 @@ class RoomInfo extends Component
     public $newAvatar = null;
     public bool $avatarUploading = false;
 
+    // ── DM nickname ("Save as a contact") state ──
+    public bool $editingNickname = false;
+    public string $nicknameDraft = '';
+
     protected $listeners = [
         'show-room-info' => 'showInfo',
+        'room-updated'   => 'refreshRoomState',
     ];
+
+    /**
+     * Re-pull room + members + pinned + media when an Echo broadcast or
+     * sibling component dispatches `room-updated`. Keeps the side panel
+     * roster, header, and pinned list current without a manual refresh.
+     */
+    public function refreshRoomState(): void
+    {
+        unset(
+            $this->room,
+            $this->members,
+            $this->pinned,
+            $this->media,
+            $this->starred,
+            $this->pendingRequests,
+        );
+    }
 
     /**
      * Called when the info panel is actually opened.
@@ -125,6 +147,14 @@ class RoomInfo extends Component
 
         if ($added > 0) {
             $room->increment('members_count', $added);
+
+            try {
+                broadcast(new \App\Events\RoomUpdated($room->fresh(), 'member_added', [
+                    'added_count' => $added,
+                ]));
+            } catch (\Throwable $e) {
+                \Log::warning('Room member-added broadcast failed: ' . $e->getMessage());
+            }
         }
 
         $this->closeAddMember();
@@ -168,6 +198,12 @@ class RoomInfo extends Component
 
         $this->dispatch('room-updated');
         $this->dispatch('room-avatar-updated', roomId: $room->id);
+
+        try {
+            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'avatar_changed'));
+        } catch (\Throwable $e) {
+            \Log::warning('Avatar broadcast failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -188,6 +224,12 @@ class RoomInfo extends Component
 
         $this->dispatch('room-updated');
         $this->dispatch('room-avatar-updated', roomId: $room->id);
+
+        try {
+            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'avatar_changed'));
+        } catch (\Throwable $e) {
+            \Log::warning('Avatar broadcast failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -236,6 +278,14 @@ class RoomInfo extends Component
         $room->decrement('members_count');
 
         $this->dispatch('room-updated');
+
+        try {
+            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'member_removed', [
+                'user_id' => $userId,
+            ]));
+        } catch (\Throwable $e) {
+            \Log::warning('Member-removed broadcast failed: ' . $e->getMessage());
+        }
     }
 
     public function getRoomProperty()
@@ -253,7 +303,7 @@ class RoomInfo extends Component
         }
 
         return YardRoomMember::where('room_id', $this->roomId)
-            ->with('user:id,name,username,avatar,current_region,last_active_at')
+            ->with('user:id,name,username,avatar,cover_photo,bio,email,current_region,last_active_at')
             ->orderByDesc('last_read_at')
             ->limit(50)
             ->get();
@@ -358,6 +408,14 @@ class RoomInfo extends Component
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
         ]);
+
+        try {
+            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'request_approved', [
+                'user_id' => $joinRequest->user_id,
+            ]));
+        } catch (\Throwable $e) {
+            \Log::warning('Request-approved broadcast failed: ' . $e->getMessage());
+        }
     }
 
     public function rejectRequest(int $requestId): void
@@ -373,6 +431,207 @@ class RoomInfo extends Component
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
         ]);
+    }
+
+    /**
+     * Member voluntarily leaves the room.
+     * Group creator cannot leave their own room (must delete it instead).
+     */
+    public function leaveRoom(): void
+    {
+        $room = YardRoom::find($this->roomId);
+        if (! $room) {
+            return;
+        }
+
+        // Disallow leaving system rooms (national/regional/city) and own group
+        if (in_array($room->room_type->value, ['national', 'regional', 'city'], true)) {
+            $this->dispatch('toast', type: 'error', message: __('You cannot leave system rooms.'));
+            return;
+        }
+
+        if ($room->created_by === auth()->id()) {
+            $this->dispatch('toast', type: 'error', message: __('Group admins cannot leave their own group. Delete it instead.'));
+            return;
+        }
+
+        $membership = YardRoomMember::where('room_id', $this->roomId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (! $membership) {
+            return;
+        }
+
+        $membership->delete();
+        $room->decrement('members_count');
+
+        $this->visible = false;
+        $this->roomId = null;
+
+        $this->dispatch('toast', type: 'success', message: __('You left the group.'));
+        $this->dispatch('room-left', roomId: $room->id);
+        $this->dispatch('refreshRoomList');
+
+        try {
+            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'left', [
+                'user_id' => auth()->id(),
+            ]));
+        } catch (\Throwable $e) {
+            \Log::warning('Leave broadcast failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * User reports the current room to admins.
+     * `reason` should be a value from \App\Enums\ReportReason.
+     */
+    public function reportRoom(string $reason = 'inappropriate', string $details = ''): void
+    {
+        $room = YardRoom::find($this->roomId);
+        if (! $room) {
+            return;
+        }
+
+        $reasonEnum = \App\Enums\ReportReason::tryFrom($reason) ?? \App\Enums\ReportReason::Inappropriate;
+
+        // Avoid duplicate open reports from the same user against this room.
+        $existing = \App\Models\Report::query()
+            ->where('reporter_id', auth()->id())
+            ->where('reportable_type', YardRoom::class)
+            ->where('reportable_id', $room->id)
+            ->where('status', \App\Enums\ReportStatus::Pending)
+            ->exists();
+
+        if ($existing) {
+            $this->dispatch('toast', type: 'info', message: __('You already reported this group. Our team is reviewing it.'));
+            return;
+        }
+
+        \App\Models\Report::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'reporter_id' => auth()->id(),
+            'reportable_type' => YardRoom::class,
+            'reportable_id' => $room->id,
+            'reason' => $reasonEnum,
+            'details' => mb_substr(trim(strip_tags($details)), 0, 1000),
+            'status' => \App\Enums\ReportStatus::Pending,
+        ]);
+
+        $this->dispatch('toast', type: 'success', message: __('Thanks — our team will review this group.'));
+    }
+
+    /**
+     * Block the DM partner. Replaces any existing connection with a blocked record
+     * owned by the current user. Reuses ConnectionService for canonical pair handling.
+     */
+    public function blockUser(int $userId): void
+    {
+        if ($userId === auth()->id()) {
+            return;
+        }
+
+        // Only allow blocking from inside a DM with this user.
+        $room = YardRoom::find($this->roomId);
+        if (! $room || $room->room_type->value !== 'direct_message') {
+            return;
+        }
+
+        $partnerInRoom = YardRoomMember::where('room_id', $this->roomId)
+            ->where('user_id', $userId)
+            ->where('user_id', '!=', auth()->id())
+            ->exists();
+        if (! $partnerInRoom) {
+            return;
+        }
+
+        try {
+            app(\App\Services\ConnectionService::class)->block(auth()->user(), $userId);
+        } catch (\Throwable $e) {
+            $this->dispatch('toast', type: 'error', message: __('Could not block this user.'));
+            return;
+        }
+
+        $this->dispatch('toast', type: 'success', message: __('User blocked. They can no longer message you.'));
+        // Refresh chat-room so the blocked banner / disabled input appears immediately.
+        $this->dispatch('room-updated');
+    }
+
+    /**
+     * Unblock the DM partner (only the user who placed the block can lift it).
+     */
+    public function unblockUser(int $userId): void
+    {
+        if ($userId === auth()->id()) {
+            return;
+        }
+
+        $ok = app(\App\Services\ConnectionService::class)->unblock(auth()->user(), $userId);
+
+        if ($ok) {
+            $this->dispatch('toast', type: 'success', message: __('User unblocked.'));
+            $this->dispatch('room-updated');
+        } else {
+            $this->dispatch('toast', type: 'info', message: __('Nothing to unblock.'));
+        }
+    }
+
+    /**
+     * Open the inline nickname editor inside the DM info panel.
+     */
+    public function startEditingNickname(): void
+    {
+        $room = YardRoom::find($this->roomId);
+        if (!$room) return;
+        $partner = $room->members()->where('user_id', '!=', auth()->id())->with('user')->first()?->user;
+        if (!$partner) return;
+
+        $this->nicknameDraft  = (string) (auth()->user()->nicknameFor($partner->id) ?? '');
+        $this->editingNickname = true;
+    }
+
+    public function cancelEditingNickname(): void
+    {
+        $this->editingNickname = false;
+        $this->nicknameDraft = '';
+    }
+
+    /**
+     * Save (or, when blank, clear) the per-viewer nickname for the DM partner.
+     */
+    public function saveContactNickname(): void
+    {
+        $room = YardRoom::find($this->roomId);
+        if (!$room) return;
+        $partner = $room->members()->where('user_id', '!=', auth()->id())->with('user')->first()?->user;
+        if (!$partner) return;
+
+        $nickname = trim($this->nicknameDraft);
+        $ownerId  = auth()->id();
+
+        if ($nickname === '') {
+            \App\Models\UserContactName::where('owner_user_id', $ownerId)
+                ->where('contact_user_id', $partner->id)
+                ->delete();
+            $this->dispatch('toast', type: 'success', message: __('Custom name removed'));
+        } else {
+            if (mb_strlen($nickname) > 60) {
+                $this->dispatch('toast', type: 'error', message: __('Name is too long (60 max)'));
+                return;
+            }
+            \App\Models\UserContactName::updateOrCreate(
+                ['owner_user_id' => $ownerId, 'contact_user_id' => $partner->id],
+                ['tenant_id' => auth()->user()->tenant_id, 'nickname' => $nickname],
+            );
+            $this->dispatch('toast', type: 'success', message: __('Saved as :name', ['name' => $nickname]));
+        }
+
+        \Cache::driver('array')->forget("ucn.{$ownerId}.{$partner->id}");
+        $this->editingNickname = false;
+
+        // Refresh the chat list so the room row updates immediately
+        $this->dispatch('refreshRoomList');
+        $this->dispatch('room-updated');
     }
 
     public function render()

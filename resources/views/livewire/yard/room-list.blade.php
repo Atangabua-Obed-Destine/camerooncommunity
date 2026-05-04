@@ -38,6 +38,15 @@
             'groups'    => '<svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"/></svg>',
         ];
     @endphp
+    @if($activeFilter === 'archived')
+    {{-- WhatsApp-style "Archived" header banner: appears in place of the filter pills --}}
+    <div class="yard-archived-bar">
+        <button type="button" wire:click="setFilter('all')" class="yard-archived-bar__back" :title="$store.lang.t('Back', 'Retour')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
+        </button>
+        <span class="yard-archived-bar__title" x-text="$store.lang.t('Archived', 'Archivés')"></span>
+    </div>
+    @else
     <div class="yard-filters">
         @foreach($filters as $key => $label)
         <button wire:click="setFilter('{{ $key }}')"
@@ -47,6 +56,7 @@
         </button>
         @endforeach
     </div>
+    @endif
 
     {{-- ═══════════════════════════════════════════════════════════
          ACTIVE LOCATION STRIP — manual switcher entry point.
@@ -181,6 +191,9 @@
                         @endif
                     </span>
                     <span class="yard-room__badges">
+                        @if(($room->unread_mention_count ?? 0) > 0)
+                        <span class="yard-room__mention" title="{{ __('You were mentioned') }}">@</span>
+                        @endif
                         @if(($room->unread_count ?? 0) > 0)
                         <span class="yard-room__unread">{{ $room->unread_count > 99 ? '99+' : $room->unread_count }}</span>
                         @endif
@@ -203,24 +216,96 @@
                 <span x-text="$store.lang.t('Pin chat', 'Épingler')"></span>
                 @endif
             </button>
+            <button wire:click="toggleArchive({{ $room->id }})" class="yard-room-ctx__item">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M6 8l1 11a2 2 0 002 2h6a2 2 0 002-2l1-11M10 12h4M4 4h16v4H4z"/>
+                </svg>
+                @if($room->member_archived_at ?? null)
+                <span x-text="$store.lang.t('Unarchive chat', 'Désarchiver')"></span>
+                @else
+                <span x-text="$store.lang.t('Archive chat', 'Archiver')"></span>
+                @endif
+            </button>
         </div>
         </div>
     @empty
         @if($suggested->isEmpty())
         <div class="yard-room-list__empty">
             @if($activeFilter === 'unread')
-                <div class="text-4xl mb-3">✅</div>
-                <p class="text-sm text-slate-500" x-text="$store.lang.t('All caught up!', 'Tout est lu !')"></p>
+                <div class="yard-empty-illus yard-empty-illus--check">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor"><circle cx="32" cy="32" r="28" stroke-width="2" opacity="0.18"/><path d="M20 33l9 9 17-19" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </div>
+                <p class="yard-empty-title" x-text="$store.lang.t('All caught up!', 'Tout est lu !')"></p>
+                <p class="yard-empty-hint" x-text="$store.lang.t('No unread messages right now. Pour yourself a coffee.', 'Aucun message non lu. Servez-vous un café.')"></p>
+                <button type="button"
+                        wire:click="setFilter('all')"
+                        class="yard-empty-cta yard-empty-cta--ghost">
+                    <span x-text="$store.lang.t('Show all chats', 'Voir tous les chats')"></span>
+                </button>
+
             @elseif($activeFilter === 'favorites')
-                <div class="text-4xl mb-3">📌</div>
-                <p class="text-sm text-slate-500" x-text="$store.lang.t('No favorites yet', 'Aucun favori')"></p>
-                <p class="text-xs text-slate-400 mt-1" x-text="$store.lang.t('Long-press a chat to pin it', 'Appuyez longuement pour épingler')"></p>
+                <div class="yard-empty-illus yard-empty-illus--star">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor"><path d="M32 8l7.4 15 16.6 2.4-12 11.7 2.8 16.5L32 45.8l-14.8 7.8L20 37.1 8 25.4l16.6-2.4L32 8z" stroke-width="2.5" stroke-linejoin="round"/></svg>
+                </div>
+                <p class="yard-empty-title" x-text="$store.lang.t('No favorites yet', 'Aucun favori')"></p>
+                <p class="yard-empty-hint" x-text="$store.lang.t('Long-press any chat and pick \u201cPin\u201d to keep it at the top.', 'Appuyez longuement sur un chat puis choisissez \u00ab \u00c9pingler \u00bb.')"></p>
+                <button type="button"
+                        wire:click="setFilter('all')"
+                        class="yard-empty-cta yard-empty-cta--ghost">
+                    <span x-text="$store.lang.t('Browse chats', 'Parcourir les chats')"></span>
+                </button>
+
             @elseif($activeFilter === 'groups')
-                <div class="text-4xl mb-3">👥</div>
-                <p class="text-sm text-slate-500" x-text="$store.lang.t('No groups yet', 'Aucun groupe')"></p>
+                <div class="yard-empty-illus yard-empty-illus--group">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor"><circle cx="22" cy="24" r="8" stroke-width="2.5"/><circle cx="42" cy="24" r="8" stroke-width="2.5"/><path d="M8 52c2-8 8-12 14-12s12 4 14 12" stroke-width="2.5" stroke-linecap="round"/><path d="M30 52c2-8 8-12 14-12s12 4 14 12" stroke-width="2.5" stroke-linecap="round"/></svg>
+                </div>
+                <p class="yard-empty-title" x-text="$store.lang.t('No groups yet', 'Aucun groupe')"></p>
+                <p class="yard-empty-hint" x-text="$store.lang.t('Discover communities of Cameroonians near you, or create your own.', 'D\u00e9couvrez des communaut\u00e9s de Camerounais pr\u00e8s de vous, ou cr\u00e9ez la v\u00f4tre.')"></p>
+                <button type="button"
+                        @click="window.Livewire.dispatch('open-communities')"
+                        class="yard-empty-cta yard-empty-cta--primary">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72M6 18.72a9.094 9.094 0 01-3.741-.479 3 3 0 014.682-2.72M15 6.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                    <span x-text="$store.lang.t('Discover Communities', 'D\u00e9couvrir les communaut\u00e9s')"></span>
+                </button>
+
             @else
-                <div class="text-4xl mb-3">🏠</div>
-                <p class="text-sm text-slate-500" x-text="$store.lang.t('No conversations yet', 'Aucune conversation')"></p>
+                {{-- Default empty: friendly onboarding for brand-new users --}}
+                <div class="yard-empty-illus yard-empty-illus--bubbles">
+                    <span class="yard-empty-bubble yard-empty-bubble--a">💬</span>
+                    <span class="yard-empty-bubble yard-empty-bubble--b">🇨🇲</span>
+                    <span class="yard-empty-bubble yard-empty-bubble--c">🤝</span>
+                </div>
+                <p class="yard-empty-title" x-text="$store.lang.t('Welcome to The Yard', 'Bienvenue au Yard')"></p>
+                <p class="yard-empty-hint" x-text="$store.lang.t('Start chatting with fellow Cameroonians. Pick where you want to begin.', 'Commencez \u00e0 discuter avec des compatriotes. Choisissez par o\u00f9 commencer.')"></p>
+
+                <div class="yard-empty-actions">
+                    <button type="button"
+                            @click="window.Livewire.dispatch('open-communities')"
+                            class="yard-empty-cta yard-empty-cta--primary">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72M6 18.72a9.094 9.094 0 01-3.741-.479 3 3 0 014.682-2.72M15 6.75a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                        <span x-text="$store.lang.t('Join a community', 'Rejoindre une communaut\u00e9')"></span>
+                    </button>
+                    <button type="button"
+                            @click="window.dispatchEvent(new CustomEvent('yard-open-new-chat'))"
+                            class="yard-empty-cta yard-empty-cta--ghost">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 01.778-.332 48.294 48.294 0 005.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+                        <span x-text="$store.lang.t('Start a chat', 'D\u00e9marrer un chat')"></span>
+                    </button>
+                    <button type="button"
+                            @click="window.Livewire.dispatch('open-connections')"
+                            class="yard-empty-cta yard-empty-cta--ghost">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+                        <span x-text="$store.lang.t('Find connections', 'Trouver des connexions')"></span>
+                    </button>
+                </div>
+
+                @if(!$activeCountry)
+                <button type="button"
+                        wire:click="openLocationSwitcher"
+                        class="yard-empty-loc-hint">
+                    📍 <span x-text="$store.lang.t('Set your location to see nearby rooms', 'D\u00e9finissez votre lieu pour voir les salons proches')"></span>
+                </button>
+                @endif
             @endif
         </div>
         @endif

@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 class AIService
 {
-    protected const KAMER_SYSTEM_PROMPT = 'You are Kamer, the intelligent assistant for Cameroon Community — the digital home for Cameroonians living abroad. You know the Cameroonian diaspora experience inside out. You help users navigate life in a foreign country, use the platform, find community resources, understand their rights, and feel less alone. You speak both English and French fluently. You understand Camfranglais and will never correct someone for using it. You are warm, practically helpful, culturally aware, and never condescending. You never discuss divisive politics. You prioritise user safety and wellbeing. When you don\'t know something, you say so honestly and suggest where to find out.';
+    protected const KAMER_SYSTEM_PROMPT = 'You are Kamer, the intelligent assistant for Cameroon Network — the digital home for Cameroonians living abroad. You know the Cameroonian diaspora experience inside out. You help users navigate life in a foreign country, use the platform, find community resources, understand their rights, and feel less alone. You speak both English and French fluently. You understand Camfranglais and will never correct someone for using it. You are warm, practically helpful, culturally aware, and never condescending. You never discuss divisive politics. You prioritise user safety and wellbeing. When you don\'t know something, you say so honestly and suggest where to find out.';
 
     /**
      * Check if AI features are available.
@@ -109,7 +109,7 @@ class AIService
     public function moderateText(string $text): array
     {
         $result = $this->ask(
-            'You are a content moderator for Cameroon Community, a diaspora platform. Analyse the following message and return ONLY valid JSON with no extra text: {"flagged": true/false, "score": 0-100, "categories": {"hate_speech": 0.0, "harassment": 0.0, "spam": 0.0, "scam": 0.0, "sexual": 0.0, "violence": 0.0}, "reason": "string or null"}. Flag content that is hateful, harassing, spam, scams, or explicit. Be culturally aware — Cameroonian pidgin, Camfranglais, French, and English are all normal and should NOT be flagged. Score 0 = completely safe, 100 = extremely harmful.',
+            'You are a content moderator for Cameroon Network, a diaspora platform. Analyse the following message and return ONLY valid JSON with no extra text: {"flagged": true/false, "score": 0-100, "categories": {"hate_speech": 0.0, "harassment": 0.0, "spam": 0.0, "scam": 0.0, "sexual": 0.0, "violence": 0.0}, "reason": "string or null"}. Flag content that is hateful, harassing, spam, scams, or explicit. Be culturally aware — Cameroonian pidgin, Camfranglais, French, and English are all normal and should NOT be flagged. Score 0 = completely safe, 100 = extremely harmful.',
             $text,
             null,
             300,
@@ -149,7 +149,7 @@ class AIService
      */
     public function assessCampaignRisk(string $title, string $description, string $category, ?string $beneficiary = null, ?float $goalAmount = null): array
     {
-        $prompt = "Analyse this Solidarity campaign from Cameroon Community (diaspora fundraising platform) for fraud risk.\n\n"
+        $prompt = "Analyse this Solidarity campaign from Cameroon Network (diaspora fundraising platform) for fraud risk.\n\n"
             . "Title: {$title}\n"
             . "Category: {$category}\n"
             . ($beneficiary ? "Beneficiary: {$beneficiary}\n" : '')
@@ -158,7 +158,7 @@ class AIService
             . "Return ONLY valid JSON: {\"risk_score\": \"low\"|\"medium\"|\"high\", \"risk_percentage\": 0-100, \"reason\": \"brief explanation\"}";
 
         $result = $this->ask(
-            'You are a fraud detection analyst for Cameroon Community, a Cameroonian diaspora crowdfunding platform. You assess Solidarity campaigns for authenticity. Be fair — most campaigns are genuine. Flag vague descriptions, impossible claims, missing context, or known scam patterns. Cultural context matters: bereavement and repatriation campaigns are very common and usually genuine in Cameroonian communities.',
+            'You are a fraud detection analyst for Cameroon Network, a Cameroonian diaspora crowdfunding platform. You assess Solidarity campaigns for authenticity. Be fair — most campaigns are genuine. Flag vague descriptions, impossible claims, missing context, or known scam patterns. Cultural context matters: bereavement and repatriation campaigns are very common and usually genuine in Cameroonian communities.',
             $prompt,
             null,
             300,
@@ -182,7 +182,7 @@ class AIService
         $langName = $language === 'fr' ? 'French' : 'English';
 
         return $this->ask(
-            "You are Kamer, helping a user write a Solidarity campaign description on Cameroon Community. Write a warm, respectful, clear campaign description in {$langName} based on the user's brief input. The description should explain the situation, why the community should help, and how funds will be used. Keep it under 200 words. Do not add fictional details — only expand on what the user provides.",
+            "You are Kamer, helping a user write a Solidarity campaign description on Cameroon Network. Write a warm, respectful, clear campaign description in {$langName} based on the user's brief input. The description should explain the situation, why the community should help, and how funds will be used. Keep it under 200 words. Do not add fictional details — only expand on what the user provides.",
             $situation,
             null,
             400,
@@ -212,7 +212,7 @@ class AIService
         $statsJson = json_encode($stats);
 
         return $this->ask(
-            'You are Kamer, the AI assistant for Cameroon Community admins. Generate a brief, actionable daily insight (2-3 sentences max) based on the platform statistics provided. Focus on trends, notable changes, and actionable suggestions. Be specific with numbers.',
+            'You are Kamer, the AI assistant for Cameroon Network admins. Generate a brief, actionable daily insight (2-3 sentences max) based on the platform statistics provided. Focus on trends, notable changes, and actionable suggestions. Be specific with numbers.',
             "Platform stats: {$statsJson}",
             null,
             200,
@@ -228,7 +228,7 @@ class AIService
         $text = collect($messages)->map(fn ($m) => ($m['user'] ?? 'User') . ': ' . ($m['content'] ?? ''))->implode("\n");
 
         return $this->ask(
-            "You are Kamer. Summarise this Cameroon Community chat thread in {$langName} in 3-4 sentences. Capture the main topics and conclusions. Be concise.",
+            "You are Kamer. Summarise this Cameroon Network chat thread in {$langName} in 3-4 sentences. Capture the main topics and conclusions. Be concise.",
             $text,
             null,
             300,
@@ -244,7 +244,7 @@ class AIService
 
         return $this->ask(
             self::KAMER_SYSTEM_PROMPT . "\n\nRespond in {$langName}.",
-            "A new user named {$name} just joined Cameroon Community from {$country}. Give them a warm, brief welcome (3-4 sentences). Mention what they can do on the platform: join The Yard to chat with fellow Cameroonians, support community members through Solidarity, and explore their city room. Be enthusiastic but not overwhelming.",
+            "A new user named {$name} just joined Cameroon Network from {$country}. Give them a warm, brief welcome (3-4 sentences). Mention what they can do on the platform: join The Yard to chat with fellow Cameroonians, support community members through Solidarity, and explore their city room. Be enthusiastic but not overwhelming.",
             null,
             200,
         );
@@ -260,7 +260,7 @@ class AIService
 
         return $this->ask(
             self::KAMER_SYSTEM_PROMPT . "\n\nRespond in {$langName}. Be a hype-man/doorman welcoming someone into a room. Keep it to 2-3 sentences MAX. Use one emoji. Be warm and culturally Cameroonian.",
-            "User '{$userName}' is about to join the '{$roomName}' room ({$roomType} room). There are {$memberCount} members already inside. The room is for Cameroonians in {$location}. Give them a short, exciting welcome that makes them want to click 'Enter'. Don't say 'welcome to Cameroon Community' — just hype up this specific room.",
+            "User '{$userName}' is about to join the '{$roomName}' room ({$roomType} room). There are {$memberCount} members already inside. The room is for Cameroonians in {$location}. Give them a short, exciting welcome that makes them want to click 'Enter'. Don't say 'welcome to Cameroon Network' — just hype up this specific room.",
             null,
             120,
         );

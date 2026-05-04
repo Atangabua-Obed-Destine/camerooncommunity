@@ -1,14 +1,71 @@
 <x-layouts.app :title="'Profile'">
     <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        {{-- Back button --}}
+        <button type="button" onclick="history.length > 1 ? history.back() : (window.location.href = '{{ url('/') }}')"
+                class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-cm-green transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+            </svg>
+            <span x-text="$store.lang.t('Back', 'Retour')">Back</span>
+        </button>
+
         {{-- Profile Header --}}
         <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            {{-- Banner --}}
-            <div class="h-28 bg-gradient-to-r from-cm-green via-cm-green/80 to-cm-yellow relative">
-                @if($user->is_founding_member)
-                    <div class="absolute top-3 right-3 px-3 py-1 bg-white/90 rounded-full text-xs font-bold text-cm-green flex items-center gap-1">
-                        ⭐ <span x-text="$store.lang.t('Founding Member', 'Membre Fondateur')"></span>
-                    </div>
-                @endif
+            {{-- Cover photo (Facebook/WhatsApp-style) --}}
+            <div class="relative group">
+                <div class="h-40 sm:h-52 relative overflow-hidden
+                    @if(!$user->cover_photo) bg-gradient-to-r from-cm-green via-cm-green/80 to-cm-yellow @endif">
+                    @if($user->cover_photo)
+                        <img src="{{ asset('storage/' . $user->cover_photo) }}" alt=""
+                             class="w-full h-full object-cover">
+                        {{-- Subtle dark gradient at bottom so the avatar/name area below is readable --}}
+                        <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
+                    @endif
+
+                    @if($user->is_founding_member)
+                        <div class="absolute top-3 right-3 px-3 py-1 bg-white/90 rounded-full text-xs font-bold text-cm-green flex items-center gap-1 shadow">
+                            ⭐ <span x-text="$store.lang.t('Founding Member', 'Membre Fondateur')"></span>
+                        </div>
+                    @endif
+
+                    {{-- Camera button (bottom-right of cover) — opens file picker --}}
+                    <button type="button"
+                            x-data
+                            @click.stop="$refs.coverPicker.click()"
+                            class="absolute bottom-3 right-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/55 hover:bg-black/70 text-white text-xs font-medium backdrop-blur-sm shadow-lg transition cursor-pointer z-10">
+                        <svg class="w-4 h-4 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
+                        </svg>
+                        <span class="pointer-events-none" x-text="$store.lang.t('{{ $user->cover_photo ? 'Edit cover' : 'Add cover' }}', '{{ $user->cover_photo ? 'Modifier' : 'Ajouter' }}')"></span>
+
+                        <form method="POST" action="{{ route('profile.cover') }}" enctype="multipart/form-data" class="hidden">
+                            @csrf
+                            <input type="file" x-ref="coverPicker" name="cover_photo"
+                                   accept="image/jpeg,image/png,image/webp"
+                                   onchange="this.form.submit()">
+                        </form>
+                    </button>
+
+                    {{-- Remove cover (only when one exists) --}}
+                    @if($user->cover_photo)
+                        <form method="POST" action="{{ route('profile.cover.remove') }}"
+                              class="absolute bottom-3 left-3 z-10"
+                              onsubmit="return confirm('{{ __('Remove cover photo?') }}')">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit"
+                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-black/45 hover:bg-cm-red/80 text-white text-xs backdrop-blur-sm shadow transition">
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>
+                                <span x-text="$store.lang.t('Remove', 'Supprimer')"></span>
+                            </button>
+                        </form>
+                    @endif
+                </div>
+
+                @error('cover_photo')
+                    <p class="text-xs text-cm-red mt-1 px-6">{{ $message }}</p>
+                @enderror
             </div>
 
             <div class="px-6 pb-6 relative -mt-12">

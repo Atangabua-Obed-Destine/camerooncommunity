@@ -64,10 +64,19 @@ class LocationTracker extends Component
 
         $user = $user->fresh();
 
+        // Always inform the UI of the latest detected location so any
+        // location-aware widgets (topbar strip, welcome banners, etc.)
+        // can refresh without a full page reload.
+        $this->dispatch(
+            'location-changed',
+            country: $user->current_country ?? $country,
+            region: $user->current_region ?? $region,
+            city: $user->current_city ?? $city,
+        );
+
         // Bootstrap: first-ever detection — adopt as active, no prompt.
         if (! $user->active_country) {
             app(LocationSwitchService::class)->switchTo($user, $country, $region ?: null);
-            $this->dispatch('location-changed');
 
             return;
         }
@@ -78,10 +87,7 @@ class LocationTracker extends Component
         $sameRegion = ! $user->active_region || ! $region || $user->active_region === $region;
 
         if ($sameCountry && $sameRegion) {
-            $restored = app(LocationSwitchService::class)->silentRestoreOnReturn($user);
-            if ($restored > 0) {
-                $this->dispatch('location-changed');
-            }
+            app(LocationSwitchService::class)->silentRestoreOnReturn($user);
 
             return;
         }
@@ -112,7 +118,7 @@ class LocationTracker extends Component
 
         $result = app(LocationSwitchService::class)->switchTo($user, $country, $region ?: null);
 
-        $this->dispatch('location-changed');
+        $this->dispatch('location-changed', country: $country, region: $region);
         $this->dispatch('refreshRoomList');
         $this->dispatch('location-switch-completed',
             archived: $result['archived'],

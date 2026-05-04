@@ -7,14 +7,14 @@
         {{-- ═══ Progress Bar ═══ --}}
         <div class="flex items-center justify-center gap-2 mb-8">
             @for($i = 1; $i <= 4; $i++)
-            <button wire:click="goToStep({{ $i }})"
-                    class="h-2 rounded-full transition-all duration-500 cursor-pointer"
-                    :class="{
-                        'w-10 bg-cm-green': {{ $i }} === {{ $step }},
-                        'w-6 bg-cm-green/40': {{ $i }} < {{ $step }},
-                        'w-2 bg-slate-300': {{ $i }} > {{ $step }}
-                    }">
-            </button>
+                @php $dotClickable = $i < $step; @endphp
+                <button type="button"
+                        @if($dotClickable) wire:click="goToStep({{ $i }})" @else disabled @endif
+                        title="{{ __('Step') }} {{ $i }}"
+                        class="relative h-6 flex items-center group {{ $dotClickable ? 'cursor-pointer' : 'cursor-default' }}">
+                    <span class="block h-2 rounded-full transition-all duration-500
+                        {{ $i === $step ? 'w-10 bg-cm-green' : ($i < $step ? 'w-6 bg-cm-green/40 group-hover:bg-cm-green/70 group-hover:w-8' : 'w-2 bg-slate-300') }}"></span>
+                </button>
             @endfor
         </div>
 
@@ -29,9 +29,15 @@
                 ];
             @endphp
             @foreach($labels as $num => $text)
-            <span class="text-[11px] font-medium transition-colors duration-300 {{ $step >= $num ? 'text-cm-green' : 'text-slate-400' }}"
-                  x-text="$store.lang.t('{{ $text['en'] }}', '{{ $text['fr'] }}')">
-            </span>
+                @php $clickable = $num < $step; @endphp
+                <button type="button"
+                        @if($clickable) wire:click="goToStep({{ $num }})" @else disabled @endif
+                        class="text-[11px] font-medium transition-all duration-300 px-1
+                            {{ $step >= $num ? 'text-cm-green' : 'text-slate-400' }}
+                            {{ $clickable ? 'cursor-pointer hover:underline hover:text-cm-green/80' : 'cursor-default' }}"
+                        @if($clickable) title="{{ __('Go back') }}" @endif
+                        x-text="$store.lang.t('{{ $text['en'] }}', '{{ $text['fr'] }}')">
+                </button>
             @endforeach
         </div>
 
@@ -294,11 +300,7 @@
             </div>
 
             {{-- Actions --}}
-            <div class="border-t border-slate-100 px-6 py-4 flex justify-between items-center bg-slate-50/50">
-                <button wire:click="skipRooms"
-                        class="text-sm text-slate-500 hover:text-slate-700 transition-colors"
-                        x-text="$store.lang.t('Skip for now', 'Passer pour l\'instant')">
-                </button>
+            <div class="border-t border-slate-100 px-6 py-4 flex justify-end items-center bg-slate-50/50">
                 <button wire:click="joinSelectedRooms"
                         @if(empty($selectedRoomIds)) disabled @endif
                         class="rounded-xl bg-cm-green px-6 py-2.5 text-sm font-bold text-white hover:bg-cm-green/90 transition-all duration-200 flex items-center gap-2 shadow-lg shadow-cm-green/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">

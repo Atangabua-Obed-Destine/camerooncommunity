@@ -21,7 +21,6 @@
 @if($tid && $uid)
 <div
     x-data="connectionNotifier(@js($uid), @js($tid))"
-    x-init="init()"
     class="kc-notifier"
     aria-live="polite"
 >
@@ -231,6 +230,73 @@
                         (data.from?.username || data.from?.name || 'Someone') + ' accepted your request.'
                     );
                     try { window.Livewire?.dispatch('connection-updated', { userId: data.from?.id, state: 'connected' }); } catch(_) {}
+                    // Server now auto-creates the DM room when a request is accepted —
+                    // refresh the requester's chat list so the new conversation appears immediately.
+                    try { window.Livewire?.dispatch('refreshRoomList'); } catch(_) {}
+                });
+
+                // ── State changes that should silently sync UI everywhere ──
+                // declined → requester's "Pending" pill flips back to "Connect"
+                // cancelled → recipient's incoming-request item disappears
+                // disconnected / blocked / unblocked → both the connections list
+                // and the DM "Connected" banner refresh.
+                this._channel.listen('.connection.state', (data) => {
+                    const kind = data.kind || '';
+                    const fromId = data.from?.id || null;
+                    const fromName = data.from?.username || data.from?.name || 'Someone';
+
+                    // Map server "kind" → state string the rest of the app expects.
+                    const stateMap = {
+                        declined:     'declined',
+                        cancelled:    'none',
+                        disconnected: 'none',
+                        blocked:      'blocked-by-other',
+                        unblocked:    'none',
+                    };
+                    const state = stateMap[kind] || 'none';
+
+                    // 1. Refresh the bell badge & the open Connections modal.
+                    try { window.Livewire?.dispatch('connection-updated',       { userId: fromId, state }); } catch(_) {}
+                    try { window.Livewire?.dispatch('connection-badge-refresh', {}); } catch(_) {}
+
+                    // 2. Tell anything listening (e.g. ChatRoom) to refresh its
+                    //    cached connection state for this specific partner.
+                    try {
+                        window.dispatchEvent(new CustomEvent('connection-state-changed', {
+                            detail: { userId: fromId, kind, state },
+                        }));
+                    } catch(_) {}
+
+                    // 3. Subtle in-app toasts for the user-visible cases.
+                    //    Decline & cancel are silent (avoids hurt feelings / spam).
+                    if (kind === 'disconnected') {
+                        this.push({
+                            kind: 'info',
+                            from: data.from || {},
+                            title: 'Connection removed',
+                            text: fromName + ' is no longer connected with you.',
+                            cta: '',
+                            action_url: '{{ route('yard') }}?open=connections',
+                        });
+                    } else if (kind === 'blocked') {
+                        // Don't reveal the block — UX choice. Just refresh state.
+                    }
+                });
+
+                // ── @mention received in any room ──
+                // Even if the room is muted, a mention should pop a toast that
+                // takes the user straight to the message.
+                this._channel.listen('.message.mentioned', (data) => {
+                    const fromName = data.from?.name || data.from?.username || 'Someone';
+                    const roomName = data.room_name || 'a chat';
+                    this.push({
+                        kind: 'info',
+                        from: data.from || {},
+                        title: '@ ' + fromName + ' mentioned you',
+                        text: '[' + roomName + '] ' + (data.preview || ''),
+                        cta: 'View',
+                        action_url: '{{ route('yard') }}?room=' + (data.room_id || ''),
+                    });
                 });
             },
 

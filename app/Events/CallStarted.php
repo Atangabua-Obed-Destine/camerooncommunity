@@ -16,6 +16,7 @@ class CallStarted implements ShouldBroadcastNow
     public function __construct(
         public YardCall $call,
         public string $callerName,
+        public ?string $callerAvatar = null,
     ) {}
 
     public function broadcastAs(): string
@@ -51,6 +52,7 @@ class CallStarted implements ShouldBroadcastNow
             'call_type' => $this->call->call_type,
             'initiated_by' => $this->call->initiated_by,
             'caller_name' => $this->callerName,
+            'caller_avatar' => $this->callerAvatar,
         ];
     }
 }

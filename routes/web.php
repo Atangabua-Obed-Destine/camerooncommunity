@@ -15,6 +15,37 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 // ─── Language Toggle API ───
 Route::post('/api/language', [LanguageController::class, 'update'])->name('language.update');
 
+// ─── Public Kamer AI chat (used by the landing page floating widget) ───
+Route::post('/api/kamer/chat', [HomeController::class, 'kamerChat'])->name('kamer.chat.public');
+
+// ─── IP-based geolocation proxy (avoids browser CORS + ipapi.co rate-limits) ───
+Route::get('/api/geo/ip', function (\Illuminate\Http\Request $request) {
+    $ip = $request->ip() ?: '';
+    $cacheKey = 'geo:ip:' . $ip;
+
+    return response()->json(
+        \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () {
+            try {
+                $resp = \Illuminate\Support\Facades\Http::timeout(5)->get('https://ipapi.co/json/');
+                if ($resp->successful()) {
+                    $data = $resp->json();
+                    return [
+                        'latitude' => $data['latitude'] ?? null,
+                        'longitude' => $data['longitude'] ?? null,
+                        'country_name' => $data['country_name'] ?? null,
+                        'country_code' => $data['country_code'] ?? null,
+                        'region' => $data['region'] ?? null,
+                        'city' => $data['city'] ?? null,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // Swallow — caller will detect the empty payload and fall back gracefully.
+            }
+            return ['error' => 'unavailable'];
+        })
+    );
+})->name('geo.ip');
+
 // ─── Auth Routes (guests only) ───
 Route::middleware('guest')->group(function () {
     Route::get('/register', \App\Livewire\Auth\RegisterWizard::class)->name('register');
@@ -56,6 +87,10 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::get('/yard/users/search', [YardController::class, 'searchUsers'])->name('yard.users.search');
     Route::post('/yard/connections/request', [YardController::class, 'requestConnection'])->name('yard.connections.request');
     Route::post('/yard/connections/accept', [YardController::class, 'acceptConnection'])->name('yard.connections.accept');
+    Route::post('/yard/contacts/nickname', [YardController::class, 'saveNickname'])->name('yard.contacts.nickname');
+    Route::get('/yard/contacts/nickname/{userId}', [YardController::class, 'getNickname'])
+        ->whereNumber('userId')
+        ->name('yard.contacts.nickname.get');
 
     // TURN credentials (proxies Metered API — keeps secret server-side)
     Route::get('/api/turn-credentials', function () {
@@ -87,6 +122,12 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::put('/profile', [\App\Http\Controllers\ProfileController::class, 'update'])->name('profile.update');
     Route::post('/profile/avatar', [\App\Http\Controllers\ProfileController::class, 'updateAvatar'])->name('profile.avatar');
     Route::delete('/profile/avatar', [\App\Http\Controllers\ProfileController::class, 'removeAvatar'])->name('profile.avatar.remove');
+    Route::post('/profile/cover', [\App\Http\Controllers\ProfileController::class, 'updateCover'])->name('profile.cover');
+    Route::delete('/profile/cover', [\App\Http\Controllers\ProfileController::class, 'removeCover'])->name('profile.cover.remove');
+
+    // Public user profile (Facebook-style)
+    Route::get('/u/{username}', [\App\Http\Controllers\ProfileController::class, 'showPublic'])
+        ->name('user.profile');
 
     // ── Sponsored Ads (user-facing) ──
     Route::get('/ads/yard', function () {

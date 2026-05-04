@@ -13,7 +13,7 @@ class TenantSeeder extends Seeder
         Tenant::firstOrCreate(
             ['domain' => 'camerooncommunity.net'],
             [
-                'name' => 'Cameroon Community',
+                'name' => 'Cameroon Network',
                 'slug' => 'cameroon-community',
                 'domain' => 'camerooncommunity.net',
                 'country' => 'Cameroon',

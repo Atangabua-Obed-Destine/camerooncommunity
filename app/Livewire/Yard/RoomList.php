@@ -35,6 +35,7 @@ class RoomList extends Component
         $listeners = [
             'room-updated' => 'refreshRooms',
             'location-changed' => 'onLocationChanged',
+            'open-archived' => 'openArchived',
         ];
 
         // Subscribe to Echo channels for ALL rooms the user belongs to.
@@ -74,7 +75,7 @@ class RoomList extends Component
                      ->where('m.user_id', $user->id)
                      ->whereNull('m.auto_archived_at'); // hide rooms auto-archived by location switch
             })
-            ->select('yard_rooms.*', 'm.last_read_at as member_last_read_at', 'm.is_favorited as is_favorited')
+            ->select('yard_rooms.*', 'm.last_read_at as member_last_read_at', 'm.is_favorited as is_favorited', 'm.archived_at as member_archived_at')
             ->selectRaw('(SELECT COUNT(*) FROM yard_room_members WHERE room_id = yard_rooms.id) as members_count')
             ->selectRaw('(SELECT COALESCE(u.username, u.name) FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_name', [$user->id])
             ->selectRaw('(SELECT u.avatar FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_avatar', [$user->id])
@@ -83,6 +84,14 @@ class RoomList extends Component
 
         if ($this->search) {
             $rooms->where('yard_rooms.name', 'like', '%' . $this->search . '%');
+        }
+
+        // Filter: archived view shows ONLY user-archived chats. All other
+        // filters EXCLUDE archived chats (WhatsApp behavior).
+        if ($this->filter === 'archived') {
+            $rooms->whereNotNull('m.archived_at');
+        } else {
+            $rooms->whereNull('m.archived_at');
         }
 
         // Filter: favorites only
@@ -104,6 +113,7 @@ class RoomList extends Component
         $roomIds = $rooms->pluck('id')->toArray();
         if (!empty($roomIds)) {
             $unreadCounts = collect();
+            $mentionCounts = collect();
             $cases = $rooms->filter(fn ($r) => $r->member_last_read_at)
                 ->map(fn ($r) => ['id' => $r->id, 'last_read' => $r->member_last_read_at]);
 
@@ -116,6 +126,24 @@ class RoomList extends Component
                     ->whereRaw('created_at > (SELECT last_read_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1)', [$user->id])
                     ->groupBy('room_id')
                     ->pluck('cnt', 'room_id');
+
+                // Count unread messages where this user is mentioned (WhatsApp-style "@" badge).
+                // Uses MySQL JSON_CONTAINS on the mentioned_user_ids JSON column.
+                try {
+                    $mentionCounts = DB::table('yard_messages')
+                        ->select('room_id', DB::raw('COUNT(*) as cnt'))
+                        ->whereIn('room_id', $cases->pluck('id'))
+                        ->where('user_id', '!=', $user->id)
+                        ->where('is_deleted', false)
+                        ->whereNotNull('mentioned_user_ids')
+                        ->whereRaw('JSON_CONTAINS(mentioned_user_ids, ?)', [(string) $user->id])
+                        ->whereRaw('created_at > (SELECT last_read_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1)', [$user->id])
+                        ->groupBy('room_id')
+                        ->pluck('cnt', 'room_id');
+                } catch (\Throwable $e) {
+                    // Driver without JSON_CONTAINS — gracefully degrade.
+                    \Log::warning('[RoomList] mention count query failed: ' . $e->getMessage());
+                }
             }
 
             foreach ($rooms as $room) {
@@ -123,6 +151,26 @@ class RoomList extends Component
                     $room->unread_count = $room->messages_count ?? 0;
                 } else {
                     $room->unread_count = (int) ($unreadCounts->get($room->id) ?? $unreadCounts->get((string) $room->id) ?? 0);
+                }
+                $room->unread_mention_count = (int) ($mentionCounts->get($room->id) ?? $mentionCounts->get((string) $room->id) ?? 0);
+            }
+
+            // Apply per-viewer custom contact names (WhatsApp "Save as...") on
+            // top of the SQL-derived names so DM rows and the last-message
+            // sender chip both reflect the saved nickname.
+            $contactIds = collect();
+            foreach ($rooms as $r) {
+                if ($r->dm_other_id)            $contactIds->push((int) $r->dm_other_id);
+                if ($r->last_message_user_id)   $contactIds->push((int) $r->last_message_user_id);
+            }
+            $contactIds = $contactIds->unique()->filter()->values()->all();
+            $nicknames = \App\Models\UserContactName::nicknamesFor($user->id, $contactIds);
+            foreach ($rooms as $r) {
+                if ($r->dm_other_id && isset($nicknames[$r->dm_other_id])) {
+                    $r->dm_other_name = $nicknames[$r->dm_other_id];
+                }
+                if ($r->last_message_user_id && isset($nicknames[$r->last_message_user_id])) {
+                    $r->last_message_sender_name = $nicknames[$r->last_message_user_id];
                 }
             }
 
@@ -353,8 +401,16 @@ class RoomList extends Component
 
     public function setFilter(string $filter): void
     {
-        $this->filter = in_array($filter, ['all', 'unread', 'favorites', 'groups']) ? $filter : 'all';
+        $this->filter = in_array($filter, ['all', 'unread', 'favorites', 'groups', 'archived']) ? $filter : 'all';
         unset($this->rooms);
+    }
+
+    /**
+     * Open the Archived chats view (triggered from the header overflow menu).
+     */
+    public function openArchived(): void
+    {
+        $this->setFilter('archived');
     }
 
     public function toggleFavorite(int $roomId): void
@@ -367,6 +423,40 @@ class RoomList extends Component
             $member->update(['is_favorited' => ! $member->is_favorited]);
             unset($this->rooms);
         }
+    }
+
+    /**
+     * Manually archive / unarchive a chat (WhatsApp parity). Distinct from
+     * `auto_archived_at` which is reserved for location-driven archiving.
+     */
+    public function toggleArchive(int $roomId): void
+    {
+        $member = YardRoomMember::where('room_id', $roomId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (! $member) {
+            return;
+        }
+
+        $isArchived = (bool) $member->archived_at;
+        $member->update(['archived_at' => $isArchived ? null : now()]);
+
+        // If we just archived the currently-open chat, clear the active id
+        // so the right pane resets.
+        if (! $isArchived && $this->activeRoomId === $roomId) {
+            $this->activeRoomId = null;
+            $this->dispatch('room-deselected');
+        }
+
+        unset($this->rooms);
+
+        $this->dispatch('toast',
+            type: 'success',
+            message: $isArchived
+                ? __('Chat unarchived')
+                : __('Chat archived'),
+        );
     }
 
     public function selectRoom(int $roomId)
@@ -510,9 +600,38 @@ class RoomList extends Component
     /**
      * Handle a new message broadcast on any room the user belongs to.
      * Refreshes the list so unread badges, preview text, and sort order update instantly.
+     * Also fires a browser event so the UI can show a toast + chime when the
+     * message arrives in a room that is NOT currently open.
      */
     public function onNewMessage($data): void
     {
         unset($this->rooms);
+
+        try {
+            $payload = is_array($data) ? $data : (array) $data;
+            $roomId = (int) ($payload['room_id'] ?? 0);
+            $userId = (int) ($payload['user_id'] ?? 0);
+            $myId = (int) (auth()->id() ?? 0);
+
+            // Suppress: own messages, currently-open room, or missing data.
+            if ($roomId <= 0 || $userId === $myId || $roomId === (int) $this->activeRoomId) {
+                return;
+            }
+
+            $room = YardRoom::find($roomId);
+            if (! $room) {
+                return;
+            }
+
+            $this->dispatch('yard-incoming-message',
+                roomId: $room->id,
+                roomName: $room->name,
+                senderName: (string) ($payload['user_name'] ?? __('Someone')),
+                preview: mb_substr((string) ($payload['content'] ?? ''), 0, 120),
+            );
+        } catch (\Throwable $e) {
+            // Never let a notification failure break the list refresh.
+            \Log::warning('yard.onNewMessage notify failed: ' . $e->getMessage());
+        }
     }
 }

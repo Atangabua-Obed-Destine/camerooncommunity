@@ -39,6 +39,13 @@ class LocationService
             $region = $regions[$user->home_region] ?? $user->home_region;
         }
 
+        // Normalize UK regions: route to one of the 12 ITL1 regions
+        // (London, South East, …, Scotland, Wales, Northern Ireland) using the
+        // city → region map first, then the county/country alias map.
+        if (in_array($country, ['United Kingdom', 'UK', 'Great Britain'], true)) {
+            $region = $this->normalizeUkRegion($city, $region);
+        }
+
         $user->updateQuietly([
             'current_country' => $country,
             'current_city' => $city,
@@ -109,5 +116,43 @@ class LocationService
         ]);
 
         $room->increment('members_count');
+    }
+
+    /**
+     * Normalize a UK location to one of the 12 official ITL1 regions
+     * (London, South East, South West, East of England, East Midlands,
+     * West Midlands, Yorkshire and the Humber, North West, North East,
+     * Scotland, Wales, Northern Ireland).
+     *
+     * Resolution order:
+     *   1. If `$detectedRegion` is already a valid ITL1 region → keep it.
+     *   2. Look up the city in `gb_city_to_region`.
+     *   3. Look up the detected region/county/country in `gb_region_aliases`.
+     *   4. Otherwise return null (user lands in national room only).
+     */
+    private function normalizeUkRegion(string $city, ?string $detectedRegion): ?string
+    {
+        $valid = config('cameroon.seeded_regions.GB', []);
+
+        // 1. Already a valid ITL1 region?
+        if ($detectedRegion && in_array($detectedRegion, $valid, true)) {
+            return $detectedRegion;
+        }
+
+        // 2. City lookup
+        $cityKey = Str::lower(trim($city));
+        $cityMap = config('cameroon.gb_city_to_region', []);
+        if ($cityKey !== '' && isset($cityMap[$cityKey])) {
+            return $cityMap[$cityKey];
+        }
+
+        // 3. Region/county/country alias lookup
+        $aliasKey = Str::lower(trim((string) $detectedRegion));
+        $aliasMap = config('cameroon.gb_region_aliases', []);
+        if ($aliasKey !== '' && array_key_exists($aliasKey, $aliasMap) && $aliasMap[$aliasKey] !== null) {
+            return $aliasMap[$aliasKey];
+        }
+
+        return null;
     }
 }

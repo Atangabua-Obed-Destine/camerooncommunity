@@ -15,4 +15,5 @@ enum MessageType: string
     case Sticker = 'sticker';
     case CallLog = 'call_log';
     case Poll = 'poll';
+    case ShareCard = 'share_card';
 }

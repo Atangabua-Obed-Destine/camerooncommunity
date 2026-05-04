@@ -1,5 +1,5 @@
 <x-layouts.guest>
-    <x-slot:title>Login — Cameroon Community</x-slot:title>
+    <x-slot:title>Login — Cameroon Network</x-slot:title>
 
     <div class="min-h-screen flex flex-col lg:flex-row">
 
@@ -35,7 +35,7 @@
                 <div>
                     <a href="{{ route('home') }}" class="inline-flex items-center group">
                         @if($__siteLogo ?? null)
-                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-[120px] object-contain transition-transform group-hover:scale-110">
+                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-[120px] object-contain transition-transform group-hover:scale-110">
                         @else
                             <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
                         @endif
@@ -129,7 +129,7 @@
                 <div class="text-center mb-6 lg:hidden">
                     <a href="{{ route('home') }}" class="inline-flex items-center group">
                         @if($__siteLogo ?? null)
-                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Community' }}" class="h-20 object-contain transition-transform group-hover:scale-110">
+                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-20 object-contain transition-transform group-hover:scale-110">
                         @else
                             <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
                         @endif

@@ -29,6 +29,8 @@
     @php
         $isDm = $room->room_type->value === 'direct_message';
         $dmPartner = $isDm ? $members->first(fn($m) => $m->user_id !== auth()->id())?->user : null;
+        $blockConn = ($isDm && $dmPartner) ? \App\Models\UserConnection::between(auth()->id(), $dmPartner->id) : null;
+        $isBlockedByMe = $blockConn && $blockConn->status === \App\Models\UserConnection::STATUS_BLOCKED && $blockConn->requested_by === auth()->id();
     @endphp
 
     {{-- ═══════════════════════════════════════════════════
@@ -113,8 +115,12 @@
 
         {{-- Confirm FAB --}}
         @if(count($selectedUsers) > 0)
-        <button wire:click="addSelectedMembers" class="wa-add-member__fab">
-            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+        <button wire:click="addSelectedMembers"
+                wire:loading.attr="disabled"
+                wire:target="addSelectedMembers"
+                class="wa-add-member__fab">
+            <svg wire:loading.remove wire:target="addSelectedMembers" class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
+            <svg wire:loading wire:target="addSelectedMembers" class="w-6 h-6 text-white animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M2.985 19.644V14.65h4.992M16.023 9.348a8.001 8.001 0 0 0-15.046 4.65A8.001 8.001 0 0 0 7.977 14.65"/></svg>
         </button>
         @endif
     </div>
@@ -136,6 +142,14 @@
                 : \App\Support\AvatarPalette::colorClass('room:' . $room->id));
     @endphp
     <div class="wa-info-hero">
+        {{-- DM partner cover photo (Facebook/WhatsApp-style banner) --}}
+        @if($isDm && $dmPartner?->cover_photo)
+            <div class="wa-info-hero__cover">
+                <img src="{{ asset('storage/' . $dmPartner->cover_photo) }}" alt="" class="w-full h-full object-cover">
+                <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
+            </div>
+        @endif
+
         {{-- Avatar --}}
         <div class="wa-info-hero__avatar relative group {{ $heroBgClass }}">
             @if($isDm && $dmPartner?->avatar)
@@ -188,21 +202,75 @@
 
         {{-- Name --}}
         <h3 class="wa-info-hero__name">
-            {{ $isDm && $dmPartner ? ($dmPartner->username ?? $dmPartner->name) : $room->name }}
+            @if($isDm && $dmPartner)
+                @php $dmDisplayName = auth()->user()->displayNameFor($dmPartner); @endphp
+                @if($dmPartner->username)
+                    <a href="{{ route('user.profile', $dmPartner->username) }}" class="hover:text-cm-green hover:underline transition">{{ $dmDisplayName }}</a>
+                @else
+                    {{ $dmDisplayName }}
+                @endif
+            @else
+                {{ $room->name }}
+            @endif
         </h3>
 
         {{-- Subtitle --}}
         <p class="wa-info-hero__sub">
             @if($isDm && $dmPartner)
-                {{ $dmPartner->email ?? '' }}
+                @php $dmRealHandle = $dmPartner->username ?? $dmPartner->name; @endphp
+                @if(isset($dmDisplayName) && $dmDisplayName !== $dmRealHandle)
+                    <span class="text-slate-400">@</span>{{ $dmRealHandle }}{{ $dmPartner->email ? ' · ' . $dmPartner->email : '' }}
+                @else
+                    {{ $dmPartner->email ?? '' }}
+                @endif
             @else
                 {{ ucfirst(str_replace('_', ' ', $room->room_type->value)) }} · <span class="text-cm-green font-semibold">{{ $room->members_count }} <span x-text="$store.lang.t('members', 'membres')"></span></span>
             @endif
         </p>
 
+        {{-- Save-as-contact (per-viewer nickname) — DM rooms only --}}
+        @if($isDm && $dmPartner)
+            @php $existingNick = auth()->user()->nicknameFor($dmPartner->id); @endphp
+            <div class="wa-info-nickname">
+                @if(! $editingNickname)
+                    <button type="button" wire:click="startEditingNickname" class="yard-nickname-trigger">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l11.932-11.93z"/>
+                        </svg>
+                        <span>{{ $existingNick ? __('Edit saved name') : __('Save as a contact') }}</span>
+                    </button>
+                @else
+                    <div class="yard-nickname-edit w-full max-w-xs mx-auto">
+                        <input type="text" maxlength="60"
+                               wire:model.live="nicknameDraft"
+                               wire:keydown.enter="saveContactNickname"
+                               wire:keydown.escape="cancelEditingNickname"
+                               placeholder="{{ __('Enter a name you\'ll recognize') }}"
+                               class="yard-nickname-input" autofocus>
+                        <div class="flex items-center gap-2 mt-2">
+                            <button type="button" wire:click="saveContactNickname" class="yard-nickname-save">
+                                <span wire:loading.remove wire:target="saveContactNickname">{{ __('Save') }}</span>
+                                <span wire:loading wire:target="saveContactNickname">{{ __('Saving...') }}</span>
+                            </button>
+                            @if($existingNick)
+                                <button type="button" wire:click="$set('nicknameDraft', '')" class="yard-nickname-clear">{{ __('Clear') }}</button>
+                            @endif
+                            <button type="button" wire:click="cancelEditingNickname" class="yard-nickname-cancel">{{ __('Cancel') }}</button>
+                        </div>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         {{-- Quick action buttons --}}
         <div class="wa-info-hero__actions">
             @if($isDm)
+                @if($dmPartner && $dmPartner->username)
+                    <a class="wa-info-action" href="{{ route('user.profile', $dmPartner->username) }}" title="{{ __('View profile') }}">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+                        <span x-text="$store.lang.t('Profile', 'Profil')"></span>
+                    </a>
+                @endif
                 <button class="wa-info-action" @click="$dispatch('toggle-room-info')" title="Search">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
                     <span x-text="$store.lang.t('Search', 'Chercher')"></span>
@@ -393,10 +461,16 @@
                     </div>
                 </div>
                 <div class="wa-info-request__actions">
-                    <button wire:click="rejectRequest({{ $req->id }})" class="wa-info-request__btn wa-info-request__btn--reject" title="{{ app()->getLocale() === 'fr' ? 'Refuser' : 'Reject' }}">
+                    <button wire:click="rejectRequest({{ $req->id }})"
+                            wire:loading.attr="disabled"
+                            wire:target="rejectRequest({{ $req->id }})"
+                            class="wa-info-request__btn wa-info-request__btn--reject" title="{{ app()->getLocale() === 'fr' ? 'Refuser' : 'Reject' }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
                     </button>
-                    <button wire:click="approveRequest({{ $req->id }})" class="wa-info-request__btn wa-info-request__btn--approve" title="{{ app()->getLocale() === 'fr' ? 'Accepter' : 'Approve' }}">
+                    <button wire:click="approveRequest({{ $req->id }})"
+                            wire:loading.attr="disabled"
+                            wire:target="approveRequest({{ $req->id }})"
+                            class="wa-info-request__btn wa-info-request__btn--approve" title="{{ app()->getLocale() === 'fr' ? 'Accepter' : 'Approve' }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/></svg>
                     </button>
                 </div>
@@ -484,21 +558,93 @@
     {{-- ═══════════════════════════════════════════════════
          DANGER ZONE — Exit / Report
     ═══════════════════════════════════════════════════ --}}
-    <div class="wa-info-danger">
+    <div class="wa-info-danger"
+         x-data="{
+            reportOpen: false,
+            reportReason: 'inappropriate',
+            reportDetails: '',
+            submitReport() {
+                $wire.reportRoom(this.reportReason, this.reportDetails);
+                this.reportOpen = false;
+                this.reportDetails = '';
+            }
+         }">
         @if($isDm)
-            <button class="wa-info-danger__btn text-red-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-                <span x-text="$store.lang.t('Block', 'Bloquer')"></span>
-            </button>
+            @if($dmPartner)
+                @if($isBlockedByMe)
+                    <button class="wa-info-danger__btn text-emerald-600"
+                            wire:click="unblockUser({{ $dmPartner->id }})"
+                            wire:confirm="{{ app()->getLocale() === 'fr' ? 'Débloquer cet utilisateur ?' : 'Unblock this user?' }}"
+                            wire:loading.attr="disabled"
+                            wire:target="unblockUser">
+                        <svg wire:loading.remove wire:target="unblockUser" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5V6.75a4.5 4.5 0 1 1 9 0v3.75M3.75 21.75h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H3.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"/></svg>
+                        <svg wire:loading wire:target="unblockUser" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M2.985 19.644V14.65h4.992M16.023 9.348a8.001 8.001 0 0 0-15.046 4.65A8.001 8.001 0 0 0 7.977 14.65"/></svg>
+                        <span x-text="$store.lang.t('Unblock', 'Débloquer')"></span>
+                    </button>
+                @else
+                    <button class="wa-info-danger__btn text-red-500"
+                            wire:click="blockUser({{ $dmPartner->id }})"
+                            wire:confirm="{{ app()->getLocale() === 'fr' ? 'Bloquer cet utilisateur ? Vous ne recevrez plus ses messages.' : 'Block this user? You will no longer receive their messages.' }}"
+                            wire:loading.attr="disabled"
+                            wire:target="blockUser">
+                        <svg wire:loading.remove wire:target="blockUser" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+                        <svg wire:loading wire:target="blockUser" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M2.985 19.644V14.65h4.992M16.023 9.348a8.001 8.001 0 0 0-15.046 4.65A8.001 8.001 0 0 0 7.977 14.65"/></svg>
+                        <span x-text="$store.lang.t('Block', 'Bloquer')"></span>
+                    </button>
+                @endif
+            @endif
         @else
-            <button class="wa-info-danger__btn text-red-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
+            @if($room && $room->created_by !== auth()->id() && ! in_array($room->room_type->value, ['national', 'regional', 'city'], true))
+            <button class="wa-info-danger__btn text-red-500"
+                    wire:click="leaveRoom"
+                    wire:confirm="{{ app()->getLocale() === 'fr' ? 'Quitter définitivement ce groupe ?' : 'Permanently leave this group?' }}"
+                    wire:loading.attr="disabled"
+                    wire:target="leaveRoom">
+                <svg wire:loading.remove wire:target="leaveRoom" class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
+                <svg wire:loading wire:target="leaveRoom" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356M2.985 19.644V14.65h4.992M16.023 9.348a8.001 8.001 0 0 0-15.046 4.65A8.001 8.001 0 0 0 7.977 14.65"/></svg>
                 <span x-text="$store.lang.t('Exit group', 'Quitter le groupe')"></span>
             </button>
-            <button class="wa-info-danger__btn text-red-500">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.498 15.25H4.372c-1.026 0-1.945-.694-2.054-1.715A12.137 12.137 0 0 1 2.25 12c0-1.025.1-2.024.29-2.99.174-.896.92-1.51 1.882-1.51h3.19m7.878 0h3.126c1.026 0 1.945.694 2.054 1.715.086.49.132.992.132 1.5s-.046 1.01-.132 1.5c-.109 1.021-1.028 1.715-2.054 1.715h-3.126M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0z"/></svg>
+            @endif
+            <button class="wa-info-danger__btn text-red-500" @click="reportOpen = true">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"/></svg>
                 <span x-text="$store.lang.t('Report group', 'Signaler le groupe')"></span>
             </button>
+
+            {{-- Report modal --}}
+            <div x-show="reportOpen" x-cloak
+                 x-transition.opacity
+                 @click.self="reportOpen = false"
+                 @keydown.escape.window="reportOpen = false"
+                 class="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-5" @click.stop>
+                    <h3 class="text-base font-semibold text-slate-900 mb-1" x-text="$store.lang.t('Report this group', 'Signaler ce groupe')"></h3>
+                    <p class="text-xs text-slate-500 mb-4" x-text="$store.lang.t('Tell us what’s wrong. Reports are anonymous and reviewed by our team.', 'Dites-nous ce qui ne va pas. Les signalements sont anonymes et examinés par notre équipe.')"></p>
+
+                    <label class="block text-xs font-medium text-slate-600 mb-1" x-text="$store.lang.t('Reason', 'Raison')"></label>
+                    <select x-model="reportReason" class="w-full rounded-lg border-slate-300 text-sm mb-3">
+                        <option value="spam" x-text="$store.lang.t('Spam', 'Spam')"></option>
+                        <option value="harassment" x-text="$store.lang.t('Harassment', 'Harcèlement')"></option>
+                        <option value="scam" x-text="$store.lang.t('Scam', 'Arnaque')"></option>
+                        <option value="misinformation" x-text="$store.lang.t('Misinformation', 'Désinformation')"></option>
+                        <option value="inappropriate" x-text="$store.lang.t('Inappropriate content', 'Contenu inapproprié')"></option>
+                        <option value="other" x-text="$store.lang.t('Other', 'Autre')"></option>
+                    </select>
+
+                    <label class="block text-xs font-medium text-slate-600 mb-1" x-text="$store.lang.t('Details (optional)', 'Détails (facultatif)')"></label>
+                    <textarea x-model="reportDetails" rows="3" maxlength="1000"
+                              class="w-full rounded-lg border-slate-300 text-sm mb-4"
+                              :placeholder="$store.lang.t('Add any context that might help our team…', 'Ajoutez tout contexte utile pour notre équipe…')"></textarea>
+
+                    <div class="flex justify-end gap-2">
+                        <button @click="reportOpen = false" class="px-3 py-1.5 text-sm rounded-lg text-slate-600 hover:bg-slate-100" x-text="$store.lang.t('Cancel', 'Annuler')"></button>
+                        <button @click="submitReport()"
+                                wire:loading.attr="disabled"
+                                wire:target="reportRoom"
+                                class="px-4 py-1.5 text-sm rounded-lg bg-red-500 text-white font-semibold hover:bg-red-600 disabled:opacity-60"
+                                x-text="$store.lang.t('Submit report', 'Envoyer le signalement')"></button>
+                    </div>
+                </div>
+            </div>
         @endif
     </div>
 
