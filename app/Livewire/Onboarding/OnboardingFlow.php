@@ -48,23 +48,20 @@ class OnboardingFlow extends Component
                 $user->current_region ?? ''
             );
 
-            // Pre-select the National + Regional rooms for the user's country
-            // so the "default room" is checked by default on the Discover step.
-            // The user can still uncheck them, but most people just want to
-            // tap "Join" and get straight into their country's main room.
+            // Pre-select the National + matching Regional room for the user's
+            // country/region so both communities are checked by default. The
+            // user cannot un-check them — they are mandatory.
             $this->selectedRoomIds = YardRoom::where('is_system_room', true)
                 ->where('is_active', true)
                 ->where('country', $user->current_country)
-                ->whereIn('room_type', [RoomType::National, RoomType::Regional])
-                ->when($user->current_region, function ($q) use ($user) {
-                    // Only auto-select the regional room that matches the user's region
-                    $q->where(function ($q2) use ($user) {
-                        $q2->where('room_type', RoomType::National)
-                           ->orWhere('region', $user->current_region);
-                    });
-                }, function ($q) {
-                    // No region known — only auto-select the National room
+                ->where(function ($q) use ($user) {
                     $q->where('room_type', RoomType::National);
+                    if ($user->current_region) {
+                        $q->orWhere(function ($q2) use ($user) {
+                            $q2->where('room_type', RoomType::Regional)
+                               ->where('region', $user->current_region);
+                        });
+                    }
                 })
                 ->pluck('id')
                 ->all();
@@ -102,33 +99,25 @@ class OnboardingFlow extends Component
             return collect();
         }
 
-        $joinedRoomIds = YardRoomMember::where('user_id', $user->id)->pluck('room_id');
-
-        return YardRoom::where('is_system_room', true)
+        // Show exactly 2 system rooms — the user's country (National) and the
+        // user's detected region (Regional). They are auto-joined below, so we
+        // simply present them here as a confirmation.
+        $query = YardRoom::where('is_system_room', true)
             ->where('is_active', true)
-            ->whereNotIn('id', $joinedRoomIds)
+            ->where('country', $user->current_country)
             ->where(function ($q) use ($user) {
-                $q->where(function ($q2) use ($user) {
-                    $q2->where('room_type', RoomType::National)
-                       ->where('country', $user->current_country);
-                });
-                // Regional rooms: match user's region
-                $q->orWhere(function ($q2) use ($user) {
-                    $q2->where('room_type', RoomType::Regional)
-                       ->where(function ($q3) use ($user) {
-                           if ($user->current_region) {
-                               $q3->where('region', $user->current_region);
-                           }
-                           if ($user->home_region) {
-                               $regionName = config('cameroon.regions.' . $user->home_region, $user->home_region);
-                               $q3->orWhere('region', $regionName);
-                           }
-                       });
-                });
+                $q->where('room_type', RoomType::National);
+                if ($user->current_region) {
+                    $q->orWhere(function ($q2) use ($user) {
+                        $q2->where('room_type', RoomType::Regional)
+                           ->where('region', $user->current_region);
+                    });
+                }
             })
             ->withCount('members')
-            ->orderBy('room_type')
-            ->get();
+            ->orderByRaw("FIELD(room_type, '" . RoomType::National->value . "', '" . RoomType::Regional->value . "')");
+
+        return $query->get();
     }
 
     #[Computed]

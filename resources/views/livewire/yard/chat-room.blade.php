@@ -178,18 +178,64 @@
 
     {{-- ── Pinned Messages Bar ── --}}
     @if($pinnedMessages->count() > 0)
-    <div class="yard-chat__pinned-bar" x-data="{ expanded: false }">
-        <button @click="expanded = !expanded" class="yard-chat__pinned-toggle">
-            <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
-            <span class="text-xs font-medium text-slate-700">{{ $pinnedMessages->count() }} {{ __('pinned') }}</span>
-            <span class="text-xs text-slate-500 truncate flex-1">— {{ Str::limit($pinnedMessages->first()->content, 40) }}</span>
-            <svg class="w-3 h-3 text-slate-400 transition-transform" :class="expanded && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>
-        </button>
+    <div class="yard-chat__pinned-bar"
+         x-data="{
+            expanded: false,
+            cycleIdx: 0,
+            jumpTo(id) {
+                const el = document.getElementById('msg-' + id);
+                if (!el) return;
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                // Brief WhatsApp-style highlight flash on the target bubble.
+                const bubble = el.querySelector('.yard-msg__bubble') || el;
+                const prevTransition = bubble.style.transition;
+                const prevBg = bubble.style.boxShadow;
+                bubble.style.transition = 'box-shadow 200ms ease-out';
+                bubble.style.boxShadow = '0 0 0 3px rgba(252, 209, 22, 0.7)';
+                setTimeout(() => {
+                    bubble.style.boxShadow = prevBg;
+                    setTimeout(() => { bubble.style.transition = prevTransition; }, 250);
+                }, 1200);
+            }
+         }">
+        @php $pinIds = $pinnedMessages->pluck('id')->values()->all(); @endphp
+        <div class="yard-chat__pinned-toggle">
+            <button type="button"
+                    @click.prevent.stop="
+                        if ({{ count($pinIds) }} > 1) {
+                            const ids = @js($pinIds);
+                            jumpTo(ids[cycleIdx % ids.length]);
+                            cycleIdx++;
+                        } else {
+                            jumpTo({{ $pinIds[0] ?? 0 }});
+                        }"
+                    class="flex items-center gap-2 flex-1 min-w-0 text-left">
+                <svg class="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                <span class="text-xs font-medium text-slate-700 shrink-0">{{ $pinnedMessages->count() }} {{ __('pinned') }}</span>
+                <span class="text-xs text-slate-500 truncate flex-1">— {{ Str::limit($pinnedMessages->first()->content, 40) }}</span>
+            </button>
+            @if($pinnedMessages->count() > 1)
+                <button type="button" @click.prevent.stop="expanded = !expanded"
+                        class="text-slate-400 hover:text-slate-600 p-0.5 shrink-0"
+                        :title="expanded ? '{{ __('Collapse') }}' : '{{ __('Show all') }}'">
+                    <svg class="w-3 h-3 transition-transform" :class="expanded && 'rotate-180'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>
+                </button>
+            @endif
+        </div>
         <div x-show="expanded" x-collapse class="yard-chat__pinned-list">
             @foreach($pinnedMessages as $pin)
-            <div class="yard-chat__pinned-item">
-                <span class="font-medium text-xs text-cm-green">{{ $pin->user?->username ?? $pin->user?->name }}</span>
-                <span class="text-xs text-slate-600 truncate">{{ Str::limit($pin->content, 60) }}</span>
+            <div class="yard-chat__pinned-item flex items-center gap-2 hover:bg-amber-50 transition-colors">
+                <button type="button" @click.prevent.stop="jumpTo({{ $pin->id }})"
+                        class="flex-1 min-w-0 text-left flex flex-col">
+                    <span class="font-medium text-xs text-cm-green">{{ $pin->user?->username ?? $pin->user?->name }}</span>
+                    <span class="text-xs text-slate-600 truncate">{{ Str::limit($pin->content, 60) }}</span>
+                </button>
+                <button type="button"
+                        wire:click.stop="togglePin({{ $pin->id }})"
+                        class="text-slate-400 hover:text-red-500 p-1 shrink-0"
+                        title="{{ __('Unpin') }}">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
             @endforeach
         </div>

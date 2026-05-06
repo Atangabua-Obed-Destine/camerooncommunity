@@ -103,7 +103,7 @@
                         x-text="$store.lang.t('Live Now', 'Disponible Maintenant')"></h3>
                 </div>
 
-                <div class="grid sm:grid-cols-3 gap-3">
+                <div class="grid sm:grid-cols-2 gap-3">
                     <div class="discover-card group" style="--accent: #009639; --delay: 0ms;"
                          @click="open = false; window.location.href='{{ route('yard') }}'">
                         <div class="discover-card__icon">
@@ -114,16 +114,7 @@
                              x-text="$store.lang.t('Chat & connect', 'Discuter & connecter')"></div>
                     </div>
 
-                    <div class="discover-card group" style="--accent: #CE1126; --delay: 100ms;">
-                        <div class="discover-card__icon">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
-                        </div>
-                        <div class="font-bold text-slate-800 text-sm" x-text="$store.lang.t('Solidarity', 'Solidarité')"></div>
-                        <div class="text-[11px] text-slate-500 mt-0.5"
-                             x-text="$store.lang.t('Mutual aid', 'Entraide')"></div>
-                    </div>
-
-                    <div class="discover-card group" style="--accent: #F59E0B; --delay: 200ms;"
+                    <div class="discover-card group" style="--accent: #F59E0B; --delay: 100ms;"
                          @click="open = false; setTimeout(() => Livewire.dispatch('open-kamer-ai'), 200)">
                         <div class="discover-card__icon">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
@@ -213,6 +204,9 @@ function discoverModal() {
               descFr: 'Marketplace, colis, covoiturage, emplois — fait par nous, pour nous.' },
         ],
         upcoming: [
+            { name: 'Solidarity', emoji: '❤️', color: '#CE1126',
+              descEn: 'Mutual aid & community fundraising.',
+              descFr: 'Entraide & cagnottes communautaires.' },
             { name: 'Marketplace', emoji: '🛒', color: '#009639',
               descEn: 'Buy & sell within the diaspora.',
               descFr: 'Achetez & vendez dans la diaspora.' },

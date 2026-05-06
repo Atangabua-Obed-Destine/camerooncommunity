@@ -116,13 +116,18 @@ class Connections extends Component
         return $rows->map(fn ($r) => $users->get($r->otherUserId($userId)))->filter()->values();
     }
 
-    /** Blocked connections (both directions). */
+    /**
+     * Blocked connections — ONLY those the current user blocked.
+     * If the other party blocked us, we must not reveal that fact here
+     * (privacy) and we have no business unblocking on their behalf.
+     */
     #[Computed]
     public function blockedConnections()
     {
         $userId = auth()->id();
 
         $rows = UserConnection::where('status', UserConnection::STATUS_BLOCKED)
+            ->where('requested_by', $userId)
             ->where(function ($q) use ($userId) {
                 $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
             })

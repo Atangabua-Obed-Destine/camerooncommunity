@@ -123,7 +123,6 @@
                 @forelse($this->blockedConnections as $item)
                     @php
                         $u = $item['user'];
-                        $blockedByMe = $item['blockedByMe'];
                     @endphp
                     <div class="relative p-3 rounded-lg border border-red-200 bg-red-50/50 hover:bg-red-50 transition-colors group">
                         <div class="flex items-center gap-3">
@@ -137,7 +136,7 @@
                                     </div>
                                 @endif
                                 {{-- Blocked badge --}}
-                                <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold" title="{{ $blockedByMe ? 'Blocked by you' : 'Blocked by them' }}">
+                                <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold" title="Blocked by you">
                                     🚫
                                 </div>
                             </div>
@@ -146,11 +145,7 @@
                             <div class="flex-1 min-w-0">
                                 <p class="font-semibold text-slate-900 truncate">{{ $u->username ?? $u->name }}</p>
                                 <p class="text-xs text-red-600 font-medium">
-                                    @if($blockedByMe)
-                                        <span x-text="$store.lang.t('Blocked by you', 'Bloqué par vous')"></span>
-                                    @else
-                                        <span x-text="$store.lang.t('Blocked by them', 'Bloqué par eux')"></span>
-                                    @endif
+                                    <span x-text="$store.lang.t('Blocked by you', 'Bloqué par vous')"></span>
                                 </p>
                             </div>
 

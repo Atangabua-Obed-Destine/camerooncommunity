@@ -295,14 +295,45 @@ class ChatRoom extends Component
         $user = auth()->user();
         $currentRoomId = isset($this->room) && $this->room->exists ? $this->room->id : 0;
 
-        return YardRoom::whereIn('id',
-            YardRoomMember::where('user_id', $user->id)->pluck('room_id')
-        )
+        // Only rooms the user is actively a member of — exclude both manually
+        // archived ("Away") and auto-archived (location-switched) rooms so
+        // forwarding can't deliver to chats hidden from the active list.
+        $activeRoomIds = YardRoomMember::where('user_id', $user->id)
+            ->whereNull('archived_at')
+            ->whereNull('auto_archived_at')
+            ->pluck('room_id');
+
+        $rooms = YardRoom::whereIn('id', $activeRoomIds)
             ->where('id', '!=', $currentRoomId)
             ->orderByDesc('last_message_at')
             ->select('id', 'name', 'room_type')
             ->limit(50)
             ->get();
+
+        // For DMs, replace the stored "userA & userB" name with the OTHER
+        // participant's display name so the modal reads like a contact list.
+        $dmRoomIds = $rooms->where('room_type', \App\Enums\RoomType::DirectMessage)
+            ->pluck('id');
+
+        if ($dmRoomIds->isNotEmpty()) {
+            $partnerNames = YardRoomMember::whereIn('room_id', $dmRoomIds)
+                ->where('user_id', '!=', $user->id)
+                ->join('users', 'users.id', '=', 'yard_room_members.user_id')
+                ->get(['yard_room_members.room_id', 'users.name', 'users.username'])
+                ->keyBy('room_id');
+
+            $rooms->transform(function ($r) use ($partnerNames) {
+                if ($r->room_type === \App\Enums\RoomType::DirectMessage) {
+                    $partner = $partnerNames->get($r->id);
+                    if ($partner) {
+                        $r->name = $partner->username ?: $partner->name;
+                    }
+                }
+                return $r;
+            });
+        }
+
+        return $rooms;
     }
 
     public function loadMore()
@@ -975,6 +1006,8 @@ class ChatRoom extends Component
 
         $isMember = YardRoomMember::where('room_id', $targetRoomId)
             ->where('user_id', $user->id)
+            ->whereNull('archived_at')
+            ->whereNull('auto_archived_at')
             ->exists();
 
         if (!$isMember) {
