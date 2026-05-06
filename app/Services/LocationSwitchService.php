@@ -42,6 +42,21 @@ class LocationSwitchService
         $newCountry = trim($newCountry);
         $newRegion = $newRegion ? trim($newRegion) : null;
 
+        // Defense-in-depth: if a UK switch is requested with a non-ITL
+        // region (e.g. "England" from a legacy caller), normalize it via
+        // the same map LocationService uses. Prevents bad active_region
+        // values regardless of which entry-point fired the switch.
+        if ($newRegion && in_array($newCountry, ['United Kingdom', 'UK', 'Great Britain'], true)) {
+            $valid = config('cameroon.seeded_regions.GB', []);
+            if (! in_array($newRegion, $valid, true)) {
+                $cityMap = config('cameroon.gb_city_to_region', []);
+                $aliasMap = config('cameroon.gb_region_aliases', []);
+                $key = Str::lower($newRegion);
+                $newRegion = $cityMap[$key]
+                    ?? ($aliasMap[$key] ?? null);
+            }
+        }
+
         $oldCountry = $user->active_country ?: $user->current_country;
         $oldRegion = $user->active_region ?: $user->current_region;
 

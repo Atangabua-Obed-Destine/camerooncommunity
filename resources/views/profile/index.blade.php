@@ -1,5 +1,17 @@
-<x-layouts.app :title="'Profile'">
-    <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+<x-layouts.app :title="'Profile'" :yardMode="true">
+    {{-- ═══════════════════════════════════════════════════════════
+         MY PROFILE — wrapped in the Yard layout shell so it gets the
+         same left icon-sidebar (navigation) and right ads-sidebar as
+         the public profile page (/u/{username}).
+       ═══════════════════════════════════════════════════════════ --}}
+    <div class="yard-container">
+
+        {{-- Left icon sidebar (shared with /yard) --}}
+        @include('yard.partials.icon-sidebar', ['active' => 'profile'])
+
+        {{-- Middle scrollable column --}}
+        <main class="flex-1 min-w-0 overflow-y-auto bg-slate-50">
+        <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
         {{-- Back button --}}
         <button type="button" onclick="history.length > 1 ? history.back() : (window.location.href = '{{ url('/') }}')"
                 class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-cm-green transition">
@@ -253,5 +265,10 @@
                 </button>
             </form>
         </div>
+        </div>
+        </main>
+
+        {{-- Right sponsored ads sidebar (shared with /yard) --}}
+        @include('yard.partials.ads-sidebar')
     </div>
 </x-layouts.app>

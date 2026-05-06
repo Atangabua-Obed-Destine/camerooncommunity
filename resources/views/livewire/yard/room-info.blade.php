@@ -31,6 +31,12 @@
         $dmPartner = $isDm ? $members->first(fn($m) => $m->user_id !== auth()->id())?->user : null;
         $blockConn = ($isDm && $dmPartner) ? \App\Models\UserConnection::between(auth()->id(), $dmPartner->id) : null;
         $isBlockedByMe = $blockConn && $blockConn->status === \App\Models\UserConnection::STATUS_BLOCKED && $blockConn->requested_by === auth()->id();
+
+        // Current user's membership state for this room — drives the
+        // Pin / Archive toggles inside this contact-info pane.
+        $myMembership = $members->firstWhere('user_id', auth()->id());
+        $isPinned = (bool) ($myMembership->is_favorited ?? false);
+        $isArchived = (bool) ($myMembership->archived_at ?? null);
     @endphp
 
     {{-- ═══════════════════════════════════════════════════
@@ -271,10 +277,6 @@
                         <span x-text="$store.lang.t('Profile', 'Profil')"></span>
                     </a>
                 @endif
-                <button class="wa-info-action" @click="$dispatch('toggle-room-info')" title="Search">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
-                    <span x-text="$store.lang.t('Search', 'Chercher')"></span>
-                </button>
                 <button class="wa-info-action" @click="$dispatch('initiate-call', { roomId: {{ $room->id }}, type: 'video' })">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25z"/></svg>
                     <span>Video</span>
@@ -290,10 +292,6 @@
                     <span x-text="$store.lang.t('Add', 'Ajouter')"></span>
                 </button>
                 @endif
-                <button class="wa-info-action" @click="$dispatch('toggle-room-info')">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
-                    <span x-text="$store.lang.t('Search', 'Chercher')"></span>
-                </button>
             @endif
         </div>
     </div>
@@ -497,8 +495,26 @@
         </button>
 
         <div x-show="showMembers" x-collapse class="wa-info-members">
+            {{-- Search members (always available for groups) --}}
+            @if($room->members_count >= 2 || $memberFilter !== '')
+            <div class="px-4 py-2">
+                <div class="relative">
+                    <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/></svg>
+                    <input type="text"
+                           wire:model.live.debounce.250ms="memberFilter"
+                           :placeholder="$store.lang.t('Search members', 'Rechercher des membres')"
+                           class="w-full pl-9 pr-8 py-2 text-sm bg-slate-100 border-0 rounded-lg focus:ring-2 focus:ring-cm-green focus:bg-white">
+                    @if($memberFilter !== '')
+                        <button wire:click="$set('memberFilter', '')" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
+                        </button>
+                    @endif
+                </div>
+            </div>
+            @endif
+
             {{-- Add member row (WhatsApp-style) — only for private_group / city --}}
-            @if(in_array($room->room_type->value, ['private_group', 'city']))
+            @if(in_array($room->room_type->value, ['private_group', 'city']) && $memberFilter === '')
             <button wire:click="openAddMember" class="wa-info-member wa-info-member--add">
                 <div class="wa-info-member__avatar !bg-cm-green">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/></svg>
@@ -553,8 +569,91 @@
             @endforelse
         </div>
     </div>
+
+    {{-- ═══════════════════════════════════════════════════
+         PAST MEMBERS — admin only (WhatsApp "Past participants")
+    ═══════════════════════════════════════════════════ --}}
+    @php $pastMembers = $this->pastMembers; @endphp
+    @if($room->created_by === auth()->id() && $pastMembers->isNotEmpty())
+    <div class="wa-info-section" x-data="{ showPast: false }">
+        <button @click="showPast = !showPast" class="wa-info-section__row">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+                <span class="text-sm text-slate-700 font-medium">
+                    <span x-text="$store.lang.t('Past members', 'Anciens membres')"></span>
+                </span>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-slate-400">{{ $pastMembers->count() }}</span>
+                <svg class="w-4 h-4 text-slate-400 transition-transform" :class="showPast && 'rotate-90'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/></svg>
+            </div>
+        </button>
+
+        <div x-show="showPast" x-collapse x-cloak class="wa-info-members">
+            @foreach($pastMembers as $entry)
+                @php $past = $entry->user; @endphp
+                @if($past)
+                <div class="wa-info-member">
+                    <div class="wa-info-member__avatar {{ $past->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . $past->id) }}">
+                        @if($past->avatar)
+                            <img src="{{ asset('storage/' . $past->avatar) }}" alt="" class="w-full h-full rounded-full object-cover opacity-70">
+                        @else
+                            <span class="text-white opacity-80">{{ strtoupper(substr($past->username ?? $past->name, 0, 1)) }}</span>
+                        @endif
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="wa-info-member__name text-slate-600">
+                            {{ $past->username ?? $past->name }}
+                        </p>
+                        <p class="wa-info-member__meta">
+                            @if($entry->reason === 'removed')
+                                @if($entry->remover)
+                                    <span x-text="$store.lang.t('Removed by', 'Retiré par')"></span>
+                                    {{ $entry->remover->username ?? $entry->remover->name }} ·
+                                @else
+                                    <span x-text="$store.lang.t('Removed', 'Retiré')"></span> ·
+                                @endif
+                            @else
+                                <span x-text="$store.lang.t('Left', 'A quitté')"></span> ·
+                            @endif
+                            {{ $entry->exited_at?->diffForHumans() }}
+                        </p>
+                    </div>
+                </div>
+                @endif
+            @endforeach
+        </div>
+    </div>
+    @endif
     @endunless
 
+    {{-- ═══════════════════════════════════════════════════
+         CHAT ACTIONS — Pin / Archive (matches the chat-list ctx menu)
+    ═════════════════════════════════════════════════ --}}
+    <div class="wa-info-section">
+        <button wire:click="togglePinChat" class="wa-info-section__row">
+            <div class="flex items-center gap-3">
+                @if($isPinned)
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M3 12h18M3 18h18"/></svg>
+                    <span class="text-sm text-slate-700 font-medium" x-text="$store.lang.t('Unpin chat', 'Désépingler')"></span>
+                @else
+                    <svg class="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="currentColor"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
+                    <span class="text-sm text-slate-700 font-medium" x-text="$store.lang.t('Pin chat', 'Épingler')"></span>
+                @endif
+            </div>
+        </button>
+
+        <button wire:click="toggleArchiveChat" class="wa-info-section__row">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M6 8l1 11a2 2 0 002 2h6a2 2 0 002-2l1-11M10 12h4M4 4h16v4H4z"/></svg>
+                @if($isArchived)
+                    <span class="text-sm text-slate-700 font-medium" x-text="$store.lang.t('Unarchive chat', 'Désarchiver')"></span>
+                @else
+                    <span class="text-sm text-slate-700 font-medium" x-text="$store.lang.t('Archive chat', 'Archiver')"></span>
+                @endif
+            </div>
+        </button>
+    </div>
     {{-- ═══════════════════════════════════════════════════
          DANGER ZONE — Exit / Report
     ═══════════════════════════════════════════════════ --}}

@@ -1,160 +1,7 @@
 <x-layouts.guest>
     <x-slot:title>Cameroon Network — Connecting Cameroonians. Wherever They Are.</x-slot:title>
 
-    {{-- ═══════════════════════════════════════════════════════════════
-         STICKY NAVBAR
-         ═══════════════════════════════════════════════════════════════ --}}
-    <nav x-data="{ scrolled: false, mobileOpen: false }"
-         @scroll.window="scrolled = (window.scrollY > 40)"
-         :class="scrolled ? 'bg-white/95 backdrop-blur shadow-sm' : 'bg-transparent'"
-         class="fixed top-0 inset-x-0 z-50 transition-all duration-300 pointer-events-auto">
-        {{-- Logo — absolutely positioned, centered across full header height --}}
-        <a href="{{ route('home') }}" class="absolute left-6 sm:left-10 lg:left-12 top-1/2 -translate-y-1/2 z-10 flex items-center">
-            @if($__siteLogo ?? null)
-            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-[120px] object-contain">
-            @else
-            <span class="text-5xl">🇨🇲</span>
-            @endif
-        </a>
-
-        {{-- Location strip --}}
-        @auth
-        <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300"
-             :class="scrolled ? 'text-slate-500' : 'text-white/70'"
-             x-data="{
-                country: @js(auth()->user()->current_country ?? ''),
-                region: @js(auth()->user()->current_region ?? ''),
-             }"
-             x-on:location-changed.window="
-                country = $event.detail?.country || $event.detail?.[0]?.country || country;
-                region  = $event.detail?.region  || $event.detail?.[0]?.region  || region;
-             ">
-            <div class="flex items-center gap-1.5 text-[11px] font-medium">
-                <span>🇨🇲</span>
-                <span x-text="(region ? region + ', ' : '') + (country || $store.lang.t('Detecting…', 'Détection…'))"></span>
-            </div>
-        </div>
-        @else
-        <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300"
-             :class="scrolled ? 'text-slate-500' : 'text-white/70'"
-             x-data="{
-                loc: localStorage.getItem('guest_location') || '',
-                mode: @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps')),
-                async detect() {
-                    if (this.loc) return;
-                    if (this.mode === 'gps' && navigator.geolocation) {
-                        try {
-                            const pos = await new Promise((res, rej) => navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000 }));
-                            const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en`);
-                            const d = await r.json();
-                            const a = d.address || {};
-                            const parts = [];
-                            if (a.state) parts.push(a.state);
-                            if (a.country) parts.push(a.country);
-                            if (parts.length) {
-                                this.loc = parts.join(', ');
-                                localStorage.setItem('guest_location', this.loc);
-                                return;
-                            }
-                        } catch(e) { /* fall through to IP */ }
-                    }
-                    try {
-                        const r = await fetch('{{ route("geo.ip") }}');
-                        const d = await r.json();
-                        if (!d.error) {
-                            const parts = [];
-                            if (d.region) parts.push(d.region);
-                            if (d.country_name) parts.push(d.country_name);
-                            this.loc = parts.join(', ') || (d.country_name || '');
-                            localStorage.setItem('guest_location', this.loc);
-                        }
-                    } catch(e) {}
-                }
-             }"
-             x-init="
-                detect();
-                if (window.Echo) {
-                    window.Echo.channel('platform-settings').listen('.setting.updated', (e) => {
-                        if (e.key === 'location_detection_mode') {
-                            mode = e.value;
-                            loc = '';
-                            try { localStorage.removeItem('guest_location'); } catch {}
-                            detect();
-                        }
-                    });
-                }
-             ">
-            <div class="flex items-center gap-1.5 text-[11px] font-medium">
-                <span>🌍</span>
-                <span x-text="loc || $store.lang.t('Detecting location…', 'Détection de la localisation…')"></span>
-            </div>
-        </div>
-        @endauth
-
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12 flex items-center justify-between h-16">
-            {{-- Spacer for logo --}}
-            <div class="shrink-0 w-48"></div>
-
-            {{-- Desktop Links --}}
-            <div class="hidden md:flex items-center gap-6 text-sm font-bold">
-                <a href="#features" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
-                   x-text="$store.lang.t('Features', 'Fonctionnalités')">Features</a>
-                <a href="#how-it-works" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
-                   x-text="$store.lang.t('How It Works', 'Comment Ça Marche')">How It Works</a>
-                <a href="#solidarity" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
-                   x-text="$store.lang.t('Solidarity', 'Solidarité')">Solidarity</a>
-                <a href="#community" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
-                   x-text="$store.lang.t('Community', 'Communauté')">Community</a>
-
-                {{-- Language Toggle --}}
-                <button @click="$store.lang.toggle()" class="flex items-center gap-1 rounded-full px-3 py-1 border transition-colors text-xs font-bold"
-                        :class="scrolled ? 'border-slate-300 text-slate-600 hover:bg-slate-50' : 'border-white/30 text-white hover:bg-white/10'">
-                    <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
-                </button>
-
-                @auth
-                    <a href="{{ route('yard') }}" class="rounded-full bg-cm-green px-5 py-2 text-white font-bold text-sm hover:bg-cm-green-light transition-colors"
-                       x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
-                @else
-                    <a href="{{ route('login') }}" :class="scrolled ? 'text-cm-green hover:underline' : 'text-white hover:underline'" class="transition-colors font-bold drop-shadow-sm"
-                       x-text="$store.lang.t('Sign In', 'Connexion')">Sign In</a>
-                    <a href="{{ route('register') }}" class="rounded-full bg-cm-yellow px-5 py-2 text-cm-green-dark font-bold text-sm hover:bg-cm-yellow/90 transition-colors shadow-sm"
-                       x-text="$store.lang.t('Join Free', 'Rejoindre')">Join Free</a>
-                @endauth
-            </div>
-
-            {{-- Mobile Menu Toggle --}}
-            <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2" :class="scrolled ? 'text-slate-700' : 'text-white'">
-                <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-                <svg x-show="mobileOpen" x-cloak class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
-        </div>
-
-        {{-- Mobile Menu --}}
-        <div x-show="mobileOpen" x-cloak x-transition class="md:hidden bg-white border-t border-slate-100 shadow-lg">
-            <div class="px-4 py-4 space-y-3 text-sm font-medium">
-                <a href="#features" @click="mobileOpen = false" class="block text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Features', 'Fonctionnalités')">Features</a>
-                <a href="#how-it-works" @click="mobileOpen = false" class="block text-slate-700 hover:text-cm-green" x-text="$store.lang.t('How It Works', 'Comment Ça Marche')">How It Works</a>
-                <a href="#solidarity" @click="mobileOpen = false" class="block text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Solidarity', 'Solidarité')">Solidarity</a>
-                <a href="#community" @click="mobileOpen = false" class="block text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Community', 'Communauté')">Community</a>
-                <hr class="border-slate-100">
-                <button @click="$store.lang.toggle()" class="flex items-center gap-2 text-slate-600">
-                    🌐 <span x-text="$store.lang.isEn ? 'Français' : 'English'"></span>
-                </button>
-                @auth
-                    <a href="{{ route('yard') }}" class="block w-full text-center rounded-xl bg-cm-green py-3 text-white font-bold hover:bg-cm-green-light"
-                       x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
-                @else
-                    <div class="flex gap-3">
-                        <a href="{{ route('login') }}" class="flex-1 text-center rounded-xl border border-slate-300 py-3 text-slate-700 font-bold hover:bg-slate-50"
-                           x-text="$store.lang.t('Sign In', 'Connexion')">Sign In</a>
-                        <a href="{{ route('register') }}" class="flex-1 text-center rounded-xl bg-cm-green py-3 text-white font-bold hover:bg-cm-green-light"
-                           x-text="$store.lang.t('Join Free', 'Rejoindre')">Join Free</a>
-                    </div>
-                @endauth
-            </div>
-        </div>
-    </nav>
+    @include('partials.site-nav', ['staysTransparent' => true])
 
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 1 — HERO (full viewport)
@@ -1072,21 +919,21 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 11 — FOOTER
          ═══════════════════════════════════════════════════════════════ --}}
-    <footer class="bg-slate-900 text-slate-400 py-16">
+    <footer class="bg-slate-900 text-slate-400 py-8">
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
-            <div class="grid md:grid-cols-4 gap-8">
+            <div class="grid md:grid-cols-4 gap-6">
                 {{-- Brand --}}
                 <div class="md:col-span-2">
-                    <div class="flex items-center gap-2 mb-4">
+                    <div class="flex items-center gap-2 mb-2">
                         @if($__siteLogo ?? null)
-                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain">
+                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-10 object-contain">
                         @else
-                            <span class="text-3xl">🇨🇲</span>
+                            <span class="text-2xl">🇨🇲</span>
                         @endif
                     </div>
-                    <p class="text-sm leading-relaxed max-w-sm"
+                    <p class="text-sm leading-snug max-w-sm"
                        x-text="$store.lang.t('Connecting Cameroonians. Wherever They Are.', 'Connecter les Camerounais. Où Qu\'Ils Soient.')"></p>
-                    <div class="mt-6 flex items-center gap-4">
+                    <div class="mt-3 flex items-center gap-4">
                         <a href="#" class="text-slate-500 hover:text-white transition-colors">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                         </a>
@@ -1101,8 +948,8 @@
 
                 {{-- Navigation --}}
                 <div>
-                    <h3 class="mb-4 font-semibold text-white text-sm uppercase tracking-wider" x-text="$store.lang.t('Platform', 'Plateforme')"></h3>
-                    <ul class="space-y-3 text-sm">
+                    <h3 class="mb-2 font-semibold text-white text-sm uppercase tracking-wider" x-text="$store.lang.t('Platform', 'Plateforme')"></h3>
+                    <ul class="space-y-1.5 text-sm">
                         <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('About', 'À Propos')"></a></li>
                         <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('Modules', 'Modules')"></a></li>
                         <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('FAQ', 'FAQ')"></a></li>
@@ -1112,14 +959,14 @@
 
                 {{-- Legal --}}
                 <div>
-                    <h3 class="mb-4 font-semibold text-white text-sm uppercase tracking-wider" x-text="$store.lang.t('Legal', 'Juridique')"></h3>
-                    <ul class="space-y-3 text-sm">
-                        <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a></li>
-                        <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')"></a></li>
+                    <h3 class="mb-2 font-semibold text-white text-sm uppercase tracking-wider" x-text="$store.lang.t('Legal', 'Juridique')"></h3>
+                    <ul class="space-y-1.5 text-sm">
+                        <li><a href="{{ route('legal.privacy') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a></li>
+                        <li><a href="{{ route('legal.terms') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')"></a></li>
                     </ul>
                     {{-- Footer Language Toggle --}}
-                    <div class="mt-6">
-                        <button @click="$store.lang.toggle()" class="inline-flex items-center gap-2 rounded-full border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-300 transition-colors hover:border-cm-yellow hover:text-cm-yellow">
+                    <div class="mt-3">
+                        <button @click="$store.lang.toggle()" class="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:border-cm-yellow hover:text-cm-yellow">
                             🌐 <span x-text="$store.lang.isEn ? 'English' : 'Français'"></span>
                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
                         </button>
@@ -1127,12 +974,6 @@
                 </div>
             </div>
 
-            <div class="mt-12 pt-8 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <p class="text-xs text-slate-500">
-                    &copy; {{ date('Y') }} I-NNOVA CM — Transforming Communities. Empowering Innovators.
-                </p>
-                <p class="text-xs text-slate-600">Belgocam Building, City-Chemist, Bamenda, Cameroon</p>
-            </div>
         </div>
     </footer>
 

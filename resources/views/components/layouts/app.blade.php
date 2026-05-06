@@ -118,8 +118,10 @@
                     <div class="hidden lg:flex items-center gap-0.5">
                         <a href="{{ route('yard') }}" class="px-3 py-2 rounded-lg text-sm font-bold transition-colors {{ $yardMode ? 'text-cm-yellow' : 'text-white hover:text-cm-yellow hover:bg-white/10' }}"
                            x-text="$store.lang.t('The Yard', 'Le Yard')"></a>
-                        <a href="#" class="px-3 py-2 rounded-lg text-sm font-bold text-white hover:text-cm-yellow hover:bg-white/10 transition-colors"
-                           x-text="$store.lang.t('Discover', 'Découvrir')"></a>
+                        <button type="button"
+                                @click="window.dispatchEvent(new CustomEvent('open-discover'))"
+                                class="px-3 py-2 rounded-lg text-sm font-bold text-white hover:text-cm-yellow hover:bg-white/10 transition-colors"
+                                x-text="$store.lang.t('Discover', 'Découvrir')"></button>
                     </div>
 
                     {{-- Language Toggle --}}
@@ -129,11 +131,10 @@
                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
                     </button>
 
-                    {{-- Notifications --}}
-                    <button class="relative rounded-full p-2 text-white/70 hover:bg-white/10 hover:text-white transition-colors ml-1">
-                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                        <span class="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-cm-red text-[10px] font-bold text-white" x-show="false">0</span>
-                    </button>
+                    {{-- Notifications (real-time bell) --}}
+                    @auth
+                        <livewire:notifications.notification-bell />
+                    @endauth
 
                     {{-- User Menu --}}
                     <div x-data="{ open: false }" class="relative ml-1">
@@ -145,7 +146,6 @@
                         </button>
                         <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                             <a href="{{ route('profile') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" x-text="$store.lang.t('Profile', 'Profil')"></a>
-                            <a href="#" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" x-text="$store.lang.t('Settings', 'Paramètres')"></a>
                             @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('admin'))
                             <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" x-text="$store.lang.t('Admin Panel', 'Panneau admin')"></a>
                             @endif
@@ -172,10 +172,12 @@
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 <span class="text-[10px] font-medium" x-text="$store.lang.t('Yard', 'Yard')">Yard</span>
             </a>
-            <a href="#" class="flex flex-col items-center gap-0.5 text-slate-400">
+            <button type="button"
+                    @click="window.dispatchEvent(new CustomEvent('open-discover'))"
+                    class="flex flex-col items-center gap-0.5 text-slate-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <span class="text-[10px] font-medium" x-text="$store.lang.t('Discover', 'Découvrir')">Discover</span>
-            </a>
+            </button>
             <a href="#" class="flex flex-col items-center gap-0.5 text-slate-400">
                 <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
                 <span class="text-[10px] font-medium" x-text="$store.lang.t('Alerts', 'Alertes')">Alerts</span>

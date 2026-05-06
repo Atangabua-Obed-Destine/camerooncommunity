@@ -231,13 +231,15 @@
          @scroll.passive="
              // Telegram-style infinite scroll: when the user scrolls within
              // 80px of the top, auto-trigger loadMore (debounced via the flag).
-             if (!$wire.hasMore || _autoLoading) return;
-             if ($el.scrollTop < 80) {
-                 _autoLoading = true;
-                 _prevScrollHeight = $el.scrollHeight;
-                 _prevScrollTop    = $el.scrollTop;
-                 $wire.loadMore().finally(() => { setTimeout(() => { _autoLoading = false; }, 400); });
-             }
+             (() => {
+                 if (!$wire.hasMore || _autoLoading) return;
+                 if ($el.scrollTop < 80) {
+                     _autoLoading = true;
+                     _prevScrollHeight = $el.scrollHeight;
+                     _prevScrollTop    = $el.scrollTop;
+                     $wire.loadMore().finally(() => { setTimeout(() => { _autoLoading = false; }, 400); });
+                 }
+             })();
          ">
 
         @if($hasMore && $roomMessages->count() >= $perPage)
@@ -271,7 +273,20 @@
 
             {{-- System message --}}
             @if($msg->message_type === \App\Enums\MessageType::System)
-                <div class="yard-chat__system" wire:key="msg-{{ $msg->id }}">{{ $msg->content }}</div>
+                @php
+                    $sysMeta = is_array($msg->media_metadata) ? $msg->media_metadata : [];
+                    $sysKind = $sysMeta['kind'] ?? null;
+                    $isAdminViewer = $room->created_by === auth()->id();
+                @endphp
+                <div class="yard-chat__system" wire:key="msg-{{ $msg->id }}">
+                    {{ $msg->content }}
+                    @if($sysKind === 'join_request' && $isAdminViewer)
+                        <button type="button"
+                                onclick="window.dispatchEvent(new CustomEvent('open-room-info', { detail: { roomId: {{ $room->id }} } }))"
+                                class="ml-2 text-cm-green font-semibold hover:underline"
+                                x-text="$store.lang.t('Review', 'Examiner')"></button>
+                    @endif
+                </div>
 
             {{-- Call log message --}}
             @elseif($msg->message_type === \App\Enums\MessageType::CallLog)

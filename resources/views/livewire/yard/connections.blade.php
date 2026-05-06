@@ -49,6 +49,11 @@
             <button wire:click="setTab('search')" class="comm-tabs__tab {{ $tab === 'search' ? 'comm-tabs__tab--active' : '' }}">
                 <span x-text="$store.lang.t('Search', 'Rechercher')"></span>
             </button>
+            <button wire:click="setTab('blocked')" class="comm-tabs__tab {{ $tab === 'blocked' ? 'comm-tabs__tab--active' : '' }}">
+                <svg class="w-4 h-4 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.172l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                <span x-text="$store.lang.t('Blocked', 'Bloqués')"></span>
+                <span class="comm-tabs__badge" x-show="true">{{ $this->blockedConnections->count() }}</span>
+            </button>
         </div>
 
         {{-- Body --}}
@@ -111,6 +116,63 @@
                         </div>
                     @endforelse
                 @endif
+            @endif
+
+            {{-- ── BLOCKED CONNECTIONS ── --}}
+            @if($tab === 'blocked')
+                @forelse($this->blockedConnections as $item)
+                    @php
+                        $u = $item['user'];
+                        $blockedByMe = $item['blockedByMe'];
+                    @endphp
+                    <div class="relative p-3 rounded-lg border border-red-200 bg-red-50/50 hover:bg-red-50 transition-colors group">
+                        <div class="flex items-center gap-3">
+                            {{-- Avatar --}}
+                            <div class="relative flex-shrink-0">
+                                @if($u->avatar)
+                                    <img src="{{ asset('storage/' . $u->avatar) }}" alt="{{ $u->name }}" class="w-12 h-12 rounded-full object-cover">
+                                @else
+                                    <div class="w-12 h-12 rounded-full bg-gradient-to-br {{ \App\Support\AvatarPalette::colorClass('user:' . $u->id) }} flex items-center justify-center text-white font-bold text-sm">
+                                        {{ substr($u->username ?? $u->name, 0, 1) }}
+                                    </div>
+                                @endif
+                                {{-- Blocked badge --}}
+                                <div class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold" title="{{ $blockedByMe ? 'Blocked by you' : 'Blocked by them' }}">
+                                    🚫
+                                </div>
+                            </div>
+
+                            {{-- Name + indicator --}}
+                            <div class="flex-1 min-w-0">
+                                <p class="font-semibold text-slate-900 truncate">{{ $u->username ?? $u->name }}</p>
+                                <p class="text-xs text-red-600 font-medium">
+                                    @if($blockedByMe)
+                                        <span x-text="$store.lang.t('Blocked by you', 'Bloqué par vous')"></span>
+                                    @else
+                                        <span x-text="$store.lang.t('Blocked by them', 'Bloqué par eux')"></span>
+                                    @endif
+                                </p>
+                            </div>
+
+                            {{-- Actions --}}
+                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                    wire:click="unblock({{ $u->id }})"
+                                    class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"
+                                    x-text="$store.lang.t('Unblock', 'Débloquer')"
+                                ></button>
+                            </div>
+                        </div>
+                    </div>
+                @empty
+                    <div class="comm-empty">
+                        <div class="flex flex-col items-center justify-center py-8">
+                            <div class="text-4xl mb-2">✌️</div>
+                            <p class="text-sm text-slate-600 font-medium" x-text="$store.lang.t('No blocked connections', 'Aucune connexion bloquée')"></p>
+                            <p class="text-xs text-slate-400 mt-1" x-text="$store.lang.t('Your blocked list is empty — stay friendly!', 'Votre liste bloquée est vide — restez courtois !')"></p>
+                        </div>
+                    </div>
+                @endforelse
             @endif
         </div>
     </div>

@@ -46,6 +46,70 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | UK ITL Regions (Integrated Transport Levels)
+    | For United Kingdom, use ITL regions instead of cities
+    | These are the official statistical regions
+    |--------------------------------------------------------------------------
+    */
+    'uk_itl_regions' => [
+        'UKC' => 'North East',
+        'UKD' => 'North West',
+        'UKE' => 'Yorkshire and The Humber',
+        'UKF' => 'East Midlands',
+        'UKG' => 'West Midlands',
+        'UKH' => 'East',
+        'UKI' => 'London',
+        'UKJ' => 'South East',
+        'UKK' => 'South West',
+        'UKL' => 'Wales',
+        'UKM' => 'Scotland',
+        'UKN' => 'Northern Ireland',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | UK City to ITL Region Mapping
+    | Maps major UK cities to their corresponding ITL1 region
+    |--------------------------------------------------------------------------
+    */
+    'gb_city_to_region' => [
+        'london' => 'London',
+        'manchester' => 'North West',
+        'birmingham' => 'West Midlands',
+        'leeds' => 'Yorkshire and The Humber',
+        'glasgow' => 'Scotland',
+        'sheffield' => 'Yorkshire and The Humber',
+        'edinburgh' => 'Scotland',
+        'liverpool' => 'North West',
+        'bristol' => 'South West',
+        'newcastle' => 'North East',
+        'belfast' => 'Northern Ireland',
+        'cardiff' => 'Wales',
+        'coventry' => 'West Midlands',
+        'northampton' => 'East Midlands',
+        'nottingham' => 'East Midlands',
+        'leicester' => 'East Midlands',
+        'derby' => 'East Midlands',
+        'cambridge' => 'East of England',
+        'norwich' => 'East of England',
+        'peterborough' => 'East of England',
+        'brighton' => 'South East',
+        'southampton' => 'South East',
+        'oxford' => 'South East',
+        'reading' => 'South East',
+        'exeter' => 'South West',
+        'plymouth' => 'South West',
+        'bath' => 'South West',
+        'swansea' => 'Wales',
+        'aberdeen' => 'Scotland',
+        'dundee' => 'Scotland',
+        'perth' => 'Scotland',
+        'inverness' => 'Scotland',
+        'stirling' => 'Scotland',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Countries with seeded National Rooms at launch
     | Key = ISO alpha-2 code, value = display name
     |--------------------------------------------------------------------------

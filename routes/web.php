@@ -6,11 +6,16 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LanguageController;
+use App\Http\Controllers\LocationController;
 use App\Http\Controllers\Yard\YardController;
 use Illuminate\Support\Facades\Route;
 
 // ─── Public Routes ───
 Route::get('/', [HomeController::class, 'index'])->name('home');
+
+// ─── Legal pages (public) ───
+Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
+Route::view('/terms', 'legal.terms')->name('legal.terms');
 
 // ─── Language Toggle API ───
 Route::post('/api/language', [LanguageController::class, 'update'])->name('language.update');
@@ -24,9 +29,22 @@ Route::get('/api/geo/ip', function (\Illuminate\Http\Request $request) {
     $cacheKey = 'geo:ip:' . $ip;
 
     return response()->json(
-        \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () {
+        \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () use ($ip) {
             try {
-                $resp = \Illuminate\Support\Facades\Http::timeout(5)->get('https://ipapi.co/json/');
+                // Resolve the visitor's IP rather than the server's. ipapi.co
+                // accepts /{ip}/json/. For local/private IPs (127.0.0.1, ::1,
+                // 10.x, 192.168.x) fall back to bare /json/ which uses the
+                // requesting host's public IP (good enough for dev).
+                $isPrivate = ! $ip
+                    || $ip === '127.0.0.1'
+                    || $ip === '::1'
+                    || str_starts_with($ip, '10.')
+                    || str_starts_with($ip, '192.168.')
+                    || preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $ip);
+                $url = $isPrivate
+                    ? 'https://ipapi.co/json/'
+                    : 'https://ipapi.co/' . $ip . '/json/';
+                $resp = \Illuminate\Support\Facades\Http::timeout(5)->get($url);
                 if ($resp->successful()) {
                     $data = $resp->json();
                     return [
@@ -77,6 +95,10 @@ Route::middleware(['auth', 'verified', 'location'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function () {
+
+    // Location updates from client-side detection
+    Route::post('/api/location/update', [LocationController::class, 'update'])->name('location.update');
+    Route::post('/api/location/switch', [LocationController::class, 'switch'])->name('location.switch');
 
     // The Yard
     Route::get('/yard', [YardController::class, 'index'])->name('yard');

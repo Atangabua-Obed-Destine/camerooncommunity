@@ -236,11 +236,15 @@ class ConnectionService
                 ->lockForUpdate()
                 ->first();
 
+            // Only set accepted_at to null if it wasn't previously accepted
+            // (so we can restore the connection on unblock if they were connected before)
             $payload = [
                 'status'       => UserConnection::STATUS_BLOCKED,
                 'requested_by' => $blocker->id,
-                'accepted_at'  => null,
             ];
+            if (! $c || ! $c->accepted_at) {
+                $payload['accepted_at'] = null;
+            }
 
             if ($c) {
                 $c->update($payload);
@@ -269,10 +273,17 @@ class ConnectionService
         if ($c->requested_by !== $unblocker->id) {
             return false;
         }
-        $c->delete();
 
-        // Let the other party's UI refresh (no toast, just a state sync).
-        $this->pushStateChange($unblocker, $otherUserId, 'unblocked');
+        // If they were previously connected (accepted_at is not null), restore the connection.
+        // Otherwise, delete the record.
+        if ($c->accepted_at) {
+            $c->update(['status' => UserConnection::STATUS_ACCEPTED]);
+            $this->pushStateChange($unblocker, $otherUserId, 'unblocked-restored');
+        } else {
+            $c->delete();
+            $this->pushStateChange($unblocker, $otherUserId, 'unblocked');
+        }
+
         return true;
     }
 

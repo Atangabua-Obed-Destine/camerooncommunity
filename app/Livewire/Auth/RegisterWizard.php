@@ -119,12 +119,33 @@ class RegisterWizard extends Component
         $this->step = max($this->step - 1, 1);
     }
 
-    public function setLocation(float $lat, float $lng, string $country, string $city): void
+    public function setLocation(float $lat, float $lng, string $country, string $region = '', string $city = ''): void
     {
         $this->current_lat = $lat;
         $this->current_lng = $lng;
         $this->current_country = $country;
-        $this->current_region = $city;
+
+        $region = trim($region);
+        $city = trim($city);
+
+        // Normalize UK regions to ITL1 (e.g. "England" / "Greater London"
+        // → "London") so the user sees the same value that will be saved.
+        if (in_array($country, ['United Kingdom', 'UK', 'Great Britain'], true)) {
+            $valid = config('cameroon.seeded_regions.GB', []);
+            $cityMap = config('cameroon.gb_city_to_region', []);
+            $aliasMap = config('cameroon.gb_region_aliases', []);
+
+            // Prefer city lookup — geo providers return broad regions like
+            // "England" for any English city, so the city is more accurate.
+            if ($city && isset($cityMap[Str::lower($city)])) {
+                $region = $cityMap[Str::lower($city)];
+            } elseif ($region && ! in_array($region, $valid, true)) {
+                $key = Str::lower($region);
+                $region = $cityMap[$key] ?? ($aliasMap[$key] ?? $region);
+            }
+        }
+
+        $this->current_region = $region;
         $this->gps_detected = true;
     }
 
@@ -285,6 +306,36 @@ class RegisterWizard extends Component
 
         $tenant = Tenant::first();
 
+        // Normalize the location BEFORE creating the user so that UK regions
+        // like "England" are mapped to a valid ITL1 region (London, Scotland,
+        // ...) using city name + coordinates. This ensures regional rooms are
+        // suggested correctly on first yard visit.
+        $normalizedRegion = $this->current_region ?: null;
+        if (in_array($this->current_country, ['United Kingdom', 'UK', 'Great Britain'], true)) {
+            try {
+                $svc = app(LocationService::class);
+                $tmpUser = new User([
+                    'tenant_id' => $tenant->id,
+                    'current_country' => $this->current_country,
+                    'current_region' => $this->current_region ?: null,
+                ]);
+                $tmpUser->saveQuietly();
+                $svc->handleUserLocation(
+                    $tmpUser,
+                    $this->current_country,
+                    '',
+                    $this->current_region ?: null,
+                    $this->current_lat,
+                    $this->current_lng,
+                );
+                $tmpUser->refresh();
+                $normalizedRegion = $tmpUser->current_region;
+                $tmpUser->delete();
+            } catch (\Throwable $e) {
+                logger()->warning('Register UK normalization failed: ' . $e->getMessage());
+            }
+        }
+
         $user = User::withoutGlobalScopes()->create([
             'tenant_id' => $tenant->id,
             'uuid' => Str::uuid(),
@@ -298,7 +349,7 @@ class RegisterWizard extends Component
             'home_city' => $this->home_city ?: null,
             'language_pref' => $this->language_pref,
             'current_country' => $this->current_country,
-            'current_region' => $this->current_region ?: null,
+            'current_region' => $normalizedRegion,
             'current_lat' => $this->current_lat,
             'current_lng' => $this->current_lng,
             // Treat the location chosen during signup as the user's active
@@ -306,7 +357,7 @@ class RegisterWizard extends Component
             // available immediately on first yard visit, without waiting for
             // the IP/GPS auto-detection cycle to bootstrap them.
             'active_country' => $this->current_country,
-            'active_region' => $this->current_region ?: null,
+            'active_region' => $normalizedRegion,
             'location_updated_at' => now(),
             'is_active' => true,
         ]);

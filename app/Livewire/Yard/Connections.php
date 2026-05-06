@@ -34,7 +34,7 @@ class Connections extends Component
     #[On('connection-updated')]
     public function refreshIncoming(): void
     {
-        unset($this->incomingRequests, $this->myConnections, $this->sentRequests);
+        unset($this->incomingRequests, $this->myConnections, $this->sentRequests, $this->blockedConnections);
     }
 
     public function close(): void
@@ -114,6 +114,35 @@ class Connections extends Component
             ->keyBy('id');
 
         return $rows->map(fn ($r) => $users->get($r->otherUserId($userId)))->filter()->values();
+    }
+
+    /** Blocked connections (both directions). */
+    #[Computed]
+    public function blockedConnections()
+    {
+        $userId = auth()->id();
+
+        $rows = UserConnection::where('status', UserConnection::STATUS_BLOCKED)
+            ->where(function ($q) use ($userId) {
+                $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
+            })
+            ->latest()
+            ->get();
+
+        $userIds = $rows->map(fn ($r) => $r->user_a_id === $userId ? $r->user_b_id : $r->user_a_id)->all();
+        $users = User::whereIn('id', $userIds)
+            ->get(['id', 'name', 'username', 'avatar', 'current_country'])
+            ->keyBy('id');
+
+        return $rows->map(function ($r) use ($userId, $users) {
+            $otherId = $r->user_a_id === $userId ? $r->user_b_id : $r->user_a_id;
+            $u = $users->get($otherId);
+            return [
+                'user' => $u,
+                'connection' => $r,
+                'blockedByMe' => $r->requested_by === $userId,
+            ];
+        })->filter()->values();
     }
 
     /**

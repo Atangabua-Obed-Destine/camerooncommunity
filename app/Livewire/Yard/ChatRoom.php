@@ -92,6 +92,19 @@ class ChatRoom extends Component
         $query = YardMessage::where('room_id', $this->room->id)
             ->with(['user:id,name,username,avatar', 'parent:id,content,user_id', 'parent.user:id,name,username', 'poll.options']);
 
+        // Hide admin-only system messages (e.g. "X requested to join")
+        // from non-admin viewers, mirroring WhatsApp's behavior.
+        if ($this->room->created_by !== auth()->id()) {
+            $query->where(function ($q) {
+                $q->where('message_type', '!=', \App\Enums\MessageType::System->value)
+                  ->orWhereNull('media_metadata')
+                  ->orWhere(function ($qq) {
+                      $qq->whereRaw("JSON_EXTRACT(media_metadata, '$.visibility') IS NULL")
+                         ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(media_metadata, '$.visibility')) <> 'admins'");
+                  });
+            });
+        }
+
         if ($this->searchActive && $this->messageSearch) {
             $query->where('content', 'like', '%' . $this->messageSearch . '%');
         }

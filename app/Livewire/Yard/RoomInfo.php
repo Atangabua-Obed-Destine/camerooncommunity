@@ -24,6 +24,9 @@ class RoomInfo extends Component
     public string $memberSearch = '';
     public array $selectedUsers = [];
 
+    // ── Members list filter (in-group search) ──
+    public string $memberFilter = '';
+
     // ── Avatar upload state ──
     public $newAvatar = null;
     public bool $avatarUploading = false;
@@ -274,6 +277,17 @@ class RoomInfo extends Component
             return;
         }
 
+        // Record the removal in history before deleting so admins can
+        // review past members later.
+        \App\Models\YardRoomMemberHistory::create([
+            'tenant_id'  => $room->tenant_id,
+            'room_id'    => $room->id,
+            'user_id'    => $userId,
+            'removed_by' => auth()->id(),
+            'reason'     => 'removed',
+            'exited_at'  => now(),
+        ]);
+
         $membership->delete();
         $room->decrement('members_count');
 
@@ -302,11 +316,55 @@ class RoomInfo extends Component
             return collect();
         }
 
+        $filter = trim($this->memberFilter);
+
         return YardRoomMember::where('room_id', $this->roomId)
             ->with('user:id,name,username,avatar,cover_photo,bio,email,current_region,last_active_at')
+            ->when($filter !== '', function ($q) use ($filter) {
+                $q->whereHas('user', function ($u) use ($filter) {
+                    $u->where('name', 'like', "%{$filter}%")
+                      ->orWhere('username', 'like', "%{$filter}%");
+                });
+            })
             ->orderByDesc('last_read_at')
             ->limit(50)
             ->get();
+    }
+
+    public function updatedMemberFilter(): void
+    {
+        unset($this->members);
+    }
+
+    /**
+     * Past members (left or removed) for the current room — only loaded
+     * for the room creator (admin), matching WhatsApp's "Past participants".
+     */
+    public function getPastMembersProperty()
+    {
+        if (! $this->roomId || ! $this->visible) {
+            return collect();
+        }
+
+        $room = YardRoom::find($this->roomId);
+        if (! $room || $room->created_by !== auth()->id()) {
+            return collect();
+        }
+
+        // Exclude users who have since rejoined — only show those who are
+        // not currently active members of the room.
+        $currentMemberIds = YardRoomMember::where('room_id', $this->roomId)
+            ->pluck('user_id');
+
+        return \App\Models\YardRoomMemberHistory::where('room_id', $this->roomId)
+            ->whereNotIn('user_id', $currentMemberIds)
+            ->with(['user:id,name,username,avatar', 'remover:id,name,username'])
+            ->orderByDesc('exited_at')
+            ->limit(100)
+            ->get()
+            // Collapse to most recent exit per user (in case of multiple cycles).
+            ->unique('user_id')
+            ->values();
     }
 
     public function getPinnedProperty()
@@ -409,6 +467,33 @@ class RoomInfo extends Component
             'reviewed_at' => now(),
         ]);
 
+        // WhatsApp-style: replace the admin-only "requested to join" pill with
+        // a public "X joined" system message visible to everyone in the room.
+        try {
+            $joiner = \App\Models\User::find($joinRequest->user_id);
+            \App\Models\YardMessage::where('room_id', $room->id)
+                ->where('message_type', \App\Enums\MessageType::System->value)
+                ->whereJsonContains('media_metadata->kind', 'join_request')
+                ->whereJsonContains('media_metadata->request_id', $joinRequest->id)
+                ->delete();
+            $sysMsg = \App\Models\YardMessage::create([
+                'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                'room_id' => $room->id,
+                'user_id' => $joinRequest->user_id,
+                'message_type' => \App\Enums\MessageType::System,
+                'content' => sprintf('%s joined', $joiner?->username ?? $joiner?->name ?? 'A new member'),
+                'media_metadata' => ['kind' => 'member_joined', 'user_id' => $joinRequest->user_id],
+            ]);
+            $room->update([
+                'last_message_at'      => now(),
+                'last_message_preview' => $sysMsg->content,
+                'last_message_user_id' => $joinRequest->user_id,
+            ]);
+            broadcast(new \App\Events\MessageSent($sysMsg));
+        } catch (\Throwable $e) {
+            \Log::warning('Join-approved system message failed: ' . $e->getMessage());
+        }
+
         try {
             broadcast(new \App\Events\RoomUpdated($room->fresh(), 'request_approved', [
                 'user_id' => $joinRequest->user_id,
@@ -431,6 +516,17 @@ class RoomInfo extends Component
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
         ]);
+
+        // Remove the pending admin-only "requested to join" pill so the chat stays clean.
+        try {
+            \App\Models\YardMessage::where('room_id', $joinRequest->room_id)
+                ->where('message_type', \App\Enums\MessageType::System->value)
+                ->whereJsonContains('media_metadata->kind', 'join_request')
+                ->whereJsonContains('media_metadata->request_id', $joinRequest->id)
+                ->delete();
+        } catch (\Throwable $e) {
+            \Log::warning('Join-rejected cleanup failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -463,6 +559,17 @@ class RoomInfo extends Component
             return;
         }
 
+        // Record the leave in history before deleting so admins can
+        // review past members later.
+        \App\Models\YardRoomMemberHistory::create([
+            'tenant_id'  => $room->tenant_id,
+            'room_id'    => $room->id,
+            'user_id'    => auth()->id(),
+            'removed_by' => null,
+            'reason'     => 'left',
+            'exited_at'  => now(),
+        ]);
+
         $membership->delete();
         $room->decrement('members_count');
 
@@ -479,6 +586,63 @@ class RoomInfo extends Component
             ]));
         } catch (\Throwable $e) {
             \Log::warning('Leave broadcast failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Pin / unpin (favorite) the current chat for this user.
+     * Mirrors RoomList::toggleFavorite so the action is reachable from
+     * inside the contact-info pane as well as the chat list.
+     */
+    public function togglePinChat(): void
+    {
+        $member = YardRoomMember::where('room_id', $this->roomId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (! $member) {
+            return;
+        }
+
+        $nowPinned = ! $member->is_favorited;
+        $member->update(['is_favorited' => $nowPinned]);
+
+        $this->dispatch('refreshRoomList');
+        $this->dispatch('toast',
+            type: 'success',
+            message: $nowPinned ? __('Chat pinned') : __('Chat unpinned'),
+        );
+    }
+
+    /**
+     * Manually archive / unarchive the current chat for this user.
+     * Mirrors RoomList::toggleArchive — uses the manual `archived_at`
+     * column (never the location-driven `auto_archived_at`).
+     */
+    public function toggleArchiveChat(): void
+    {
+        $member = YardRoomMember::where('room_id', $this->roomId)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (! $member) {
+            return;
+        }
+
+        $isArchived = (bool) $member->archived_at;
+        $member->update(['archived_at' => $isArchived ? null : now()]);
+
+        $this->dispatch('refreshRoomList');
+        $this->dispatch('toast',
+            type: 'success',
+            message: $isArchived ? __('Chat unarchived') : __('Chat archived'),
+        );
+
+        // If we just archived the open chat, close the info pane and
+        // signal the chat surface to reset.
+        if (! $isArchived) {
+            $this->visible = false;
+            $this->dispatch('room-deselected');
         }
     }
 

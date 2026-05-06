@@ -23,7 +23,7 @@ class Communities extends Component
     public bool $creating = false;
     public string $newName = '';
     public string $newDescription = '';
-    public bool $newIsPrivate = false;
+    public bool $newIsPrivate = true;
 
     #[On('open-communities')]
     public function open(): void
@@ -58,7 +58,24 @@ class Communities extends Component
             })
             ->select('yard_rooms.*')
             ->selectRaw('(SELECT COUNT(*) FROM yard_room_members WHERE room_id = yard_rooms.id) as live_members_count')
-            ->where('yard_rooms.room_type', '!=', RoomType::DirectMessage);
+            ->where('yard_rooms.room_type', '!=', RoomType::DirectMessage)
+            // Show only National + Regional + Private rooms (NO city rooms)
+            // Filter default location-based rooms by user's active location
+            ->where(function ($q) use ($user) {
+                $q->where('yard_rooms.room_type', RoomType::PrivateGroup)
+                  ->orWhere(function ($q2) use ($user) {
+                      $q2->where('yard_rooms.room_type', RoomType::National)
+                         ->where('yard_rooms.country', $user->current_country);
+                  });
+
+                // Only show regional room if user has a current_region
+                if ($user->current_region) {
+                    $q->orWhere(function ($q2) use ($user) {
+                        $q2->where('yard_rooms.room_type', RoomType::Regional)
+                           ->where('yard_rooms.region', $user->current_region);
+                    });
+                }
+            });
 
         if ($this->search) {
             $query->where('yard_rooms.name', 'like', '%' . $this->search . '%');
@@ -83,22 +100,28 @@ class Communities extends Component
                 $q->where(function ($q2) use ($user) {
                     $q2->where('room_type', RoomType::National)
                        ->where('country', $user->current_country);
-                })
-                // Regional rooms: user's region (home_region or current_region)
-                ->orWhere(function ($q2) use ($user) {
-                    $q2->where('room_type', RoomType::Regional)
-                       ->where(function ($q3) use ($user) {
-                           if ($user->current_region) {
-                               $q3->where('region', $user->current_region);
-                           }
-                           if ($user->home_region) {
-                               $regionName = config('cameroon.regions.' . $user->home_region, $user->home_region);
-                               $q3->orWhere('region', $regionName);
-                           }
-                       });
-                })
+                });
+
+                // Regional rooms: ONLY if user has a current_region
+                // (prevents showing all regions when region is not set)
+                if ($user->current_region) {
+                    $q->orWhere(function ($q2) use ($user) {
+                        $q2->where('room_type', RoomType::Regional)
+                           ->where('region', $user->current_region);
+                    });
+                }
+
+                // Also check home_region as fallback for Cameroon users
+                if ($user->home_region && $user->current_country === 'Cameroon') {
+                    $regionName = config('cameroon.regions.' . $user->home_region, $user->home_region);
+                    $q->orWhere(function ($q2) use ($regionName) {
+                        $q2->where('room_type', RoomType::Regional)
+                           ->where('region', $regionName);
+                    });
+                }
+
                 // Private groups: show all
-                ->orWhere('room_type', RoomType::PrivateGroup);
+                $q->orWhere('room_type', RoomType::PrivateGroup);
             })
             ->selectRaw('yard_rooms.*, (SELECT COUNT(*) FROM yard_room_members WHERE room_id = yard_rooms.id) as live_members_count');
 
@@ -173,6 +196,39 @@ class Communities extends Component
             'status' => 'pending',
         ]);
 
+        // Drop a WhatsApp-style system message into the room (admin-only visibility).
+        try {
+            $room = YardRoom::find($roomId);
+            $sysMsg = \App\Models\YardMessage::create([
+                'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                'room_id' => $roomId,
+                'user_id' => $user->id,
+                'message_type' => \App\Enums\MessageType::System,
+                'content' => sprintf('%s requested to join', $user->username ?? $user->name),
+                'media_metadata' => [
+                    'visibility' => 'admins',
+                    'kind' => 'join_request',
+                    'request_id' => $joinRequest->id,
+                    'requester_id' => $user->id,
+                ],
+            ]);
+
+            // Bump the room so it surfaces at the top of the chat list. Use a
+            // neutral preview so existing non-admin members don't learn the
+            // requester's identity from the chat list.
+            if ($room) {
+                $room->update([
+                    'last_message_at'      => now(),
+                    'last_message_preview' => 'Pending join request',
+                    'last_message_user_id' => null,
+                ]);
+            }
+
+            broadcast(new \App\Events\MessageSent($sysMsg));
+        } catch (\Throwable $e) {
+            \Log::warning('Join-request system message failed: ' . $e->getMessage());
+        }
+
         // Broadcast to room so admin sees it in real-time
         $joinRequest->load('room', 'user');
         broadcast(new JoinRequestReceived($joinRequest));
@@ -230,7 +286,7 @@ class Communities extends Component
         $this->creating = true;
         $this->newName = '';
         $this->newDescription = '';
-        $this->newIsPrivate = false;
+        $this->newIsPrivate = true;
     }
 
     public function resetCreate(): void
@@ -238,7 +294,7 @@ class Communities extends Component
         $this->creating = false;
         $this->newName = '';
         $this->newDescription = '';
-        $this->newIsPrivate = false;
+        $this->newIsPrivate = true;
     }
 
     public function createCommunity(): void

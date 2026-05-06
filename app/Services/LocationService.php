@@ -28,8 +28,11 @@ class LocationService
     /**
      * Process a user's detected location: update profile, ensure rooms exist.
      * Does NOT auto-join the user — rooms are presented for explicit opt-in.
+     * 
+     * When UK is detected with generic "England" region, uses coordinates to
+     * reverse-geocode to a specific ITL region via Nominatim.
      */
-    public function handleUserLocation(User $user, string $country, string $city, ?string $region = null): array
+    public function handleUserLocation(User $user, string $country, string $city, ?string $region = null, ?float $lat = null, ?float $lng = null): array
     {
         $countryChanged = $user->current_country !== $country;
 
@@ -42,8 +45,25 @@ class LocationService
         // Normalize UK regions: route to one of the 12 ITL1 regions
         // (London, South East, …, Scotland, Wales, Northern Ireland) using the
         // city → region map first, then the county/country alias map.
+        // If we get "England" as the region, try to reverse-geocode with coordinates.
         if (in_array($country, ['United Kingdom', 'UK', 'Great Britain'], true)) {
-            $region = $this->normalizeUkRegion($city, $region);
+            // First try normal normalization with what we already have
+            $normalized = $this->normalizeUkRegion($city, $region);
+
+            // If that failed and we have coordinates, ask Nominatim for richer
+            // location candidates (city / state_district / county) and try each.
+            if (! $normalized && $lat && $lng) {
+                $candidates = $this->reverseGeocodeCandidates($lat, $lng);
+                foreach ($candidates as $candidate) {
+                    $normalized = $this->normalizeUkRegion($candidate, $region);
+                    if ($normalized) {
+                        $city = $candidate;
+                        break;
+                    }
+                }
+            }
+
+            $region = $normalized;
         }
 
         $user->updateQuietly([
@@ -116,6 +136,82 @@ class LocationService
         ]);
 
         $room->increment('members_count');
+    }
+
+    /**
+     * Reverse-geocode coordinates to a list of candidate location strings
+     * (city, state_district, county) using Nominatim. Returns an ordered
+     * array of candidates to try when normalising to an ITL region.
+     *
+     * Nominatim returns names like "City of Westminster" or
+     * "City of Edinburgh", which won't match plain "westminster" /
+     * "edinburgh" entries in our map, so we also include a "City of"-stripped
+     * variant for each candidate.
+     */
+    private function reverseGeocodeCandidates(float $lat, float $lng): array
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(5)
+                ->withUserAgent('CameroonCommunity/1.0')
+                ->get(
+                    'https://nominatim.openstreetmap.org/reverse',
+                    [
+                        'lat' => $lat,
+                        'lon' => $lng,
+                        'format' => 'json',
+                        'accept-language' => 'en'
+                    ]
+                );
+
+            if (! $response->successful()) {
+                return [];
+            }
+
+            $address = $response->json('address') ?? [];
+            $raw = array_filter([
+                $address['city']           ?? null,
+                $address['town']           ?? null,
+                $address['village']        ?? null,
+                $address['suburb']         ?? null,
+                $address['state_district'] ?? null,
+                $address['county']         ?? null,
+            ]);
+
+            $candidates = [];
+            foreach ($raw as $value) {
+                $candidates[] = $value;
+                // Strip leading "City of " prefix (e.g. "City of Westminster" => "Westminster")
+                if (Str::startsWith(Str::lower($value), 'city of ')) {
+                    $candidates[] = trim(substr($value, 8));
+                }
+            }
+
+            \Illuminate\Support\Facades\Log::debug('Nominatim reverse-geocode candidates', [
+                'lat' => $lat,
+                'lng' => $lng,
+                'address' => $address,
+                'candidates' => $candidates,
+            ]);
+
+            return array_values(array_unique($candidates));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::debug('Nominatim reverse-geocoding failed', [
+                'lat' => $lat,
+                'lng' => $lng,
+                'error' => $e->getMessage()
+            ]);
+        }
+
+        return [];
+    }
+
+    /**
+     * Reverse-geocode coordinates to a single city name (legacy helper).
+     */
+    private function reverseGeocodeToCity(float $lat, float $lng): string
+    {
+        $candidates = $this->reverseGeocodeCandidates($lat, $lng);
+        return $candidates[0] ?? '';
     }
 
     /**

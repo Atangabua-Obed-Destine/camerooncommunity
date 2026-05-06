@@ -1,4 +1,4 @@
-<div class="min-h-[calc(100vh-4rem)] flex items-center justify-center py-8 px-4"
+<div class="flex items-start justify-center pt-2 pb-8 px-4"
      x-data="onboardingFlow()"
      x-init="$nextTick(() => typewriterInit())">
 

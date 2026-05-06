@@ -234,29 +234,39 @@ class RoomList extends Component
 
         $joinedRoomIds = YardRoomMember::where('user_id', $user->id)->pluck('room_id');
 
+        // Determine which regions are eligible for the regional suggestion.
+        // We use the active_region (set by the location switch flow), and
+        // for Cameroon users we also accept the home_region as a fallback.
+        $eligibleRegions = [];
+        if ($user->active_region) {
+            $eligibleRegions[] = $user->active_region;
+        }
+        if ($user->home_region && $user->active_country === 'Cameroon') {
+            $regionName = config('cameroon.regions.' . $user->home_region, $user->home_region);
+            if ($regionName && ! in_array($regionName, $eligibleRegions, true)) {
+                $eligibleRegions[] = $regionName;
+            }
+        }
+
         return YardRoom::where('is_system_room', true)
             ->where('is_active', true)
             ->whereNotIn('id', $joinedRoomIds)
-            ->where(function ($q) use ($user) {
+            ->where(function ($q) use ($user, $eligibleRegions) {
                 // National room for user's active country
                 $q->where(function ($q2) use ($user) {
                     $q2->where('room_type', RoomType::National)
                        ->where('country', $user->active_country);
                 });
-                // Regional room for user's active region (within active country)
-                $q->orWhere(function ($q2) use ($user) {
-                    $q2->where('room_type', RoomType::Regional)
-                       ->where('country', $user->active_country)
-                       ->where(function ($q3) use ($user) {
-                           if ($user->active_region) {
-                               $q3->where('region', $user->active_region);
-                           }
-                           if ($user->home_region && $user->active_country === 'Cameroon') {
-                               $regionName = config('cameroon.regions.' . $user->home_region, $user->home_region);
-                               $q3->orWhere('region', $regionName);
-                           }
-                       });
-                });
+                // Regional room ONLY when we have a specific region to suggest.
+                // Without a region we'd otherwise match every regional room in
+                // the country (e.g. all 12 UK ITL regions).
+                if (! empty($eligibleRegions)) {
+                    $q->orWhere(function ($q2) use ($user, $eligibleRegions) {
+                        $q2->where('room_type', RoomType::Regional)
+                           ->where('country', $user->active_country)
+                           ->whereIn('region', $eligibleRegions);
+                    });
+                }
             })
             ->withCount('members')
             ->orderBy('room_type')

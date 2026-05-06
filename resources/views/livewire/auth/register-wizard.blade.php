@@ -13,27 +13,76 @@
 
         {{-- ── GPS / IP detection ── --}}
         async detectLocation() {
+            console.log('[Register] Starting location detection (mode=' + this.locationMode + ')');
             this.detecting = true;
-            if (this.locationMode === 'ip') { await this.detectByIP(); return; }
-            if (!navigator.geolocation) { await this.detectByIP(); return; }
+            if (this.locationMode === 'ip') {
+                console.log('[Register] IP mode — skipping GPS');
+                await this.detectByIP();
+                return;
+            }
+            if (!navigator.geolocation) {
+                console.warn('[Register] Geolocation API not available — falling back to IP');
+                await this.detectByIP();
+                return;
+            }
             try {
+                console.log('[Register] Requesting GPS position…');
                 const pos = await new Promise((resolve, reject) =>
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000 })
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: false })
                 );
+                console.log('[Register] GPS got position:', pos.coords.latitude, pos.coords.longitude);
                 const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en`);
                 const data = await resp.json();
                 const country = data.address?.country || '';
                 const region = data.address?.state || data.address?.region || '';
-                $wire.setLocation(pos.coords.latitude, pos.coords.longitude, country, region);
-            } catch { await this.detectByIP(); }
+                const city = data.address?.city
+                          || data.address?.town
+                          || data.address?.village
+                          || data.address?.municipality
+                          || data.address?.suburb
+                          || data.address?.county
+                          || '';
+                console.log('[Register] Nominatim:', { country, region, city, address: data.address });
+                if (!country) {
+                    console.warn('[Register] Nominatim returned no country — falling back to IP');
+                    await this.detectByIP();
+                    return;
+                }
+                $wire.setLocation(pos.coords.latitude, pos.coords.longitude, country, region, city);
+            } catch (e) {
+                console.warn('[Register] GPS failed (' + (e?.message || e) + ') — falling back to IP');
+                await this.detectByIP();
+                return;
+            }
             this.detecting = false;
         },
         async detectByIP() {
+            console.log('[Register] Detecting via IP…');
             try {
-                const resp = await fetch('{{ route("geo.ip") }}');
-                const data = await resp.json();
-                if (!data.error) $wire.setLocation(data.latitude, data.longitude, data.country_name || '', data.region || '');
-            } catch {}
+                {{-- Call ipapi.co DIRECTLY from the browser so VPN traffic is captured.
+                     (A server-side proxy would use XAMPP's IP, which never sees the VPN.)
+                     Falls back to the server proxy on CORS / rate-limit failure. --}}
+                let data = null;
+                try {
+                    const resp = await fetch('https://ipapi.co/json/');
+                    if (resp.ok) data = await resp.json();
+                } catch (e) {
+                    console.warn('[Register] Direct ipapi failed, trying proxy:', e?.message || e);
+                }
+                if (!data || data.error || !data.country_name) {
+                    console.log('[Register] Falling back to server proxy…');
+                    const resp = await fetch('{{ route("geo.ip") }}');
+                    data = await resp.json();
+                }
+                console.log('[Register] IP response:', data);
+                if (!data || data.error || !data.country_name) {
+                    console.error('[Register] IP detection failed — payload:', data);
+                } else {
+                    $wire.setLocation(data.latitude || 0, data.longitude || 0, data.country_name, data.region || '', data.city || '');
+                }
+            } catch (e) {
+                console.error('[Register] IP detection threw:', e);
+            }
             this.detecting = false;
         }
      }"
@@ -84,7 +133,7 @@
                 <h1 class="text-3xl xl:text-4xl font-extrabold text-white leading-tight">
                     <span x-text="$store.lang.t('Join the Family', 'Rejoignez la Famille')"></span> 🎉
                 </h1>
-                <p class="mt-3 text-sm text-white/70 leading-relaxed max-w-xs"
+                <p class="mt-3 text-sm text-white/70 leading-relaxed whitespace-nowrap"
                    x-text="$store.lang.t(
                        'Connect with Cameroonians wherever you are. Your community is waiting.',
                        'Connectez-vous avec les Camerounais où que vous soyez. Votre communauté vous attend.'
@@ -245,10 +294,10 @@
                     @if($step === 1)
                     <div wire:key="step-1">
                         <h2 class="text-2xl font-extrabold text-slate-900"
-                            x-text="$store.lang.t('Let's personalize your experience', 'Personnalisons votre expérience')"></h2>
+                            x-text="$store.lang.t('Let\'s personalize your experience', 'Personnalisons votre expérience')"></h2>
                         <p class="mt-1 text-sm text-slate-500"
                            x-text="$store.lang.t(
-                               'Tell us which community you'd like to join — you can change this anytime.',
+                               'Tell us which community you\'d like to join — you can change this anytime.',
                                'Dites-nous à quelle communauté vous souhaitez vous joindre — modifiable à tout moment.'
                            )"></p>
 
@@ -317,26 +366,26 @@
                                 @error('current_region') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 
-                            {{-- Language Toggle (early — so AI messages match) --}}
-                            <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-2"
+                            {{-- Language Toggle (compact pill — saves space) --}}
+                            <div class="flex items-center justify-between gap-3">
+                                <label class="text-sm font-medium text-slate-700"
                                        x-text="$store.lang.t('Preferred Language', 'Langue Préférée')"></label>
-                                <div class="grid grid-cols-2 gap-3">
-                                    <label class="relative cursor-pointer">
-                                        <input wire:model.live="language_pref" type="radio" value="en" class="peer sr-only"
+                                <div class="inline-flex rounded-full bg-slate-100 p-0.5 text-xs font-semibold">
+                                    <label class="cursor-pointer">
+                                        <input wire:model.live="language_pref" type="radio" value="en" class="sr-only"
                                                @change="$store.lang.current = 'en'">
-                                        <div class="rounded-xl border-2 p-3 text-center transition-all peer-checked:border-cm-green peer-checked:bg-cm-green/5 peer-checked:shadow-md peer-checked:shadow-cm-green/10 border-slate-200 hover:border-slate-300">
-                                            <span class="text-xl block mb-0.5">🇬🇧</span>
-                                            <span class="text-xs font-bold text-slate-800">English</span>
-                                        </div>
+                                        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors"
+                                              :class="$wire.language_pref === 'en' ? 'bg-white text-cm-green shadow-sm' : 'text-slate-500'">
+                                            🇬🇧 EN
+                                        </span>
                                     </label>
-                                    <label class="relative cursor-pointer">
-                                        <input wire:model.live="language_pref" type="radio" value="fr" class="peer sr-only"
+                                    <label class="cursor-pointer">
+                                        <input wire:model.live="language_pref" type="radio" value="fr" class="sr-only"
                                                @change="$store.lang.current = 'fr'">
-                                        <div class="rounded-xl border-2 p-3 text-center transition-all peer-checked:border-cm-green peer-checked:bg-cm-green/5 peer-checked:shadow-md peer-checked:shadow-cm-green/10 border-slate-200 hover:border-slate-300">
-                                            <span class="text-xl block mb-0.5">🇫🇷</span>
-                                            <span class="text-xs font-bold text-slate-800">Français</span>
-                                        </div>
+                                        <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors"
+                                              :class="$wire.language_pref === 'fr' ? 'bg-white text-cm-green shadow-sm' : 'text-slate-500'">
+                                            🇫🇷 FR
+                                        </span>
                                     </label>
                                 </div>
                             </div>
@@ -586,8 +635,8 @@
                             <label class="flex items-start gap-3 cursor-pointer">
                                 <input wire:model="terms" type="checkbox" class="mt-0.5 h-5 w-5 rounded border-slate-300 text-cm-green focus:ring-cm-green">
                                 <span class="text-sm text-slate-600" x-html="$store.lang.t(
-                                    'I agree to the <a href=\'#\' class=\'text-cm-green hover:underline font-medium\'>Terms of Service</a> and <a href=\'#\' class=\'text-cm-green hover:underline font-medium\'>Privacy Policy</a>',
-                                    'J\'accepte les <a href=\'#\' class=\'text-cm-green hover:underline font-medium\'>Conditions d\'Utilisation</a> et la <a href=\'#\' class=\'text-cm-green hover:underline font-medium\'>Politique de Confidentialité</a>'
+                                    'I agree to the <a href=\'{{ route('legal.terms') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Terms of Service</a> and <a href=\'{{ route('legal.privacy') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Privacy Policy</a>',
+                                    'J\'accepte les <a href=\'{{ route('legal.terms') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Conditions d\'Utilisation</a> et la <a href=\'{{ route('legal.privacy') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Politique de Confidentialité</a>'
                                 )"></span>
                             </label>
                             @error('terms') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror

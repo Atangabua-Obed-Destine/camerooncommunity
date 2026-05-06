@@ -21,6 +21,9 @@ class LocationTracker extends Component
      *   - Detected differs from `active_*`: dispatch `location-switch-prompt`
      *     so the toast can ask the user whether to switch their active
      *     location.
+     *
+     * NOTE: City rooms are no longer supported. Only National + Regional rooms.
+     * City parameter is ignored.
      */
     public function updateLocation(float $lat, float $lng, string $country, string $region, string $city = ''): void
     {
@@ -31,18 +34,9 @@ class LocationTracker extends Component
 
         $country = trim(strip_tags($country));
         $region = trim(strip_tags($region));
-        $city = trim(strip_tags($city));
 
-        if (! $country || mb_strlen($country) > 100 || mb_strlen($region) > 100 || mb_strlen($city) > 100) {
+        if (! $country || mb_strlen($country) > 100 || mb_strlen($region) > 100) {
             return;
-        }
-
-        // Normalise UK regions: ip-api / Nominatim return the constituent
-        // country (England, Scotland, Wales, Northern Ireland) but our
-        // diaspora communities are organised by city. Prefer the city
-        // when we have it.
-        if (in_array($country, ['United Kingdom', 'UK'], true) && $city !== '') {
-            $region = $city;
         }
 
         $user = auth()->user();
@@ -60,7 +54,7 @@ class LocationTracker extends Component
             ]);
         }
 
-        app(LocationService::class)->handleUserLocation($user, $country, $city, $region);
+        app(LocationService::class)->handleUserLocation($user, $country, '', $region);
 
         $user = $user->fresh();
 
@@ -71,7 +65,7 @@ class LocationTracker extends Component
             'location-changed',
             country: $user->current_country ?? $country,
             region: $user->current_region ?? $region,
-            city: $user->current_city ?? $city,
+            city: '',
         );
 
         // Bootstrap: first-ever detection — adopt as active, no prompt.
