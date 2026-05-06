@@ -155,7 +155,7 @@
                             </div>
 
                             {{-- Actions --}}
-                            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex gap-1">
                                 <button
                                     wire:click="unblock({{ $u->id }})"
                                     class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-100 text-green-700 hover:bg-green-200 transition-colors"

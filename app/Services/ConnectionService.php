@@ -161,6 +161,41 @@ class ConnectionService
                     ]);
                 }
 
+                // Post a celebratory system message so the new DM lands at the
+                // top of both users' chat lists with a clear "you're now
+                // connected" hint instead of an empty preview. The text is
+                // neutral so both sides see the same friendly greeting.
+                $aName = $a->username ?: $a->name;
+                $bName = $b->username ?: $b->name;
+
+                $preview = "🎉 You're now connected — say hi 👋";
+
+                try {
+                    $sysMsg = \App\Models\YardMessage::create([
+                        'uuid'           => (string) Str::uuid(),
+                        'tenant_id'      => $tenantId,
+                        'room_id'        => $room->id,
+                        'user_id'        => $a->id,
+                        'message_type'   => \App\Enums\MessageType::System,
+                        'content'        => $preview,
+                        'media_metadata' => [
+                            'kind'       => 'connection_accepted',
+                            'a_user_id'  => $a->id,
+                            'b_user_id'  => $b->id,
+                            'a_name'     => $aName,
+                            'b_name'     => $bName,
+                        ],
+                    ]);
+
+                    $room->update([
+                        'last_message_at'      => now(),
+                        'last_message_preview' => $sysMsg->content,
+                        'last_message_user_id' => $a->id,
+                    ]);
+                } catch (\Throwable $e) {
+                    Log::warning('Connection system message failed: ' . $e->getMessage());
+                }
+
                 return (int) $room->id;
             });
         } catch (\Throwable $e) {

@@ -48,6 +48,12 @@ class RoomList extends Component
             foreach ($roomIds as $roomId) {
                 $listeners["echo:tenant.{$user->tenant_id}.room.{$roomId},.MessageSent"] = 'onNewMessage';
             }
+
+            // When the user accepts/receives an accepted connection, the server
+            // creates a fresh DM room for both sides. Listen on the user's own
+            // channel so the chat list refreshes immediately and the new DM
+            // shows up without waiting for the first message.
+            $listeners["echo:tenant.{$user->tenant_id}.user.{$user->id},.connection.accepted"] = 'refreshRooms';
         }
 
         return $listeners;
