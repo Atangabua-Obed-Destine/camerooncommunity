@@ -1378,16 +1378,31 @@
                    :placeholder="$store.lang.t('Search rooms...', 'Rechercher...')">
             <div class="yard-forward-modal__list">
                 @foreach($this->forwardRooms as $fwdRoom)
+                @php
+                    $isDm = $fwdRoom->room_type === \App\Enums\RoomType::DirectMessage;
+                    $paletteKey = $isDm
+                        ? 'user:' . ($fwdRoom->dm_partner_id ?? $fwdRoom->id)
+                        : 'room:' . $fwdRoom->id;
+                @endphp
                 <button class="yard-forward-modal__item"
                         x-show="!search || '{{ strtolower(e($fwdRoom->name)) }}'.includes(search.toLowerCase())"
                         @click="doForward({{ $fwdRoom->id }})">
                     <span class="yard-forward-modal__avatar">
-                        @switch($fwdRoom->room_type)
-                            @case(\App\Enums\RoomType::National) 🇨🇲 @break
-                            @case(\App\Enums\RoomType::City) 📍 @break
-                            @case(\App\Enums\RoomType::PrivateGroup) 👥 @break
-                            @case(\App\Enums\RoomType::DirectMessage) 💬 @break
-                        @endswitch
+                        @if($fwdRoom->avatar)
+                            <img src="{{ asset('storage/' . $fwdRoom->avatar) }}" alt="{{ $fwdRoom->name }}"
+                                 class="w-full h-full rounded-full object-cover">
+                        @elseif($isDm)
+                            <span class="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br {{ \App\Support\AvatarPalette::colorClass($paletteKey) }}">
+                                {{ strtoupper(substr($fwdRoom->name, 0, 1)) }}
+                            </span>
+                        @else
+                            @switch($fwdRoom->room_type)
+                                @case(\App\Enums\RoomType::National) 🇨🇲 @break
+                                @case(\App\Enums\RoomType::City) 📍 @break
+                                @case(\App\Enums\RoomType::PrivateGroup) 👥 @break
+                                @default 💬
+                            @endswitch
+                        @endif
                     </span>
                     <span class="yard-forward-modal__name">{{ $fwdRoom->name }}</span>
                 </button>

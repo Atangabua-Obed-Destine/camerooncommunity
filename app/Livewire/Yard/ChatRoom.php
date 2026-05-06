@@ -306,7 +306,7 @@ class ChatRoom extends Component
         $rooms = YardRoom::whereIn('id', $activeRoomIds)
             ->where('id', '!=', $currentRoomId)
             ->orderByDesc('last_message_at')
-            ->select('id', 'name', 'room_type')
+            ->select('id', 'name', 'room_type', 'avatar')
             ->limit(50)
             ->get();
 
@@ -319,7 +319,7 @@ class ChatRoom extends Component
             $partnerNames = YardRoomMember::whereIn('room_id', $dmRoomIds)
                 ->where('user_id', '!=', $user->id)
                 ->join('users', 'users.id', '=', 'yard_room_members.user_id')
-                ->get(['yard_room_members.room_id', 'users.name', 'users.username'])
+                ->get(['yard_room_members.room_id', 'users.id as uid', 'users.name', 'users.username', 'users.avatar'])
                 ->keyBy('room_id');
 
             $rooms->transform(function ($r) use ($partnerNames) {
@@ -327,6 +327,10 @@ class ChatRoom extends Component
                     $partner = $partnerNames->get($r->id);
                     if ($partner) {
                         $r->name = $partner->username ?: $partner->name;
+                        // Use partner's avatar for DM rooms (rooms themselves
+                        // typically have no avatar stored).
+                        $r->avatar = $partner->avatar;
+                        $r->dm_partner_id = $partner->uid;
                     }
                 }
                 return $r;
