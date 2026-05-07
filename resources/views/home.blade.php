@@ -950,9 +950,7 @@
                 <div>
                     <h3 class="mb-2 font-semibold text-white text-sm uppercase tracking-wider" x-text="$store.lang.t('Platform', 'Plateforme')"></h3>
                     <ul class="space-y-1.5 text-sm">
-                        <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('About', 'À Propos')"></a></li>
-                        <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('Modules', 'Modules')"></a></li>
-                        <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('FAQ', 'FAQ')"></a></li>
+                        <li><a href="{{ route('about') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('About', 'À Propos')"></a></li>
                         <li><a href="{{ route('contact') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Contact', 'Contact')"></a></li>
                     </ul>
                 </div>

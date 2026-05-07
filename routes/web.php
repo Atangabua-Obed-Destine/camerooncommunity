@@ -17,6 +17,7 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
 Route::view('/terms', 'legal.terms')->name('legal.terms');
 Route::view('/contact', 'pages.contact')->name('contact');
+Route::view('/about', 'pages.about')->name('about');
 
 // ─── Language Toggle API ───
 Route::post('/api/language', [LanguageController::class, 'update'])->name('language.update');

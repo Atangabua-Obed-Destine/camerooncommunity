@@ -46,7 +46,7 @@
                 <div class="mt-10 mb-8">
                     <h1 class="text-3xl xl:text-4xl font-extrabold text-white leading-tight whitespace-nowrap"
                         x-text="$store.lang.t('Welcome Back!', 'Bon Retour !')"></h1>
-                    <p class="mt-3 text-sm text-white/70 leading-relaxed max-w-xs"
+                    <p class="mt-3 text-sm text-white/70 leading-relaxed whitespace-nowrap"
                        x-text="$store.lang.t(
                            'Your community is always here for you. Sign in to reconnect.',
                            'Votre communauté est toujours là pour vous. Connectez-vous pour retrouver les vôtres.'
