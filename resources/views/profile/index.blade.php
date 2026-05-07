@@ -11,7 +11,7 @@
 
         {{-- Middle scrollable column --}}
         <main class="flex-1 min-w-0 overflow-y-auto bg-slate-50">
-        <div class="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <div class="max-w-5xl mx-auto px-4 py-8 space-y-6">
         {{-- Back button --}}
         <button type="button" onclick="history.length > 1 ? history.back() : (window.location.href = '{{ url('/') }}')"
                 class="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-cm-green transition">
@@ -232,6 +232,25 @@
                     <input type="text" name="home_city" value="{{ old('home_city', $user->home_city) }}"
                            class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                            :placeholder="$store.lang.t('e.g. Bamenda, Douala...', 'ex. Bamenda, Douala...')">
+                </div>
+
+                {{-- Yard preferences --}}
+                <div class="pt-2 border-t border-slate-100">
+                    <label class="flex items-start justify-between gap-3 cursor-pointer">
+                        <div class="flex-1">
+                            <span class="block text-sm font-medium text-slate-700"
+                                  x-text="$store.lang.t('Show away chats in The Yard', 'Afficher les discussions absentes dans Le Yard')"></span>
+                            <span class="block text-xs text-slate-500 mt-0.5"
+                                  x-text="$store.lang.t('Display chats auto-archived because you switched location.', 'Afficher les discussions auto-archivées suite à un changement de lieu.')"></span>
+                        </div>
+                        <input type="hidden" name="show_archived_away" value="0">
+                        <span class="relative inline-block flex-shrink-0 mt-1">
+                            <input type="checkbox" name="show_archived_away" value="1" class="peer sr-only"
+                                   {{ old('show_archived_away', $user->show_archived_away) ? 'checked' : '' }}>
+                            <span class="block w-10 h-6 bg-slate-300 rounded-full peer-checked:bg-cm-green transition-colors"></span>
+                            <span class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></span>
+                        </span>
+                    </label>
                 </div>
 
                 <button type="submit" class="w-full rounded-xl bg-cm-green py-3 text-sm font-bold text-white transition-colors hover:bg-cm-green/90">

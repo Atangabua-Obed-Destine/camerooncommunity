@@ -41,6 +41,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'active_country',
         'active_region',
         'language_pref',
+        'show_archived_away',
         'account_type',
         'community_points',
         'residency_months',
@@ -75,6 +76,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'is_founding_member' => 'boolean',
             'is_community_leader' => 'boolean',
             'is_active' => 'boolean',
+            'show_archived_away' => 'boolean',
         ];
     }
 

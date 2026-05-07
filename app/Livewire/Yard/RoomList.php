@@ -202,6 +202,58 @@ class RoomList extends Component
     }
 
     /**
+     * Counts shown next to the filter pills (Unread, Favorites, Groups).
+     * Computed independently of the currently active filter so the numbers
+     * stay correct as the user switches between pills. Mirrors the same
+     * "active list" scope (excludes auto-archived and manually archived).
+     */
+    #[Computed]
+    public function filterCounts(): array
+    {
+        $user = auth()->user();
+
+        // Active membership scope: matches the default "all" view.
+        $base = YardRoomMember::query()
+            ->where('user_id', $user->id)
+            ->whereNull('auto_archived_at')
+            ->whereNull('archived_at');
+
+        // Favorites count.
+        $favorites = (clone $base)->where('is_favorited', true)->count();
+
+        // Groups count (everything except DMs).
+        $groups = (clone $base)
+            ->join('yard_rooms', 'yard_rooms.id', '=', 'yard_room_members.room_id')
+            ->where('yard_rooms.room_type', '!=', RoomType::DirectMessage->value)
+            ->count();
+
+        // Unread count = rooms with at least one message newer than last_read_at
+        // (or rooms never read that have any messages from someone else).
+        $unread = (clone $base)
+            ->where(function ($q) use ($user) {
+                $q->whereExists(function ($sub) use ($user) {
+                    $sub->select(DB::raw(1))
+                        ->from('yard_messages')
+                        ->whereColumn('yard_messages.room_id', 'yard_room_members.room_id')
+                        ->where('yard_messages.user_id', '!=', $user->id)
+                        ->where('yard_messages.is_deleted', false)
+                        ->where(function ($w) {
+                            $w->whereNull('yard_room_members.last_read_at')
+                              ->orWhereColumn('yard_messages.created_at', '>', 'yard_room_members.last_read_at');
+                        });
+                });
+            })
+            ->count();
+
+        return [
+            'unread'    => $unread,
+            'favorites' => $favorites,
+            'groups'    => $groups,
+        ];
+    }
+
+
+    /**
      * Rooms that were auto-archived because the user travelled to a new
      * location. They reappear in the main list silently when the user
      * returns. Surfaced under "Archived (away)" section.
@@ -466,6 +518,14 @@ class RoomList extends Component
         }
 
         unset($this->rooms);
+
+        // Notify the topbar archive badge so its count refreshes without a
+        // page reload.
+        $newCount = YardRoomMember::where('user_id', auth()->id())
+            ->whereNotNull('archived_at')
+            ->whereNull('auto_archived_at')
+            ->count();
+        $this->dispatch('archived-count-changed', count: $newCount);
 
         $this->dispatch('toast',
             type: 'success',

@@ -9,7 +9,7 @@
 
         {{-- Middle scrollable column --}}
         <main class="flex-1 min-w-0 overflow-y-auto bg-slate-50">
-        <div class="max-w-4xl mx-auto pb-12">
+        <div class="max-w-5xl mx-auto pb-12">
 
         {{-- ── Top bar (back + share) ── --}}
         <div class="flex items-center justify-between px-4 py-3 sm:px-6">

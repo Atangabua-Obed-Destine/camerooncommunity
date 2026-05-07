@@ -33,7 +33,10 @@ class ProfileController extends Controller
             'language_pref' => 'required|in:en,fr',
             'home_region' => 'nullable|string|max:100',
             'home_city' => 'nullable|string|max:100',
+            'show_archived_away' => 'nullable|boolean',
         ]);
+
+        $validated['show_archived_away'] = $request->boolean('show_archived_away');
 
         $user->update($validated);
 

@@ -20,8 +20,8 @@
             ],
             [
                 'icon' => '⚖️',
-                'en' => ['title' => 'Your account, your responsibility', 'body' => "Keep your password safe. You are responsible for what happens under your account. Tell us immediately at security@cameroon.network if you suspect unauthorised access."],
-                'fr' => ['title' => 'Votre compte, votre responsabilité', 'body' => "Protégez votre mot de passe. Vous êtes responsable de ce qui se passe sous votre compte. Informez-nous immédiatement à security@cameroon.network en cas d'accès non autorisé."],
+                'en' => ['title' => 'Your account, your responsibility', 'body' => "Keep your password safe. You are responsible for what happens under your account. Tell us immediately at security@cameroonnetwork.org if you suspect unauthorised access."],
+                'fr' => ['title' => 'Votre compte, votre responsabilité', 'body' => "Protégez votre mot de passe. Vous êtes responsable de ce qui se passe sous votre compte. Informez-nous immédiatement à security@cameroonnetwork.org en cas d'accès non autorisé."],
             ],
             [
                 'icon' => '🔄',

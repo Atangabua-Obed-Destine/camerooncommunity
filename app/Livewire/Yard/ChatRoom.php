@@ -888,6 +888,8 @@ class ChatRoom extends Component
                 'created_at' => now(),
             ]);
         }
+
+        $this->dispatch('starred-changed');
     }
 
     // ─── REACTIONS (full emoji support) ───

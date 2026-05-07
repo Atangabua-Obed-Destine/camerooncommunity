@@ -10,54 +10,115 @@
         detecting: false,
         detected: @entangle('gps_detected'),
         locationMode: @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps')),
+        insecureContext: false,
+        insecureHost: '',
+        accuracyMeters: null,    {{-- radius reported by the browser --}}
+        accuracySource: '',      {{-- 'gps' | 'wifi' | 'ip' --}}
+        poorAccuracy: false,     {{-- accuracy worse than threshold --}}
+        _detectInFlight: false,  {{-- re-entry guard --}}
 
         {{-- ── GPS / IP detection ── --}}
         async detectLocation() {
+            if (this._detectInFlight) {
+                console.log('[Register] detectLocation already running — ignoring duplicate call');
+                return;
+            }
+            this._detectInFlight = true;
             console.log('[Register] Starting location detection (mode=' + this.locationMode + ')');
             this.detecting = true;
-            if (this.locationMode === 'ip') {
-                console.log('[Register] IP mode — skipping GPS');
-                await this.detectByIP();
-                return;
-            }
-            if (!navigator.geolocation) {
-                console.warn('[Register] Geolocation API not available — falling back to IP');
-                await this.detectByIP();
-                return;
-            }
+            this.insecureContext = false;
+            this.poorAccuracy = false;
+            this.accuracyMeters = null;
+            this.accuracySource = '';
             try {
-                console.log('[Register] Requesting GPS position…');
-                const pos = await new Promise((resolve, reject) =>
-                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, enableHighAccuracy: false })
-                );
-                console.log('[Register] GPS got position:', pos.coords.latitude, pos.coords.longitude);
-                const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en`);
-                const data = await resp.json();
-                const country = data.address?.country || '';
-                const region = data.address?.state || data.address?.region || '';
-                const city = data.address?.city
-                          || data.address?.town
-                          || data.address?.village
-                          || data.address?.municipality
-                          || data.address?.suburb
-                          || data.address?.county
-                          || '';
-                console.log('[Register] Nominatim:', { country, region, city, address: data.address });
-                if (!country) {
-                    console.warn('[Register] Nominatim returned no country — falling back to IP');
+                if (this.locationMode === 'ip') {
+                    console.log('[Register] IP mode — skipping GPS');
                     await this.detectByIP();
                     return;
                 }
-                $wire.setLocation(pos.coords.latitude, pos.coords.longitude, country, region, city);
-            } catch (e) {
-                console.warn('[Register] GPS failed (' + (e?.message || e) + ') — falling back to IP');
-                await this.detectByIP();
-                return;
+                {{-- Browsers only expose Geolocation on secure origins (https:// or localhost).
+                     On http://<lan-ip>/... navigator.geolocation may exist but getCurrentPosition
+                     will reject with code 1 (PERMISSION_DENIED) without ever prompting. Detect
+                     that up front so we can show the user a real explanation instead of silently
+                     falling back to a wildly inaccurate IP location. --}}
+                if (typeof window !== 'undefined' && window.isSecureContext === false) {
+                    console.warn('[Register] Insecure origin — Geolocation API blocked by browser');
+                    this.insecureContext = true;
+                    this.insecureHost = window.location.host;
+                    await this.detectByIP();
+                    return;
+                }
+                if (!navigator.geolocation) {
+                    console.warn('[Register] Geolocation API not available — falling back to IP');
+                    this.insecureContext = true;
+                    this.insecureHost = window.location.host;
+                    await this.detectByIP();
+                    return;
+                }
+                try {
+                    console.log('[Register] Requesting GPS position (high accuracy)…');
+                    {{-- enableHighAccuracy:true forces the device to use real GNSS satellites
+                         instead of falling back to cell-tower / carrier-gateway triangulation
+                         (which on mobile data often returns the wrong city). maximumAge:0
+                         prevents a stale cached fix from another app being reused. --}}
+                    const pos = await new Promise((resolve, reject) =>
+                        navigator.geolocation.getCurrentPosition(resolve, reject, {
+                            timeout: 15000,
+                            enableHighAccuracy: true,
+                            maximumAge: 0,
+                        })
+                    );
+                    const acc = Math.round(pos.coords.accuracy || 0);
+                    console.log('[Register] GPS got position:', pos.coords.latitude, pos.coords.longitude, 'accuracy=' + acc + 'm');
+                    this.accuracyMeters = acc;
+                    {{-- Heuristic: < 100 m → real GPS, < 5 km → Wi-Fi, otherwise carrier/cell. --}}
+                    this.accuracySource = acc < 100 ? 'gps' : (acc < 5000 ? 'wifi' : 'cell');
+
+                    {{-- If the fix is wider than ~50 km, the country may still be right but the
+                         city often won't be. Flag it so the user is warned and prompted to
+                         double-check / retry. We still keep the result so the form is pre-filled. --}}
+                    const POOR_ACCURACY_M = 50000;
+                    if (acc > POOR_ACCURACY_M) {
+                        console.warn('[Register] GPS fix is too coarse (' + acc + 'm) — marking as poor');
+                        this.poorAccuracy = true;
+                    }
+
+                    const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en&zoom=10`);
+                    const data = await resp.json();
+                    const country = data.address?.country || '';
+                    const region = data.address?.state || data.address?.region || '';
+                    const city = data.address?.city
+                              || data.address?.town
+                              || data.address?.village
+                              || data.address?.municipality
+                              || data.address?.suburb
+                              || data.address?.county
+                              || '';
+                    console.log('[Register] Nominatim:', { country, region, city, address: data.address });
+                    if (!country) {
+                        console.warn('[Register] Nominatim returned no country — falling back to IP');
+                        await this.detectByIP();
+                        return;
+                    }
+                    $wire.setLocation(pos.coords.latitude, pos.coords.longitude, country, region, city);
+                } catch (e) {
+                    console.warn('[Register] GPS failed (' + (e?.message || e) + ') — falling back to IP');
+                    {{-- code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT.
+                         Only the secure-context warning is shown for code 1 if it really was
+                         the silent insecure-context rejection (handled above). For everything
+                         else, IP fallback + the existing poor-accuracy banner is sufficient. --}}
+                    this.accuracySource = 'ip';
+                    await this.detectByIP();
+                    return;
+                }
+            } finally {
+                this.detecting = false;
+                this._detectInFlight = false;
             }
-            this.detecting = false;
         },
         async detectByIP() {
             console.log('[Register] Detecting via IP…');
+            this.accuracySource = 'ip';
             try {
                 {{-- Call ipapi.co DIRECTLY from the browser so VPN traffic is captured.
                      (A server-side proxy would use XAMPP's IP, which never sees the VPN.)
@@ -319,8 +380,43 @@
                                       x-text="$store.lang.t('Setting things up for you...', 'Préparation de votre espace...')"></span>
                             </div>
 
+                            {{-- Imprecise-location warning (insecure origin, poor GPS fix, or IP fallback) --}}
+                            <div x-show="!detecting && (insecureContext || poorAccuracy || (detected && accuracySource === 'ip'))" x-transition x-cloak
+                                 class="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-amber-800">
+                                        <span x-show="insecureContext" x-text="$store.lang.t('GPS unavailable on this connection', 'GPS indisponible sur cette connexion')"></span>
+                                        <span x-show="!insecureContext && poorAccuracy" x-text="$store.lang.t('Location is approximate', 'Position approximative')"></span>
+                                        <span x-show="!insecureContext && !poorAccuracy && accuracySource === 'ip'" x-text="$store.lang.t('Using approximate location', 'Position approximative utilisée')"></span>
+                                    </p>
+                                    <p class="mt-0.5 text-xs text-amber-700 leading-relaxed">
+                                        <span x-show="insecureContext" x-text="$store.lang.t(
+                                            'Your browser only allows precise location on secure sites (https://) or on localhost. We\'re showing your approximate location based on your internet provider — it can be far from where you actually are. You can correct it manually below.',
+                                            'Votre navigateur n\'autorise la localisation précise que sur les sites sécurisés (https://) ou en local. Nous affichons donc une position approximative basée sur votre fournisseur internet — elle peut être éloignée de votre position réelle. Vous pouvez la corriger manuellement ci-dessous.'
+                                        )"></span>
+                                        <span x-show="!insecureContext && poorAccuracy">
+                                            <span x-text="$store.lang.t(
+                                                'Your device returned a coarse fix — likely from cell towers rather than GPS satellites. The country is usually right but the city may not be. Try moving outdoors and tap Refresh, or correct it manually below.',
+                                                'Votre appareil a renvoyé une position imprecise — vraisemblablement basée sur les antennes cellulaires plutôt que sur les satellites GPS. Le pays est généralement correct mais la ville peut ne pas l\'être. Sortez en extérieur et appuyez sur Actualiser, ou corrigez manuellement ci-dessous.'
+                                            )"></span>
+                                            <span class="block mt-0.5 text-amber-600" x-text="$store.lang.t('Accuracy: ', 'Précision : ') + (accuracyMeters >= 1000 ? Math.round(accuracyMeters/1000) + ' km' : accuracyMeters + ' m')"></span>
+                                        </span>
+                                        <span x-show="!insecureContext && !poorAccuracy && accuracySource === 'ip'" x-text="$store.lang.t(
+                                            'GPS was not available, so we used your internet provider\'s location. It can be off by tens of kilometres — please verify and correct it below if needed.',
+                                            'Le GPS n\'était pas disponible, nous avons donc utilisé la position de votre fournisseur internet. Elle peut être erronée de plusieurs dizaines de kilomètres — veuillez vérifier et corriger ci-dessous si besoin.'
+                                        )"></span>
+                                    </p>
+                                    <p x-show="insecureContext" class="mt-1 text-[11px] text-amber-600/80 font-mono break-all" x-text="insecureHost"></p>
+                                </div>
+                            </div>
+
                             {{-- Detected Success Banner --}}
-                            <div x-show="detected && !detecting" x-transition
+                            <div x-show="detected && !detecting && !insecureContext && !poorAccuracy && accuracySource !== 'ip'" x-transition
                                  class="flex items-center gap-3 rounded-xl bg-gradient-to-r from-cm-green/5 to-blue-50 border border-cm-green/20 px-4 py-3">
                                 <div class="flex-shrink-0 w-8 h-8 rounded-full bg-cm-green/10 flex items-center justify-center">
                                     <svg class="w-5 h-5 text-cm-green" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
@@ -343,7 +439,8 @@
                             <div>
                                 <label class="block text-sm font-medium text-slate-700 mb-1"
                                        x-text="$store.lang.t('Current Country', 'Pays Actuel')"></label>
-                                <select wire:model.live="current_country" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed" disabled>
+                                <select wire:model.live="current_country" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
+                                        :disabled="detecting || (detected && !insecureContext && !poorAccuracy && accuracySource !== 'ip')">
                                     <option value="" x-text="$store.lang.t('Select country...', 'Sélectionnez un pays...')"></option>
                                     @if($current_country && !in_array($current_country, $countries))
                                         <option value="{{ $current_country }}" selected>{{ $current_country }}</option>
@@ -362,7 +459,7 @@
                                 <input wire:model="current_region" type="text"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed"
                                        placeholder="England, Bavaria, California..."
-                                       readonly>
+                                       :readonly="detecting || (detected && !insecureContext && !poorAccuracy && accuracySource !== 'ip')">
                                 @error('current_region') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 

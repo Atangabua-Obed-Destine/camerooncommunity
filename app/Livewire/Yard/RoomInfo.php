@@ -633,6 +633,14 @@ class RoomInfo extends Component
         $member->update(['archived_at' => $isArchived ? null : now()]);
 
         $this->dispatch('refreshRoomList');
+
+        // Keep the topbar archive badge in sync.
+        $newCount = YardRoomMember::where('user_id', auth()->id())
+            ->whereNotNull('archived_at')
+            ->whereNull('auto_archived_at')
+            ->count();
+        $this->dispatch('archived-count-changed', count: $newCount);
+
         $this->dispatch('toast',
             type: 'success',
             message: $isArchived ? __('Chat unarchived') : __('Chat archived'),

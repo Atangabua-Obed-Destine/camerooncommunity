@@ -8,6 +8,7 @@
      }, 350)"
      x-on:optimistic-msg.window="optimistic.push({ id: ++_optId, kind: 'text', text: $event.detail.text }); scrollToBottom()"
      x-on:optimistic-media.window="optimistic.push({ id: ++_optId, kind: $event.detail.kind, url: $event.detail.url, fileName: $event.detail.fileName, fileSize: $event.detail.fileSize, fileIcon: $event.detail.fileIcon, caption: $event.detail.caption }); scrollToBottom()"
+     x-on:scroll-to-message.window="scrollToMessageId($event.detail?.messageId ?? $event.detail?.[0]?.messageId)"
      x-on:focus-edit-input.window="$nextTick(() => { if($refs.editInput) $refs.editInput.focus() })"
      x-on:echo-subscribe.window="subscribeEcho($event.detail.channel)"
      x-on:messages-prepended.window="
@@ -815,6 +816,59 @@
         <input type="file" x-ref="cameraInput" class="hidden" accept="image/*" capture="environment" wire:model="mediaUpload"
                @change="onFileSelected($event, 'image')">
 
+        {{-- ═══ In-browser Camera Modal (WhatsApp-style live capture) ═══ --}}
+        <div x-show="camera.active" x-cloak x-transition.opacity.duration.150ms
+             class="yard-camera" @keydown.escape.window="closeCamera()">
+            <div class="yard-camera__topbar">
+                <button type="button" @click="closeCamera()" class="yard-camera__close" :aria-label="$store.lang.t('Close', 'Fermer')">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+                <span class="yard-camera__title" x-text="$store.lang.t('Camera', 'Caméra')"></span>
+                <button type="button" @click="flipCamera()" class="yard-camera__flip" x-show="!camera.capturedUrl && !camera.error"
+                        :aria-label="$store.lang.t('Switch camera', 'Changer caméra')">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="yard-camera__stage">
+                <template x-if="camera.error">
+                    <div class="yard-camera__error">
+                        <svg class="w-10 h-10 text-white/70 mb-3" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+                        <p class="text-white text-sm" x-text="camera.error"></p>
+                        <p class="text-white/60 text-xs mt-2" x-text="$store.lang.t('Allow camera access in your browser settings.', 'Autorisez l’accès à la caméra dans votre navigateur.')"></p>
+                    </div>
+                </template>
+
+                <video x-ref="cameraVideo" x-show="!camera.error && !camera.capturedUrl"
+                       class="yard-camera__video" autoplay playsinline muted></video>
+
+                <img x-show="camera.capturedUrl" :src="camera.capturedUrl" alt="Captured" class="yard-camera__preview">
+            </div>
+
+            <div class="yard-camera__bottombar">
+                <template x-if="!camera.capturedUrl && !camera.error">
+                    <button type="button" @click="captureCameraPhoto()" class="yard-camera__shutter" :aria-label="$store.lang.t('Capture', 'Capturer')">
+                        <span class="yard-camera__shutter-inner"></span>
+                    </button>
+                </template>
+
+                <template x-if="camera.capturedUrl">
+                    <div class="yard-camera__review">
+                        <button type="button" @click="retakeCameraPhoto()" class="yard-camera__retake">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 010 10h-1M3 10l4-4M3 10l4 4"/></svg>
+                            <span x-text="$store.lang.t('Retake', 'Reprendre')"></span>
+                        </button>
+                        <button type="button" @click="useCameraPhoto()" class="yard-camera__use">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                            <span x-text="$store.lang.t('Use photo', 'Utiliser')"></span>
+                        </button>
+                    </div>
+                </template>
+            </div>
+        </div>
+
         {{-- ══════════════════════════════════════════════════════════════
              WhatsApp-style Media Preview Overlay
              Shows selected image/document before sending with caption
@@ -939,7 +993,7 @@
                          class="yard-chat__attach-menu">
                         <div class="yard-chat__attach-grid">
                             {{-- Camera --}}
-                            <button type="button" class="yard-chat__attach-cell" @click="open = false; $refs.cameraInput.click()">
+                            <button type="button" class="yard-chat__attach-cell" @click="open = false; openCamera()">
                                 <span class="yard-chat__attach-icon yard-chat__attach-icon--camera">
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                 </span>
@@ -958,11 +1012,6 @@
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                                 </span>
                                 <span class="yard-chat__attach-label" x-text="$store.lang.t('Document', 'Document')"></span>
-                            </button>
-                            {{-- Solidarity --}}
-                            <button type="button" class="yard-chat__attach-cell" @click="open = false">
-                                <span class="yard-chat__attach-icon yard-chat__attach-icon--solidarity">🤲</span>
-                                <span class="yard-chat__attach-label" x-text="$store.lang.t('Solidarity', 'Solidarité')"></span>
                             </button>
                             {{-- Poll --}}
                             <button type="button" class="yard-chat__attach-cell" @click="open = false; pollOpen = true">
@@ -1851,6 +1900,43 @@
                     });
                 },
 
+                /**
+                 * Try to scroll to a specific message id (used by Starred messages).
+                 * The message may not be in the DOM yet if the room just opened or
+                 * if it's older than the loaded page — we retry briefly.
+                 */
+                scrollToMessageId(id) {
+                    if (!id) return;
+                    let attempts = 0;
+                    const maxAttempts = 12; // ~1.8s total
+                    const tick = () => {
+                        const el = document.getElementById('msg-' + id);
+                        if (el) {
+                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            const bubble = el.querySelector('.yard-msg__bubble') || el;
+                            const prevTransition = bubble.style.transition;
+                            const prevShadow = bubble.style.boxShadow;
+                            bubble.style.transition = 'box-shadow 200ms ease-out';
+                            bubble.style.boxShadow = '0 0 0 3px rgba(252, 209, 22, 0.7)';
+                            setTimeout(() => {
+                                bubble.style.boxShadow = prevShadow;
+                                setTimeout(() => { bubble.style.transition = prevTransition; }, 250);
+                            }, 1200);
+                            return;
+                        }
+                        if (++attempts < maxAttempts) {
+                            setTimeout(tick, 150);
+                        } else {
+                            window.dispatchEvent(new CustomEvent('toast', { detail: {
+                                type: 'info',
+                                message: 'Scroll up in the chat to find this message.',
+                            }}));
+                        }
+                    };
+                    // Small initial delay so the room/messages have time to render.
+                    setTimeout(tick, 200);
+                },
+
                 typingLabel() {
                     if (this.typingUsers.length === 1) return this.typingUsers[0] + ' is typing...';
                     if (this.typingUsers.length === 2) return this.typingUsers.join(' and ') + ' are typing...';
@@ -2101,6 +2187,111 @@
                     caption: '',
                 },
 
+                // In-browser camera capture state (WhatsApp-style)
+                camera: {
+                    active: false,
+                    stream: null,
+                    facing: 'environment',
+                    capturedUrl: '',
+                    error: '',
+                },
+                _pendingCameraFile: null,
+
+                async openCamera() {
+                    this.camera.active = true;
+                    this.camera.error = '';
+                    this.camera.capturedUrl = '';
+                    this._stopCameraStream();
+                    if (!navigator.mediaDevices?.getUserMedia) {
+                        this.camera.error = 'Camera not supported in this browser';
+                        return;
+                    }
+                    try {
+                        this.camera.stream = await navigator.mediaDevices.getUserMedia({
+                            video: { facingMode: this.camera.facing },
+                            audio: false,
+                        });
+                        await this.$nextTick();
+                        const v = this.$refs.cameraVideo;
+                        if (v) {
+                            v.srcObject = this.camera.stream;
+                            try { await v.play(); } catch (_) {}
+                        }
+                    } catch (e) {
+                        this.camera.error = (e && e.message) ? e.message : 'Cannot access camera';
+                    }
+                },
+
+                async flipCamera() {
+                    this.camera.facing = this.camera.facing === 'environment' ? 'user' : 'environment';
+                    await this.openCamera();
+                },
+
+                captureCameraPhoto() {
+                    const v = this.$refs.cameraVideo;
+                    if (!v || !v.videoWidth) return;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = v.videoWidth;
+                    canvas.height = v.videoHeight;
+                    const ctx = canvas.getContext('2d');
+                    if (this.camera.facing === 'user') {
+                        // Mirror the front-camera capture so the photo matches the preview
+                        ctx.translate(canvas.width, 0);
+                        ctx.scale(-1, 1);
+                    }
+                    ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                    canvas.toBlob((blob) => {
+                        if (!blob) return;
+                        if (this.camera.capturedUrl) URL.revokeObjectURL(this.camera.capturedUrl);
+                        this.camera.capturedUrl = URL.createObjectURL(blob);
+                        this._pendingCameraFile = new File([blob], 'camera-' + Date.now() + '.jpg', { type: 'image/jpeg' });
+                    }, 'image/jpeg', 0.92);
+                },
+
+                retakeCameraPhoto() {
+                    if (this.camera.capturedUrl) URL.revokeObjectURL(this.camera.capturedUrl);
+                    this.camera.capturedUrl = '';
+                    this._pendingCameraFile = null;
+                },
+
+                useCameraPhoto() {
+                    const file = this._pendingCameraFile;
+                    if (!file) return;
+                    // Hand the captured object URL to the existing media-preview overlay
+                    if (this.preview.url) URL.revokeObjectURL(this.preview.url);
+                    this.preview.type = 'image';
+                    this.preview.fileName = file.name;
+                    this.preview.fileExt = 'jpg';
+                    this.preview.fileSize = (file.size < 1048576)
+                        ? (file.size / 1024).toFixed(1) + ' KB'
+                        : (file.size / 1048576).toFixed(1) + ' MB';
+                    this.preview.fileIcon = '📷';
+                    this.preview.caption = '';
+                    this.preview.url = this.camera.capturedUrl;
+                    this.camera.capturedUrl = ''; // ownership transferred to preview
+                    this.preview.active = true;
+                    this._closeCameraInternal(/*keepFile*/ true);
+                },
+
+                closeCamera() {
+                    this._closeCameraInternal(false);
+                },
+
+                _closeCameraInternal(keepFile) {
+                    this._stopCameraStream();
+                    if (this.camera.capturedUrl) URL.revokeObjectURL(this.camera.capturedUrl);
+                    this.camera.capturedUrl = '';
+                    this.camera.active = false;
+                    if (!keepFile) this._pendingCameraFile = null;
+                },
+
+                _stopCameraStream() {
+                    if (this.camera.stream) {
+                        this.camera.stream.getTracks().forEach(t => t.stop());
+                        this.camera.stream = null;
+                    }
+                },
+
                 onFileSelected(event, type) {
                     const file = event.target.files[0];
                     if (!file) return;
@@ -2161,10 +2352,24 @@
                     // closePreview() (fired by media-sent) doesn't revoke it underneath us.
                     this.preview.url = '';
 
-                    // Set caption on Livewire before sending
-                    this.$wire.set('mediaCaption', caption).then(() => {
-                        this.$wire.sendMedia(type);
-                    });
+                    const finalize = () => {
+                        this.$wire.set('mediaCaption', caption).then(() => {
+                            this.$wire.sendMedia(type);
+                        });
+                    };
+
+                    // Camera-captured photos aren't bound to a file <input>, so upload
+                    // the captured Blob directly through Livewire before sending.
+                    if (this._pendingCameraFile) {
+                        const file = this._pendingCameraFile;
+                        this._pendingCameraFile = null;
+                        this.$wire.upload('mediaUpload', file,
+                            () => finalize(),
+                            () => window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: 'Upload failed.' } })),
+                        );
+                    } else {
+                        finalize();
+                    }
                 },
 
                 closePreview() {

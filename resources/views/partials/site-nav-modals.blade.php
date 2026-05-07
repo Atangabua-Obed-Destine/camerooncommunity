@@ -6,13 +6,21 @@
       • open-how-it-works-modal
       • open-solidarity-modal
       • open-community-modal
+
+    Each modal also listens to the OTHER three open events and closes
+    itself when one fires, so opening any nav modal automatically
+    dismisses whichever one was previously visible (instead of stacking
+    them on top of each other at the same z-index).
 --}}
 
-{{-- ═══════════════════════════════════════════════════════════════
+{{-- ══════════════════════════════════════════════════════════════
      FEATURES MODAL
-     ═══════════════════════════════════════════════════════════════ --}}
+     ════════════════════════════════════════════════════════════ --}}
 <div x-data="{ open: false }"
      x-on:open-features-modal.window="open = true"
+     x-on:open-how-it-works-modal.window="open = false"
+     x-on:open-solidarity-modal.window="open = false"
+     x-on:open-community-modal.window="open = false"
      x-on:keydown.escape.window="open = false">
     <template x-teleport="body">
         <div x-cloak>
@@ -86,6 +94,9 @@
      ═══════════════════════════════════════════════════════════════ --}}
 <div x-data="{ open: false }"
      x-on:open-how-it-works-modal.window="open = true"
+     x-on:open-features-modal.window="open = false"
+     x-on:open-solidarity-modal.window="open = false"
+     x-on:open-community-modal.window="open = false"
      x-on:keydown.escape.window="open = false">
     <template x-teleport="body">
         <div x-cloak>
@@ -151,6 +162,9 @@
      ═══════════════════════════════════════════════════════════════ --}}
 <div x-data="{ open: false }"
      x-on:open-solidarity-modal.window="open = true"
+     x-on:open-features-modal.window="open = false"
+     x-on:open-how-it-works-modal.window="open = false"
+     x-on:open-community-modal.window="open = false"
      x-on:keydown.escape.window="open = false">
     <template x-teleport="body">
         <div x-cloak>
@@ -222,6 +236,9 @@
      ═══════════════════════════════════════════════════════════════ --}}
 <div x-data="{ open: false }"
      x-on:open-community-modal.window="open = true"
+     x-on:open-features-modal.window="open = false"
+     x-on:open-how-it-works-modal.window="open = false"
+     x-on:open-solidarity-modal.window="open = false"
      x-on:keydown.escape.window="open = false">
     <template x-teleport="body">
         <div x-cloak>

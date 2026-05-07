@@ -48,11 +48,16 @@
     </div>
     @else
     <div class="yard-filters">
+        @php $counts = $this->filterCounts; @endphp
         @foreach($filters as $key => $label)
         <button wire:click="setFilter('{{ $key }}')"
                 class="yard-filters__pill {{ $activeFilter === $key ? 'yard-filters__pill--active' : '' }}">
             {!! $filterIcons[$key] !!}
             <span x-text="$store.lang.t('{{ $label['en'] }}', '{{ $label['fr'] }}')"></span>
+            @if($key !== 'all')
+                @php $c = (int) ($counts[$key] ?? 0); @endphp
+                <span class="yard-filters__count {{ $c === 0 ? 'yard-filters__count--zero' : '' }}">{{ $c > 99 ? '99+' : $c }}</span>
+            @endif
         </button>
         @endforeach
     </div>
@@ -316,19 +321,19 @@
          switched their active location. They auto-resurface when the
          user returns to that location.
          ═══════════════════════════════════════════════════════════ --}}
-    @if($archived && $archived->count())
+    @if($archived && $archived->count() && auth()->user()?->show_archived_away)
     <div class="yard-room-archived" x-data="{ open: false }">
         <button type="button"
                 class="yard-room-archived__toggle"
                 @click="open = !open">
-            <span class="flex items-center gap-2">
-                <svg class="w-4 h-4 text-cm-green/80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <span class="flex items-center gap-1.5">
+                <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
                 </svg>
-                <span x-text="$store.lang.t('Archived (away)', 'Archivés (absent)')"></span>
+                <span x-text="$store.lang.t('Away', 'Absent')"></span>
                 <span class="yard-room-archived__count">{{ $archived->count() }}</span>
             </span>
-            <svg class="w-3.5 h-3.5 text-slate-400 transition-transform" :class="{ 'rotate-180': open }"
+            <svg class="w-3 h-3 text-slate-300 transition-transform" :class="{ 'rotate-180': open }"
                  fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
             </svg>

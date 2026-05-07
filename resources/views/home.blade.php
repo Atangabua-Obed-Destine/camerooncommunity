@@ -953,7 +953,7 @@
                         <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('About', 'À Propos')"></a></li>
                         <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('Modules', 'Modules')"></a></li>
                         <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('FAQ', 'FAQ')"></a></li>
-                        <li><a href="#" class="hover:text-white transition-colors" x-text="$store.lang.t('Contact', 'Contact')"></a></li>
+                        <li><a href="{{ route('contact') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Contact', 'Contact')"></a></li>
                     </ul>
                 </div>
 

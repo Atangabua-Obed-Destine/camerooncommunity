@@ -53,18 +53,43 @@
                                 </button>
                             </div>
                         </div>
-                        {{-- Three-dot overflow menu (Archived, etc.) --}}
+                        {{-- Archived chats — direct button on the top bar --}}
+                        @php
+                            $archivedCount = \App\Models\YardRoomMember::where('user_id', auth()->id())
+                                ->whereNotNull('archived_at')
+                                ->whereNull('auto_archived_at')
+                                ->count();
+                        @endphp
+                        <button @click="Livewire.dispatch('open-archived')"
+                                x-data="{ count: {{ (int) $archivedCount }} }"
+                                @archived-count-changed.window="count = $event.detail.count ?? $event.detail[0]?.count ?? 0"
+                                class="yard-header__btn yard-header__btn--with-badge"
+                                :title="$store.lang.t('Archived', 'Archivés')"
+                                :aria-label="$store.lang.t('Archived', 'Archivés')">
+                            {{-- WhatsApp archive icon: tray + downward arrow --}}
+                            <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25l2 2 2-2M12 13.25V4.5M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
+                            </svg>
+                            <template x-if="count > 0">
+                                <span class="yard-header__btn-badge" x-text="count > 99 ? '99+' : count"></span>
+                            </template>
+                        </button>
+
+                        {{-- 3-dot overflow menu --}}
                         <div class="relative" x-data="{ moreOpen: false }">
-                            <button @click="moreOpen = !moreOpen" class="yard-header__btn" :title="$store.lang.t('More', 'Plus')" aria-label="More options">
+                            <button type="button" @click="moreOpen = !moreOpen" class="yard-header__btn"
+                                    :title="$store.lang.t('More', 'Plus')" :aria-label="$store.lang.t('More', 'Plus')">
                                 <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/>
                                 </svg>
                             </button>
                             <div x-show="moreOpen" @click.away="moreOpen = false" x-transition x-cloak
-                                 class="absolute right-0 top-full mt-1 w-52 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
-                                <button @click="moreOpen = false; Livewire.dispatch('open-archived')" class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
-                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M6 8l1 11a2 2 0 002 2h6a2 2 0 002-2l1-11M10 12h4M4 4h16v4H4z"/></svg>
-                                    <span x-text="$store.lang.t('Archived', 'Archivés')"></span>
+                                 class="absolute right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
+                                <button type="button"
+                                        @click="moreOpen = false; Livewire.dispatch('open-starred')"
+                                        class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                                    <svg class="w-4 h-4 text-amber-500" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                                    <span x-text="$store.lang.t('Starred messages', 'Messages favoris')"></span>
                                 </button>
                             </div>
                         </div>
@@ -953,6 +978,7 @@
     {{-- ── Connections Modal ── --}}
     @auth
     <livewire:yard.connections />
+    <livewire:yard.starred-messages />
     @endauth
 
     {{-- Auto-open Connections modal via ?open=connections&tab=requests --}}

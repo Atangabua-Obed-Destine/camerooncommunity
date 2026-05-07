@@ -922,6 +922,92 @@
     color: #1a2238;
     box-shadow: 0 1px 4px rgba(26,34,56,0.18);
 }
+.yard-filters__count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    margin-left: 4px;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    background: linear-gradient(135deg, #007A5E 0%, #00a37a 100%);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 122, 94, 0.35);
+    border: 1.5px solid #ffffff;
+}
+.yard-filters__count--zero {
+    background: var(--color-slate-200);
+    color: var(--color-slate-500);
+    box-shadow: none;
+    border-color: transparent;
+    font-weight: 600;
+}
+.yard-filters__pill--active .yard-filters__count {
+    background: #1a2238;
+    color: var(--color-cm-yellow, #FCD116);
+    border-color: var(--color-cm-yellow, #FCD116);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.yard-filters__pill--active .yard-filters__count--zero {
+    background: rgba(26, 34, 56, 0.15);
+    color: #1a2238;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+/* Topbar overflow-menu count badge (Archived, etc.) */
+/* Topbar overflow-menu count badge (Archived, etc.) */
+.yard-header__btn--with-badge {
+    position: relative;
+}
+.yard-header__btn-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, #007A5E 0%, #00a37a 100%);
+    color: #ffffff;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    pointer-events: none;
+}
+.yard-menu-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9999px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1;
+    background: linear-gradient(135deg, #007A5E 0%, #00a37a 100%);
+    color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 122, 94, 0.35);
+    border: 1.5px solid #ffffff;
+}
+.yard-menu-count--zero {
+    background: var(--color-slate-200);
+    color: var(--color-slate-500);
+    box-shadow: none;
+    border-color: transparent;
+    font-weight: 600;
+}
 
 /* Archived view header bar (replaces filter pills while in archived mode) */
 .yard-archived-bar {
@@ -4126,6 +4212,138 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
+   IN-BROWSER CAMERA MODAL — WhatsApp-style live capture
+   ═══════════════════════════════════════════════════════════ */
+.yard-camera {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+}
+.yard-camera__topbar {
+    flex-shrink: 0;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.75rem;
+    background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
+}
+.yard-camera__close,
+.yard-camera__flip {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9999px;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 0;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.yard-camera__close:hover,
+.yard-camera__flip:hover { background: rgba(255,255,255,0.18); }
+.yard-camera__title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+.yard-camera__stage {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: #000;
+}
+.yard-camera__video,
+.yard-camera__preview {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+.yard-camera__error {
+    text-align: center;
+    padding: 1.5rem;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.yard-camera__bottombar {
+    flex-shrink: 0;
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem 1.25rem 1.5rem;
+    background: linear-gradient(0deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%);
+}
+.yard-camera__shutter {
+    width: 72px;
+    height: 72px;
+    border-radius: 9999px;
+    border: 4px solid #fff;
+    background: rgba(255,255,255,0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+    padding: 0;
+}
+.yard-camera__shutter:hover { background: rgba(255,255,255,0.15); }
+.yard-camera__shutter:active { transform: scale(0.94); }
+.yard-camera__shutter-inner {
+    width: 56px;
+    height: 56px;
+    border-radius: 9999px;
+    background: #fff;
+}
+.yard-camera__review {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    max-width: 480px;
+}
+.yard-camera__retake,
+.yard-camera__use {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: 0;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.yard-camera__retake {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+}
+.yard-camera__retake:hover { background: rgba(255,255,255,0.22); }
+.yard-camera__use {
+    background: var(--color-cm-green, #007A5E);
+    color: #fff;
+}
+.yard-camera__use:hover { background: #005f49; }
+
+/* ═══════════════════════════════════════════════════════════
    MEDIA PREVIEW OVERLAY — WhatsApp-style pre-send screen
    ═══════════════════════════════════════════════════════════ */
 .yard-media-preview {
@@ -5626,34 +5844,39 @@
    ----------------------------------------------------------- */
 .yard-room-archived {
     border-top: 1px dashed rgb(226 232 240);
-    background: linear-gradient(180deg, rgb(248 250 252 / 0.6) 0%, transparent 100%);
+    background: transparent;
+    opacity: 0.55;
+    transition: opacity 0.2s ease;
 }
+.yard-room-archived:hover { opacity: 1; }
 .yard-room-archived__toggle {
     width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.75rem 1rem;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: rgb(71 85 105);
+    padding: 0.4rem 0.75rem;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: rgb(148 163 184);
     background: transparent;
     border: 0;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
-.yard-room-archived__toggle:hover { background: rgb(241 245 249 / 0.8); }
+.yard-room-archived__toggle:hover { background: rgb(241 245 249 / 0.6); color: rgb(71 85 105); }
 .yard-room-archived__count {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 1.25rem;
-    height: 1.25rem;
-    padding: 0 0.375rem;
+    min-width: 0.95rem;
+    height: 0.95rem;
+    padding: 0 0.3rem;
     border-radius: 9999px;
-    background: var(--color-cm-green, #243a5c);
-    color: white;
-    font-size: 0.625rem;
+    background: rgb(203 213 225);
+    color: rgb(71 85 105);
+    font-size: 0.55rem;
     font-weight: 700;
 }
 .yard-room-archived__hint {

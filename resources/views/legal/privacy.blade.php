@@ -25,8 +25,8 @@
             ],
             [
                 'icon' => '🔐',
-                'en' => ['title' => 'Your rights', 'body' => "You can export your data, correct it, or delete your account at any time. Email us at privacy@cameroon.network and we'll respond within 7 days."],
-                'fr' => ['title' => 'Vos droits', 'body' => "Vous pouvez exporter vos données, les corriger ou supprimer votre compte à tout moment. Écrivez-nous à privacy@cameroon.community et nous répondrons sous 7 jours."],
+                'en' => ['title' => 'Your rights', 'body' => "You can export your data, correct it, or delete your account at any time. Email us at privacy@cameroonnetwork.org and we'll respond within 7 days."],
+                'fr' => ['title' => 'Vos droits', 'body' => "Vous pouvez exporter vos données, les corriger ou supprimer votre compte à tout moment. Écrivez-nous à privacy@cameroonnetwork.org et nous répondrons sous 7 jours."],
             ],
         ];
     @endphp
