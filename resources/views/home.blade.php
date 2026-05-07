@@ -484,7 +484,7 @@
             @php
                 $modules = [
                     ['name' => 'The Yard', 'nameFr' => 'Le Yard', 'icon' => '💬', 'desc' => 'Real-time chat rooms for your country and city', 'descFr' => 'Salons de discussion en temps réel pour votre pays et ville', 'live' => true],
-                    ['name' => 'Solidarity', 'nameFr' => 'Solidarité', 'icon' => '🤝', 'desc' => 'Community fundraising for those in need', 'descFr' => 'Collectes communautaires pour ceux dans le besoin', 'live' => true],
+                    ['name' => 'Solidarity', 'nameFr' => 'Solidarité', 'icon' => '🤝', 'desc' => 'Community fundraising for those in need', 'descFr' => 'Collectes communautaires pour ceux dans le besoin', 'live' => false],
                     ['name' => 'Marché', 'nameFr' => 'Marché', 'icon' => '🛒', 'desc' => 'Buy and sell within the community', 'descFr' => 'Achetez et vendez au sein de la communauté', 'live' => false],
                     ['name' => 'EasyGoParcel', 'nameFr' => 'EasyGoParcel', 'icon' => '📦', 'desc' => 'Send parcels home with trusted travellers', 'descFr' => 'Envoyez des colis au pays avec des voyageurs de confiance', 'live' => false],
                     ['name' => 'RoadFam', 'nameFr' => 'RoadFam', 'icon' => '🚗', 'desc' => 'Ride sharing for community events and travel', 'descFr' => 'Covoiturage pour événements et voyages communautaires', 'live' => false],
