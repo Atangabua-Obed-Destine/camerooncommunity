@@ -409,11 +409,28 @@
         </button>
         <div x-show="showPins" x-collapse x-cloak class="px-4 pb-2">
             @foreach($pinned as $pin)
-            <div class="wa-info-pin-item">
+            @php
+                $pinType = $pin->message_type?->value ?? (string) $pin->message_type;
+                $pinPreview = trim((string) $pin->content);
+                if ($pinPreview === '') {
+                    $pinPreview = match($pinType) {
+                        'image' => '📷 ' . __('Photo'),
+                        'video' => '🎥 ' . __('Video'),
+                        'audio', 'voice' => '🎙️ ' . __('Voice message'),
+                        'file', 'document' => '📎 ' . ($pin->media_original_name ?: __('Attachment')),
+                        'poll' => '📊 ' . __('Poll'),
+                        'location' => '📍 ' . __('Location'),
+                        default => __('Message'),
+                    };
+                }
+            @endphp
+            <button type="button"
+                    @click="$dispatch('scroll-to-message', { messageId: {{ $pin->id }} })"
+                    class="wa-info-pin-item w-full text-left hover:bg-slate-50 transition rounded-lg cursor-pointer">
                 <div class="wa-info-pin-item__sender">{{ $pin->user?->username ?? $pin->user?->name }}</div>
-                <p class="wa-info-pin-item__text">{{ \Illuminate\Support\Str::limit($pin->content, 120) }}</p>
+                <p class="wa-info-pin-item__text">{{ \Illuminate\Support\Str::limit($pinPreview, 120) }}</p>
                 <span class="wa-info-pin-item__date">{{ $pin->created_at->format('M j, H:i') }}</span>
-            </div>
+            </button>
             @endforeach
         </div>
     </div>

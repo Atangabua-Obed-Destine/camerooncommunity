@@ -807,7 +807,7 @@
     @endif
 
     {{-- ── Input Bar ── --}}
-    <div class="yard-chat__input-bar" x-data="inputBar()" @message-sent.window="msgText = ''; if($refs.msgInput) { $refs.msgInput.value = ''; $refs.msgInput.style.height = 'auto'; }" @media-sent.window="closePreview()" @poll-created.window="closePoll()">
+    <div class="yard-chat__input-bar" x-data="inputBar()" @message-sent.window="msgText = ''; if($refs.msgInput) { $refs.msgInput.value = ''; $refs.msgInput.style.height = 'auto'; $nextTick(() => $refs.msgInput.focus()); }" @media-sent.window="closePreview()" @poll-created.window="closePoll()">
         {{-- Hidden file inputs --}}
         <input type="file" x-ref="photoInput" class="hidden" accept="image/*" wire:model="mediaUpload"
                @change="onFileSelected($event, 'image')">
@@ -933,7 +933,28 @@
 
         {{-- ══ Normal mode (text input) ══ --}}
         @php $dmConn = $room->room_type === \App\Enums\RoomType::DirectMessage ? $this->dmConnectionState : null; @endphp
-        @if($dmConn && $dmConn['state'] !== 'connected')
+        @if($dmConn && $dmConn['state'] === 'blocked-by-me')
+            {{-- Distinct red banner so the blocker NEVER forgets they blocked this person --}}
+            <div class="px-4 py-3 bg-gradient-to-r from-rose-50 to-red-50 border-t border-rose-200 flex items-center gap-3">
+                <div class="shrink-0 w-9 h-9 rounded-full bg-rose-100 flex items-center justify-center ring-1 ring-rose-200">
+                    <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728A9 9 0 015.636 5.636"/></svg>
+                </div>
+                <div class="flex-1 text-sm leading-snug">
+                    <p class="font-bold text-rose-900"
+                       x-text="$store.lang.t('You blocked this user', 'Vous avez bloqué cet utilisateur')"></p>
+                    <p class="text-xs text-rose-700/90 mt-0.5"
+                       x-text="$store.lang.t(
+                           'They cannot see your messages and you cannot send any here. Unblock to chat again.',
+                           'Ils ne voient pas vos messages et vous ne pouvez pas en envoyer. Débloquez pour discuter à nouveau.'
+                       )"></p>
+                </div>
+                <button wire:click="unblockDmConnection"
+                        wire:confirm="{{ app()->getLocale() === 'fr' ? 'Débloquer cet utilisateur ?' : 'Unblock this user?' }}"
+                        class="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg bg-rose-600 text-white hover:bg-rose-700 transition-colors whitespace-nowrap shadow-sm">
+                    <span x-text="$store.lang.t('Unblock', 'Débloquer')"></span>
+                </button>
+            </div>
+        @elseif($dmConn && $dmConn['state'] !== 'connected')
             <div class="px-4 py-3 bg-amber-50 border-t border-amber-200 flex items-center gap-3">
                 <svg class="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
                 <div class="flex-1 text-sm text-amber-800 leading-snug">
@@ -943,9 +964,6 @@
                             @break
                         @case('incoming')
                             <span x-text="$store.lang.t('This person wants to connect with you. Accept to start chatting.', 'Cette personne souhaite se connecter avec vous. Acceptez pour discuter.')"></span>
-                            @break
-                        @case('blocked-by-me')
-                            <span x-text="$store.lang.t('You blocked this user. Unblock from Connections to chat.', 'Vous avez bloqué cet utilisateur. Débloquez-le depuis Connexions.')"></span>
                             @break
                         @case('blocked-by-them')
                             <span x-text="$store.lang.t('You can’t message this user right now.', 'Vous ne pouvez pas envoyer de message à cet utilisateur.')"></span>
@@ -972,7 +990,9 @@
         @endif
 
         <form wire:submit="sendMessage" class="yard-chat__input-form"
-              x-show="!recording && !preview.active{{ ($dmConn && $dmConn['state'] !== 'connected') ? ' && false' : '' }}" x-transition>
+              wire:key="msg-form-{{ $room->id }}-{{ ($dmConn && $dmConn['state'] !== 'connected') ? 'locked' : 'open' }}"
+              @if($dmConn && $dmConn['state'] !== 'connected') style="display:none" @endif
+              x-show="!recording && !preview.active" x-transition>
             {{-- Unified input pill: buttons + textarea all inside one rounded box --}}
             <div class="yard-chat__input-pill">
                 {{-- Attachment button --}}
@@ -1518,11 +1538,52 @@
                 </template>
             </div>
 
-            <button @click="startDm(profileUser.id); profileOpen = false"
+            <button x-show="profileConnState === 'connected'"
+                    @click="startDm(profileUser.id); profileOpen = false"
                     class="yard-user-profile__dm-btn">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                 <span x-text="$store.lang.t('Send Message', 'Envoyer un message')"></span>
             </button>
+
+            {{-- Not connected yet → Connect (sends a request) --}}
+            <button x-show="profileConnState === 'none'"
+                    :disabled="profileConnLoading || profileConnBusy"
+                    @click="connectFromProfile()"
+                    class="yard-user-profile__dm-btn">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v6m3-3h-6M5.25 21v-1.5a6 6 0 0 1 6-6h2.25a6 6 0 0 1 4.215 1.737M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0z"/>
+                </svg>
+                <span x-text="profileConnBusy
+                    ? $store.lang.t('Sending...', 'Envoi...')
+                    : $store.lang.t('Connect', 'Se connecter')"></span>
+            </button>
+
+            {{-- Outgoing pending request --}}
+            <div x-show="profileConnState === 'outgoing'"
+                 class="yard-user-profile__dm-btn yard-user-profile__dm-btn--muted pointer-events-none">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span x-text="$store.lang.t('Request sent', 'Demande envoyée')"></span>
+            </div>
+
+            {{-- Incoming request waiting for me to accept --}}
+            <button x-show="profileConnState === 'incoming'"
+                    :disabled="profileConnBusy"
+                    @click="acceptFromProfile()"
+                    class="yard-user-profile__dm-btn">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
+                <span x-text="profileConnBusy
+                    ? $store.lang.t('Accepting...', 'Acceptation...')
+                    : $store.lang.t('Accept connection', 'Accepter la connexion')"></span>
+            </button>
+
+            {{-- Either side blocked → no CTA, brief notice --}}
+            <div x-show="profileConnState === 'blocked-by-me' || profileConnState === 'blocked-by-them'"
+                 class="mt-2 text-xs text-rose-600 font-medium">
+                <span x-show="profileConnState === 'blocked-by-me'"
+                      x-text="$store.lang.t('You blocked this user', 'Vous avez bloqué cet utilisateur')"></span>
+                <span x-show="profileConnState === 'blocked-by-them'"
+                      x-text="$store.lang.t('You can\'t message this user', 'Vous ne pouvez pas envoyer de message')"></span>
+            </div>
             <template x-if="profileUser.username">
                 <a :href="'{{ url('/u') }}/' + profileUser.username"
                    class="mt-2 inline-flex items-center justify-center gap-1.5 text-sm font-medium text-cm-green hover:underline">
@@ -1566,11 +1627,16 @@
                     this.show = true;
                 },
                 doForward(roomId) {
-                    this.$wire.forwardMessage(this.msgId, roomId).then(() => {
+                    this.$wire.forwardMessage(this.msgId, roomId).then((result) => {
                         this.show = false;
                         this.msgId = null;
-                        Livewire.dispatch('room-selected', { roomId: roomId });
-                        Livewire.dispatch('refreshRoomList');
+                        // Only navigate to the target room when the forward
+                        // actually succeeded. PHP returns false when the
+                        // target is a DM with a blocked / unconnected user.
+                        if (result) {
+                            Livewire.dispatch('room-selected', { roomId: roomId });
+                            Livewire.dispatch('refreshRoomList');
+                        }
                     });
                 }
             };
@@ -1628,6 +1694,9 @@
                 typingUsers: [],
                 profileOpen: false,
                 profileUser: {},
+                profileConnState: 'none',
+                profileConnLoading: false,
+                profileConnBusy: false,
                 nicknameDraft: '',
                 nicknameEditing: false,
                 nicknameSaving: false,
@@ -1954,7 +2023,93 @@
                     this.nicknameDraft = savedNickname || '';
                     this.nicknameSaving = false;
                     this.nicknameEditing = false;
+                    this.profileConnState = 'none';
+                    this.profileConnLoading = true;
+                    this.profileConnBusy = false;
                     this.profileOpen = true;
+                    // Look up the real connection state so the popup can show
+                    // either "Connect" or "Send Message" instead of a Send
+                    // button that silently fails behind the DM gate.
+                    fetch('{{ url('/yard/connections/state') }}/' + id, {
+                        headers: { 'Accept': 'application/json' },
+                        credentials: 'same-origin',
+                    })
+                    .then(r => r.ok ? r.json() : { state: 'none' })
+                    .then(data => { this.profileConnState = data.state || 'none'; })
+                    .catch(() => { this.profileConnState = 'none'; })
+                    .finally(() => { this.profileConnLoading = false; });
+                },
+
+                connectFromProfile() {
+                    if (!this.profileUser.id || this.profileConnBusy) return;
+                    this.profileConnBusy = true;
+                    fetch('{{ route("yard.connections.request") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
+                        },
+                        body: JSON.stringify({ user_id: this.profileUser.id }),
+                    })
+                    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+                    .then(({ ok, data }) => {
+                        if (ok) {
+                            this.profileConnState = 'outgoing';
+                            window.dispatchEvent(new CustomEvent('toast', { detail: {
+                                type: 'success',
+                                message: this.$store.lang.t('Connection request sent', 'Demande de connexion envoyée'),
+                            }}));
+                        } else {
+                            window.dispatchEvent(new CustomEvent('toast', { detail: {
+                                type: 'error',
+                                message: data?.message || this.$store.lang.t('Could not send request', "Impossible d'envoyer la demande"),
+                            }}));
+                        }
+                    })
+                    .catch(() => {
+                        window.dispatchEvent(new CustomEvent('toast', { detail: {
+                            type: 'error',
+                            message: this.$store.lang.t('Network error', 'Erreur réseau'),
+                        }}));
+                    })
+                    .finally(() => { this.profileConnBusy = false; });
+                },
+
+                acceptFromProfile() {
+                    if (!this.profileUser.id || this.profileConnBusy) return;
+                    this.profileConnBusy = true;
+                    fetch('{{ route("yard.connections.accept") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
+                        },
+                        body: JSON.stringify({ user_id: this.profileUser.id }),
+                    })
+                    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+                    .then(({ ok, data }) => {
+                        if (ok) {
+                            this.profileConnState = 'connected';
+                            window.dispatchEvent(new CustomEvent('toast', { detail: {
+                                type: 'success',
+                                message: this.$store.lang.t('Connection accepted', 'Connexion acceptée'),
+                            }}));
+                        } else {
+                            window.dispatchEvent(new CustomEvent('toast', { detail: {
+                                type: 'error',
+                                message: data?.message || this.$store.lang.t('Could not accept', "Impossible d'accepter"),
+                            }}));
+                        }
+                    })
+                    .catch(() => {
+                        window.dispatchEvent(new CustomEvent('toast', { detail: {
+                            type: 'error',
+                            message: this.$store.lang.t('Network error', 'Erreur réseau'),
+                        }}));
+                    })
+                    .finally(() => { this.profileConnBusy = false; });
                 },
 
                 async saveNickname() {

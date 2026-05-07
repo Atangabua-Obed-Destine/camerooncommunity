@@ -247,11 +247,12 @@
 
                     // Map server "kind" → state string the rest of the app expects.
                     const stateMap = {
-                        declined:     'declined',
-                        cancelled:    'none',
-                        disconnected: 'none',
-                        blocked:      'blocked-by-other',
-                        unblocked:    'none',
+                        declined:              'declined',
+                        cancelled:             'none',
+                        disconnected:          'none',
+                        blocked:               'blocked-by-other',
+                        unblocked:             'none',
+                        'unblocked-restored':  'connected',
                     };
                     const state = stateMap[kind] || 'none';
 

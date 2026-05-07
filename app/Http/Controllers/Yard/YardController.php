@@ -272,6 +272,36 @@ class YardController extends Controller
     }
 
     /**
+     * Lightweight read-only lookup of the viewer's connection state with
+     * another user. Used by the in-chat profile popup so it can render either
+     * a "Connect" or a "Send Message" CTA depending on the relationship.
+     */
+    public function connectionState(Request $request, int $userId)
+    {
+        $user = $request->user();
+        if (! $user) {
+            return response()->json(['error' => 'unauthenticated'], 401);
+        }
+        if ($userId === $user->id) {
+            return response()->json(['state' => 'self']);
+        }
+
+        $c = \App\Models\UserConnection::between($user->id, $userId);
+        $state = 'none';
+        if ($c) {
+            if ($c->status === \App\Models\UserConnection::STATUS_ACCEPTED) {
+                $state = 'connected';
+            } elseif ($c->status === \App\Models\UserConnection::STATUS_PENDING) {
+                $state = $c->requested_by === $user->id ? 'outgoing' : 'incoming';
+            } elseif ($c->status === \App\Models\UserConnection::STATUS_BLOCKED) {
+                $state = $c->requested_by === $user->id ? 'blocked-by-me' : 'blocked-by-them';
+            }
+        }
+
+        return response()->json(['state' => $state]);
+    }
+
+    /**
      * Save (or clear) a per-viewer nickname for another user — WhatsApp-style
      * "Save contact as...". Pass an empty `nickname` to delete it.
      */

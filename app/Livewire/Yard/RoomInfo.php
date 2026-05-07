@@ -727,6 +727,9 @@ class RoomInfo extends Component
         $this->dispatch('toast', type: 'success', message: __('User blocked. They can no longer message you.'));
         // Refresh chat-room so the blocked banner / disabled input appears immediately.
         $this->dispatch('room-updated');
+        // Also invalidate dmConnectionState in ChatRoom (separate listener) so the
+        // text input is hidden right away — not only after a manual reload.
+        $this->dispatch('connection-updated', userId: $userId, state: 'blocked-by-me');
     }
 
     /**
@@ -743,6 +746,7 @@ class RoomInfo extends Component
         if ($ok) {
             $this->dispatch('toast', type: 'success', message: __('User unblocked.'));
             $this->dispatch('room-updated');
+            $this->dispatch('connection-updated', userId: $userId, state: 'none');
         } else {
             $this->dispatch('toast', type: 'info', message: __('Nothing to unblock.'));
         }

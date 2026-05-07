@@ -111,6 +111,9 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::get('/yard/users/search', [YardController::class, 'searchUsers'])->name('yard.users.search');
     Route::post('/yard/connections/request', [YardController::class, 'requestConnection'])->name('yard.connections.request');
     Route::post('/yard/connections/accept', [YardController::class, 'acceptConnection'])->name('yard.connections.accept');
+    Route::get('/yard/connections/state/{userId}', [YardController::class, 'connectionState'])
+        ->whereNumber('userId')
+        ->name('yard.connections.state');
     Route::post('/yard/contacts/nickname', [YardController::class, 'saveNickname'])->name('yard.contacts.nickname');
     Route::get('/yard/contacts/nickname/{userId}', [YardController::class, 'getNickname'])
         ->whereNumber('userId')

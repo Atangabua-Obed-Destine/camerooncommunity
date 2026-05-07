@@ -77,6 +77,10 @@ class ChatRoom extends Component
         $this->searchActive = false;
         $this->hasMore = true;
         $this->perPage = 50;
+        // Drop any cached DM state from the previously-open room so a
+        // "blocked-by-them" banner from a DM cannot leak into a group's
+        // input bar after switching rooms.
+        unset($this->dmConnectionState, $this->dmPartnerStatus, $this->roomMessages);
         $this->markAsRead();
         $this->dispatch('echo-subscribe', channel: 'tenant.' . $this->room->tenant_id . '.room.' . $this->room->id);
         $this->dispatch('room-type-changed', roomType: $this->room->room_type->value);
@@ -91,6 +95,14 @@ class ChatRoom extends Component
 
         $query = YardMessage::where('room_id', $this->room->id)
             ->with(['user:id,name,username,avatar', 'parent:id,content,user_id', 'parent.user:id,name,username', 'poll.options']);
+
+        // Block-aware: hide messages authored by users with whom the viewer
+        // has any block in either direction (mutual hide), in every room type.
+        // The viewer's own messages are always shown.
+        $blockedIds = auth()->user()->blockedOrBlockingUserIds();
+        if (!empty($blockedIds)) {
+            $query->whereNotIn('user_id', $blockedIds);
+        }
 
         // Hide admin-only system messages (e.g. "X requested to join")
         // from non-admin viewers, mirroring WhatsApp's behavior.
@@ -209,8 +221,11 @@ class ChatRoom extends Component
 
     public function pollDmStatus()
     {
-        // Called by JS polling — forces recompute of dmPartnerStatus
-        unset($this->dmPartnerStatus);
+        // Called by JS polling — forces recompute of dmPartnerStatus AND of
+        // dmConnectionState. The latter is the safety net so the chat input
+        // reappears within 30s even if the websocket missed the
+        // unblock/accept broadcast.
+        unset($this->dmPartnerStatus, $this->dmConnectionState);
     }
 
     /**
@@ -261,6 +276,24 @@ class ChatRoom extends Component
         if (! $info || $info['state'] !== 'incoming') return;
         app(\App\Services\ConnectionService::class)->accept(auth()->user(), $info['partner_id']);
         unset($this->dmConnectionState);
+    }
+
+    /**
+     * Allow the blocker to lift the block directly from the chat banner so they
+     * don't have to navigate to Connections. Only succeeds when *they* placed
+     * the block (state === 'blocked-by-me').
+     */
+    public function unblockDmConnection(): void
+    {
+        $info = $this->dmConnectionState;
+        if (! $info || $info['state'] !== 'blocked-by-me') return;
+        $ok = app(\App\Services\ConnectionService::class)->unblock(auth()->user(), $info['partner_id']);
+        unset($this->dmConnectionState);
+        if ($ok) {
+            $this->dispatch('toast', type: 'success', message: app()->getLocale() === 'fr'
+                ? 'Utilisateur débloqué. Vous pouvez à nouveau discuter. 🤝'
+                : 'User unblocked. You can chat again. 🤝');
+        }
     }
 
     /**
@@ -371,6 +404,9 @@ class ChatRoom extends Component
             ->exists();
 
         if (!$isMember) {
+            $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
+                ? 'Vous n\'êtes plus membre de ce salon.'
+                : 'You are no longer a member of this room.');
             return;
         }
 
@@ -1007,7 +1043,7 @@ class ChatRoom extends Component
         $user = auth()->user();
 
         if (!$originalMessage || (!$originalMessage->content && !$originalMessage->media_path)) {
-            return;
+            return false;
         }
 
         $isMember = YardRoomMember::where('room_id', $targetRoomId)
@@ -1017,7 +1053,21 @@ class ChatRoom extends Component
             ->exists();
 
         if (!$isMember) {
-            return;
+            return false;
+        }
+
+        // If forwarding into a DM, enforce the same connection gate as
+        // sendMessage / ShareToChat — cannot forward to a partner you blocked
+        // or who blocked you, or to someone you're not yet connected with.
+        $targetRoom = YardRoom::find($targetRoomId);
+        if ($targetRoom && $targetRoom->room_type === RoomType::DirectMessage) {
+            $partnerId = (int) $targetRoom->members()->where('user_id', '!=', $user->id)->value('user_id');
+            if ($partnerId && ! $user->isConnectedWith($partnerId)) {
+                $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
+                    ? 'Impossible de transférer à cet utilisateur.'
+                    : 'Cannot forward to this user.');
+                return false;
+            }
         }
 
         $forwarded = YardMessage::create([
@@ -1033,7 +1083,6 @@ class ChatRoom extends Component
             'is_forwarded' => true,
         ]);
 
-        $targetRoom = YardRoom::find($targetRoomId);
         if ($targetRoom) {
             $preview = $forwarded->content;
             if (!$preview) {

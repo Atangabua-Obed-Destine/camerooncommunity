@@ -155,6 +155,31 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * IDs of users with whom there is *any* block in either direction
+     * (this user blocked them OR they blocked this user). Cached per request
+     * so chat-room renders don't run the query for every message.
+     */
+    public function blockedOrBlockingUserIds(): array
+    {
+        static $cache = [];
+        if (isset($cache[$this->id])) {
+            return $cache[$this->id];
+        }
+
+        $rows = UserConnection::where('status', UserConnection::STATUS_BLOCKED)
+            ->where(function ($q) {
+                $q->where('user_a_id', $this->id)->orWhere('user_b_id', $this->id);
+            })
+            ->get(['user_a_id', 'user_b_id']);
+
+        return $cache[$this->id] = $rows
+            ->map(fn ($r) => $r->user_a_id === $this->id ? $r->user_b_id : $r->user_a_id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * The custom name *this* user has saved for `$otherUserId`, or null.
      */
     public function nicknameFor(int $otherUserId): ?string
