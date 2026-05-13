@@ -156,6 +156,9 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::get('/u/{username}', [\App\Http\Controllers\ProfileController::class, 'showPublic'])
         ->name('user.profile');
 
+    // People (Facebook /friends-style directory)
+    Route::get('/people', [\App\Http\Controllers\PeopleController::class, 'index'])->name('people');
+
     // ── Sponsored Ads (user-facing) ──
     Route::get('/ads/yard', function () {
         $ads = \App\Models\SponsoredAd::active()

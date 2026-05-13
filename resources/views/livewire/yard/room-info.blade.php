@@ -660,7 +660,13 @@
             </div>
         </button>
 
-        <button wire:click="toggleArchiveChat" class="wa-info-section__row">
+        <button wire:click="toggleArchiveChat"
+                @if($isArchived)
+                    wire:confirm="{{ app()->getLocale() === 'fr' ? 'Désarchiver cette discussion ?' : 'Unarchive this chat?' }}"
+                @else
+                    wire:confirm="{{ app()->getLocale() === 'fr' ? 'Archiver cette discussion ?' : 'Archive this chat?' }}"
+                @endif
+                class="wa-info-section__row">
             <div class="flex items-center gap-3">
                 <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M6 8l1 11a2 2 0 002 2h6a2 2 0 002-2l1-11M10 12h4M4 4h16v4H4z"/></svg>
                 @if($isArchived)

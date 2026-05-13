@@ -221,7 +221,13 @@
                 <span x-text="$store.lang.t('Pin chat', 'Épingler')"></span>
                 @endif
             </button>
-            <button wire:click="toggleArchive({{ $room->id }})" class="yard-room-ctx__item">
+            <button wire:click="toggleArchive({{ $room->id }})"
+                    @if($room->member_archived_at ?? null)
+                        wire:confirm="{{ app()->getLocale() === 'fr' ? 'Désarchiver cette discussion ?' : 'Unarchive this chat?' }}"
+                    @else
+                        wire:confirm="{{ app()->getLocale() === 'fr' ? 'Archiver cette discussion ?' : 'Archive this chat?' }}"
+                    @endif
+                    class="yard-room-ctx__item">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 8h14M6 8l1 11a2 2 0 002 2h6a2 2 0 002-2l1-11M10 12h4M4 4h16v4H4z"/>
                 </svg>
@@ -258,6 +264,22 @@
                         wire:click="setFilter('all')"
                         class="yard-empty-cta yard-empty-cta--ghost">
                     <span x-text="$store.lang.t('Browse chats', 'Parcourir les chats')"></span>
+                </button>
+
+            @elseif($activeFilter === 'archived')
+                <div class="yard-empty-illus yard-empty-illus--check">
+                    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor">
+                        <rect x="10" y="14" width="44" height="10" rx="2" stroke-width="2.5"/>
+                        <path d="M14 24v26a4 4 0 004 4h28a4 4 0 004-4V24" stroke-width="2.5" stroke-linecap="round"/>
+                        <path d="M26 34h12" stroke-width="2.5" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <p class="yard-empty-title" x-text="$store.lang.t('No archived chats', 'Aucune discussion archivée')"></p>
+                <p class="yard-empty-hint" x-text="$store.lang.t('Chats you archive will appear here. Long-press any chat and pick “Archive” to tuck it away.', 'Les discussions que vous archivez apparaîtront ici. Appuyez longuement sur un chat puis choisissez « Archiver ».')"></p>
+                <button type="button"
+                        wire:click="setFilter('all')"
+                        class="yard-empty-cta yard-empty-cta--ghost">
+                    <span x-text="$store.lang.t('Back to all chats', 'Retour aux discussions')"></span>
                 </button>
 
             @elseif($activeFilter === 'groups')

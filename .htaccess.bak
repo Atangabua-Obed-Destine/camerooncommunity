@@ -1,6 +1,4 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-
-    # Forward everything to the public directory (Laravel front controller)
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>

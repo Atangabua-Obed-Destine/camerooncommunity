@@ -25,15 +25,6 @@
 <body class="min-h-screen bg-slate-50 text-slate-900 antialiased" x-data="{ sidebarOpen: false }">
     {{-- Fixed Header Wrapper --}}
     <div class="fixed top-0 left-0 right-0 z-50 relative" style="background: linear-gradient(to right, #1b2d4a 0%, #243a5c 30%, #2e4a6e 60%, #3a5a80 100%)">
-        {{-- Logo — absolutely positioned, centered across full header height --}}
-        <a href="{{ route('home') }}" class="absolute left-4 lg:left-6 top-1/2 -translate-y-1/2 z-10 flex items-center shrink-0">
-            @if($__siteLogo ?? null)
-            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Logo' }}" class="h-[120px] object-contain">
-            @else
-            <span class="text-5xl">🇨🇲</span>
-            @endif
-        </a>
-
         {{-- Location strip (seamless, no border) --}}
         @auth
         <div class="hidden sm:flex h-7 items-center justify-end px-4 lg:px-6"
@@ -106,30 +97,37 @@
         </div>
         @endauth
 
-        {{-- Main navigation --}}
+        {{-- Main navigation (Facebook-style: logo left, icon tabs centered, actions right) --}}
         <nav class="h-16">
-            <div class="flex h-full items-center px-4 lg:px-6">
-                {{-- Spacer for logo --}}
-                <div class="shrink-0 mr-auto w-48"></div>
+            <div class="flex h-full items-center px-4 lg:px-6 relative">
+                {{-- Logo (inline, left — visible on both mobile & desktop, FB-style) --}}
+                <a href="{{ route('home') }}" class="flex items-center shrink-0 mr-auto">
+                    @if($__siteLogo ?? null)
+                    <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Logo' }}" class="h-9 lg:h-10 object-contain">
+                    @else
+                    <span class="text-3xl">🇨🇲</span>
+                    @endif
+                </a>
 
-                {{-- Nav Links + Actions (right) --}}
-                <div class="flex items-center gap-1">
-                    {{-- Desktop Nav Links --}}
-                    <div class="hidden lg:flex items-center gap-0.5">
-                        <a href="{{ route('yard') }}" class="px-3 py-2 rounded-lg text-sm font-bold transition-colors {{ $yardMode ? 'text-cm-yellow' : 'text-white hover:text-cm-yellow hover:bg-white/10' }}"
-                           x-text="$store.lang.t('The Yard', 'Le Yard')"></a>
-                        <button type="button"
-                                @click="window.dispatchEvent(new CustomEvent('open-discover'))"
-                                class="px-3 py-2 rounded-lg text-sm font-bold text-white hover:text-cm-yellow hover:bg-white/10 transition-colors"
-                                x-text="$store.lang.t('Discover', 'Découvrir')"></button>
-                    </div>
+                {{-- Icon tabs (Facebook-style) — desktop: centered absolute; mobile hidden (rendered as second row below) --}}
+                <div class="hidden lg:flex absolute left-1/2 top-0 h-full -translate-x-1/2 items-center gap-1">
+                    @include('partials.fb-nav-tabs', ['mode' => 'desktop', 'yardMode' => $yardMode])
+                </div>
 
+                {{-- Right-side actions --}}
+                <div class="ml-auto flex items-center gap-1">
                     {{-- Language Toggle --}}
-                    <button @click="$store.lang.toggle()" class="flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 transition-colors hover:border-white/40 hover:text-white ml-2"
+                    <button @click="$store.lang.toggle()" class="flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 transition-colors hover:border-white/40 hover:text-white"
                             :title="$store.lang.isEn ? 'Passer en français' : 'Switch to English'">
                         <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
                         <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
                     </button>
+
+                    {{-- Discover (kept here, smaller) --}}
+                    <button type="button"
+                            @click="window.dispatchEvent(new CustomEvent('open-discover'))"
+                            class="hidden md:inline-block px-3 py-2 rounded-lg text-sm font-bold text-white hover:text-cm-yellow hover:bg-white/10 transition-colors"
+                            x-text="$store.lang.t('Discover', 'Découvrir')"></button>
 
                     {{-- Notifications (real-time bell) --}}
                     @auth
@@ -137,6 +135,7 @@
                     @endauth
 
                     {{-- User Menu --}}
+                    @auth
                     <div x-data="{ open: false }" class="relative ml-1">
                         <button @click="open = !open" class="flex items-center gap-2 rounded-full p-1 hover:bg-white/10 transition-colors">
                             <div class="flex h-8 w-8 items-center justify-center rounded-full bg-cm-yellow text-sm font-bold text-cm-green">
@@ -156,41 +155,21 @@
                             </form>
                         </div>
                     </div>
+                    @endauth
                 </div>
+            </div>
+        </nav>
+
+        {{-- Mobile icon tab row (its own line under the logo/actions, like Facebook mobile) --}}
+        <nav class="lg:hidden border-t border-white/10">
+            <div class="flex items-stretch justify-around h-12 px-1">
+                @include('partials.fb-nav-tabs', ['mode' => 'mobile', 'yardMode' => $yardMode])
             </div>
         </nav>
     </div>{{-- /Fixed Header Wrapper --}}
 
-    {{-- Mobile Bottom Navigation --}}
-    <nav class="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur-sm lg:hidden transition-transform duration-300"
-         x-data="{ inChat: false }"
-         @chatroom-entered.window="inChat = true"
-         @chatroom-exited.window="inChat = false"
-         :class="inChat && 'translate-y-full'">
-        <div class="flex h-14 items-center justify-around">
-            <a href="{{ route('yard') }}" class="flex flex-col items-center gap-0.5 {{ request()->routeIs('yard*') ? 'text-cm-green' : 'text-slate-400' }}">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                <span class="text-[10px] font-medium" x-text="$store.lang.t('Yard', 'Yard')">Yard</span>
-            </a>
-            <button type="button"
-                    @click="window.dispatchEvent(new CustomEvent('open-discover'))"
-                    class="flex flex-col items-center gap-0.5 text-slate-400">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <span class="text-[10px] font-medium" x-text="$store.lang.t('Discover', 'Découvrir')">Discover</span>
-            </button>
-            <a href="#" class="flex flex-col items-center gap-0.5 text-slate-400">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-                <span class="text-[10px] font-medium" x-text="$store.lang.t('Alerts', 'Alertes')">Alerts</span>
-            </a>
-            <a href="{{ route('profile') }}" class="flex flex-col items-center gap-0.5 {{ request()->routeIs('profile*') ? 'text-cm-green' : 'text-slate-400' }}">
-                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                <span class="text-[10px] font-medium" x-text="$store.lang.t('Profile', 'Profil')">Profile</span>
-            </a>
-        </div>
-    </nav>
-
     {{-- Main Content --}}
-    <main class="pt-[92px] sm:pt-[92px] pb-14 lg:pb-0">
+    <main class="pt-[112px] lg:pt-[92px]">
         {{ $slot }}
     </main>
 

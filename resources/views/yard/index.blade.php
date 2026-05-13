@@ -28,6 +28,17 @@
                             <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992"/></svg>
                         </button>
                         {{-- New chat / Connections / Group are now consolidated into the 3-dot overflow menu below --}}
+                        {{-- Quick shortcut: jump straight to the Contacts sheet (WhatsApp-style chat-bubble icon).
+                             Kept in addition to the 3-dot menu entry because users expect a one-tap path. --}}
+                        <button @click="Livewire.dispatch('open-connections')"
+                                class="yard-header__btn relative"
+                                :title="$store.lang.t('Contacts', 'Contacts')"
+                                :aria-label="$store.lang.t('Contacts', 'Contacts')">
+                            <svg class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v6m3-3h-6M5.25 21v-1.5a6 6 0 0 1 6-6h2.25a6 6 0 0 1 4.215 1.737M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0z"/>
+                            </svg>
+                            <livewire:yard.connections-badge :variant="'dot'" />
+                        </button>
                         {{-- Archived chats — direct button on the top bar --}}
                         @php
                             $archivedCount = \App\Models\YardRoomMember::where('user_id', auth()->id())

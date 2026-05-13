@@ -18,7 +18,12 @@ class HomeController extends Controller
             ->distinct('current_region')
             ->count('current_region');
 
-        return view('home', [
+        // Authenticated visitors get the in-app feed (uses the standard app
+        // layout / Facebook-style header). Guests still see the marketing
+        // landing page.
+        $view = auth()->check() ? 'feed' : 'home';
+
+        return view($view, [
             'memberCount' => $memberCount,
             'regionCount' => max($regionCount, 1),
         ]);

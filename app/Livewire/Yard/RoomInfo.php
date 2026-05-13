@@ -646,12 +646,9 @@ class RoomInfo extends Component
             message: $isArchived ? __('Chat unarchived') : __('Chat archived'),
         );
 
-        // If we just archived the open chat, close the info pane and
-        // signal the chat surface to reset.
-        if (! $isArchived) {
-            $this->visible = false;
-            $this->dispatch('room-deselected');
-        }
+        // Note: keep the Contact info pane open and the chat surface intact.
+        // Previously we closed the pane / deselected the room here, but that
+        // left the right pane empty until the user refreshed.
     }
 
     /**
