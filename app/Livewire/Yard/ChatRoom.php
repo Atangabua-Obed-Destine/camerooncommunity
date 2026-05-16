@@ -56,6 +56,7 @@ class ChatRoom extends Component
     {
         if ($room && $room->exists) {
             $this->room = $room;
+            $this->positionChatAtFirstUnreadOrBottom();
             $this->markAsRead();
             $this->dispatch('echo-subscribe', channel: 'tenant.' . $room->tenant_id . '.room.' . $room->id);
         }
@@ -81,9 +82,39 @@ class ChatRoom extends Component
         // "blocked-by-them" banner from a DM cannot leak into a group's
         // input bar after switching rooms.
         unset($this->dmConnectionState, $this->dmPartnerStatus, $this->roomMessages);
+        $this->positionChatAtFirstUnreadOrBottom();
         $this->markAsRead();
         $this->dispatch('echo-subscribe', channel: 'tenant.' . $this->room->tenant_id . '.room.' . $this->room->id);
         $this->dispatch('room-type-changed', roomType: $this->room->room_type->value);
+    }
+
+    /**
+     * WhatsApp-style positioning: when the user opens a room, jump to the
+     * first unread message (sent by someone else after their last_read_at).
+     * If there are no unread messages, fall back to the bottom of the chat.
+     * Must be called BEFORE markAsRead() so last_read_at still reflects the
+     * state from the previous visit.
+     */
+    protected function positionChatAtFirstUnreadOrBottom(): void
+    {
+        if (!isset($this->room) || !$this->room->exists) {
+            return;
+        }
+
+        $lastRead = YardRoomMember::where('room_id', $this->room->id)
+            ->where('user_id', auth()->id())
+            ->value('last_read_at');
+
+        $firstUnreadId = null;
+        if ($lastRead) {
+            $firstUnreadId = YardMessage::where('room_id', $this->room->id)
+                ->where('user_id', '!=', auth()->id())
+                ->where('created_at', '>', $lastRead)
+                ->orderBy('created_at')
+                ->value('id');
+        }
+
+        $this->dispatch('chat-position-target', messageId: $firstUnreadId);
     }
 
     #[Computed]

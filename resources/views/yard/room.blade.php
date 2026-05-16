@@ -1,7 +1,7 @@
 <x-layouts.app>
     <x-slot:title>{{ $room->name }} — The Yard</x-slot:title>
 
-    <div class="h-[calc(100vh-4rem)] flex overflow-hidden" x-data="{ showInfo: false }">
+    <div class="h-[calc(100vh-96px)] lg:h-[calc(100vh-92px)] flex overflow-hidden" x-data="{ showInfo: false }">
         {{-- LEFT SIDEBAR: Room List (desktop only) --}}
         <div class="w-80 shrink-0 border-r border-slate-200 bg-white max-md:hidden overflow-y-auto">
             {{-- Branded Sidebar Header --}}

@@ -9,6 +9,7 @@
      x-on:optimistic-msg.window="optimistic.push({ id: ++_optId, kind: 'text', text: $event.detail.text }); scrollToBottom()"
      x-on:optimistic-media.window="optimistic.push({ id: ++_optId, kind: $event.detail.kind, url: $event.detail.url, fileName: $event.detail.fileName, fileSize: $event.detail.fileSize, fileIcon: $event.detail.fileIcon, caption: $event.detail.caption }); scrollToBottom()"
      x-on:scroll-to-message.window="scrollToMessageId($event.detail?.messageId ?? $event.detail?.[0]?.messageId)"
+     x-on:chat-position-target.window="scrollToTarget($event.detail?.messageId ?? $event.detail?.[0]?.messageId)"
      x-on:focus-edit-input.window="$nextTick(() => { if($refs.editInput) $refs.editInput.focus() })"
      x-on:echo-subscribe.window="subscribeEcho($event.detail.channel)"
      x-on:messages-prepended.window="
@@ -119,20 +120,20 @@
         </div>
 
         <div class="yard-chat__header-actions">
-            {{-- Voice Call --}}
+            {{-- Voice Call (always visible) --}}
             <button class="yard-chat__header-btn" @click="$dispatch('initiate-call', { roomId: {{ $room->id }}, type: 'voice' })" title="Voice Call">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
             </button>
-            {{-- Video Call --}}
+            {{-- Video Call (always visible) --}}
             <button class="yard-chat__header-btn" @click="$dispatch('initiate-call', { roomId: {{ $room->id }}, type: 'video' })" title="Video Call">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25z"/></svg>
             </button>
-            {{-- Search --}}
-            <button class="yard-chat__header-btn" wire:click="toggleSearch" title="Search">
+            {{-- Search (desktop only — collapsed into 3-dot menu on mobile) --}}
+            <button class="yard-chat__header-btn yard-chat__hide-mobile" wire:click="toggleSearch" title="Search">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
             </button>
-            {{-- Auto-translate toggle --}}
-            <div class="yard-chat__translate" x-data="{ open: false }" @click.away="open = false">
+            {{-- Auto-translate toggle (desktop only — collapsed into 3-dot menu on mobile) --}}
+            <div class="yard-chat__translate yard-chat__hide-mobile" x-data="{ open: false }" @click.away="open = false">
                 <button type="button" class="yard-chat__header-btn"
                         :class="{{ $this->autoTranslateLang ? 'true' : 'false' }} ? 'yard-chat__header-btn--on' : ''"
                         @click="open = !open"
@@ -154,13 +155,66 @@
                     </button>
                 </div>
             </div>
-            {{-- Refresh --}}
-            <button class="yard-chat__header-btn" @click="$wire.$refresh(); Livewire.dispatch('refreshRoomList')" title="Refresh">
+            {{-- Refresh (desktop only — collapsed into 3-dot menu on mobile) --}}
+            <button class="yard-chat__header-btn yard-chat__hide-mobile" @click="$wire.$refresh(); Livewire.dispatch('refreshRoomList')" title="Refresh">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992"/></svg>
             </button>
-            <button class="yard-chat__header-btn" @click="$dispatch('toggle-room-info')" title="Info">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/></svg>
-            </button>
+
+            {{-- 3-DOT OVERFLOW MENU (WhatsApp-style) --}}
+            <div class="yard-chat__overflow" x-data="{ open: false, tOpen: false }" @click.away="open = false; tOpen = false">
+                <button type="button" class="yard-chat__header-btn"
+                        @click="open = !open"
+                        :title="$store.lang.t('More', 'Plus')"
+                        :aria-label="$store.lang.t('More options', 'Plus d&apos;options')">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
+                        <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                        <circle cx="12" cy="19" r="1.5" fill="currentColor"/>
+                    </svg>
+                </button>
+                <div x-show="open" x-transition x-cloak class="yard-chat__overflow-menu">
+                    {{-- View contact / Room info --}}
+                    <button type="button" class="yard-chat__overflow-item"
+                            @click="open = false; $dispatch('toggle-room-info')">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        <span x-text="$store.lang.t({{ $room->room_type === \App\Enums\RoomType::DirectMessage ? "'View contact'" : "'Group info'" }}, {{ $room->room_type === \App\Enums\RoomType::DirectMessage ? "'Voir le contact'" : "'Infos du groupe'" }})"></span>
+                    </button>
+
+                    {{-- Mobile-only items: Search / Translate / Refresh --}}
+                    <button type="button" class="yard-chat__overflow-item yard-chat__overflow-item--mobile"
+                            @click="open = false" wire:click="toggleSearch">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+                        <span x-text="$store.lang.t('Search', 'Rechercher')"></span>
+                    </button>
+
+                    <div class="yard-chat__overflow-item yard-chat__overflow-item--mobile yard-chat__overflow-item--sub"
+                         @click.stop="tOpen = !tOpen">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+                        <span class="flex-1" x-text="$store.lang.t('Auto-translate', 'Traduction auto')"></span>
+                        <svg class="w-3 h-3 transition-transform" :class="tOpen ? 'rotate-90' : ''" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div x-show="tOpen" x-cloak class="yard-chat__overflow-submenu yard-chat__overflow-item--mobile">
+                        <button type="button" class="yard-chat__overflow-item {{ $this->autoTranslateLang === null ? 'is-active' : '' }}"
+                                wire:click="setAutoTranslate(null)" @click="open = false; tOpen = false">
+                            <span class="ml-6">{{ __('Off') }}</span>
+                        </button>
+                        <button type="button" class="yard-chat__overflow-item {{ $this->autoTranslateLang === 'en' ? 'is-active' : '' }}"
+                                wire:click="setAutoTranslate('en')" @click="open = false; tOpen = false">
+                            <span class="ml-6">🇬🇧 {{ __('English') }}</span>
+                        </button>
+                        <button type="button" class="yard-chat__overflow-item {{ $this->autoTranslateLang === 'fr' ? 'is-active' : '' }}"
+                                wire:click="setAutoTranslate('fr')" @click="open = false; tOpen = false">
+                            <span class="ml-6">🇫🇷 {{ __('Français') }}</span>
+                        </button>
+                    </div>
+
+                    <button type="button" class="yard-chat__overflow-item yard-chat__overflow-item--mobile"
+                            @click="open = false; $wire.$refresh(); Livewire.dispatch('refreshRoomList')">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182M21.015 4.356v4.992"/></svg>
+                        <span x-text="$store.lang.t('Refresh', 'Actualiser')"></span>
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -1966,6 +2020,36 @@
                     this.$nextTick(() => {
                         const el = this.$refs.chatMessages;
                         if (el) el.scrollTop = el.scrollHeight;
+                    });
+                },
+
+                /**
+                 * WhatsApp-style: when a room opens, jump to the first unread
+                 * message (if any) or to the bottom. Server passes the target
+                 * id via the 'chat-position-target' event after loadRoom().
+                 * Messages may not be in the DOM yet — retry briefly.
+                 */
+                scrollToTarget(messageId) {
+                    const self = this;
+                    this.$nextTick(() => {
+                        if (!messageId) { self.scrollToBottom(); return; }
+                        let attempts = 0;
+                        const maxAttempts = 12;
+                        const tick = () => {
+                            const container = self.$refs.chatMessages;
+                            const el = document.getElementById('msg-' + messageId);
+                            if (el && container) {
+                                // Align the first unread message near the top of the viewport
+                                container.scrollTop = Math.max(0, el.offsetTop - 12);
+                                return;
+                            }
+                            if (++attempts < maxAttempts) {
+                                requestAnimationFrame(tick);
+                            } else {
+                                self.scrollToBottom();
+                            }
+                        };
+                        tick();
                     });
                 },
 

@@ -24,7 +24,7 @@
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900 antialiased" x-data="{ sidebarOpen: false }">
     {{-- Fixed Header Wrapper --}}
-    <div class="fixed top-0 left-0 right-0 z-50 relative" style="background: linear-gradient(to right, #1b2d4a 0%, #243a5c 30%, #2e4a6e 60%, #3a5a80 100%)">
+    <div class="fixed top-0 left-0 right-0 z-50" style="position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: linear-gradient(to right, #1b2d4a 0%, #243a5c 30%, #2e4a6e 60%, #3a5a80 100%)">
         {{-- Location strip (seamless, no border) --}}
         @auth
         <div class="hidden sm:flex h-7 items-center justify-end px-4 lg:px-6"
@@ -97,15 +97,22 @@
         </div>
         @endauth
 
-        {{-- Main navigation (Facebook-style: logo left, icon tabs centered, actions right) --}}
-        <nav class="h-16">
-            <div class="flex h-full items-center px-4 lg:px-6 relative">
-                {{-- Logo (inline, left — visible on both mobile & desktop, FB-style) --}}
-                <a href="{{ route('home') }}" class="flex items-center shrink-0 mr-auto">
+        {{-- Main navigation (Facebook-style: logo left, icon tabs centered, actions right).
+             `overflow-visible` lets the logo extend slightly beyond the 64px nav row
+             so we can render it bigger without changing header height. --}}
+        <nav class="h-14 sm:h-16 overflow-visible">
+            <div class="flex h-full items-center px-3 sm:px-4 lg:px-6 relative overflow-visible">
+                {{-- Logo (inline, left). Sized in viewport units with min/max clamps so it
+                     scales smoothly between phone & desktop, "bleeding" a bit above/below
+                     the 64px bar via negative margins for visual weight. --}}
+                <a href="{{ route('home') }}"
+                   class="group flex items-center shrink-0 mr-auto -my-2 transition-transform duration-200 ease-out hover:scale-[1.04] active:scale-[0.98]">
                     @if($__siteLogo ?? null)
-                    <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Logo' }}" class="h-9 lg:h-10 object-contain">
+                    <img src="{{ $__siteLogo }}"
+                         alt="{{ $__siteName ?? 'Logo' }}"
+                         class="h-12 sm:h-14 md:h-16 lg:h-[72px] xl:h-20 w-auto max-w-[42vw] sm:max-w-none object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-all duration-200 group-hover:drop-shadow-[0_3px_10px_rgba(252,209,22,0.45)]">
                     @else
-                    <span class="text-3xl">🇨🇲</span>
+                    <span class="text-3xl sm:text-4xl lg:text-5xl leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]">🇨🇲</span>
                     @endif
                 </a>
 
@@ -160,16 +167,17 @@
             </div>
         </nav>
 
-        {{-- Mobile icon tab row (its own line under the logo/actions, like Facebook mobile) --}}
-        <nav class="lg:hidden border-t border-white/10">
-            <div class="flex items-stretch justify-around h-12 px-1">
+        {{-- Mobile icon tab row (its own line under the logo/actions, like Facebook mobile).
+             No divider border: keeps the header feeling like one continuous surface. --}}
+        <nav class="lg:hidden">
+            <div class="flex items-stretch justify-around h-10 px-1">
                 @include('partials.fb-nav-tabs', ['mode' => 'mobile', 'yardMode' => $yardMode])
             </div>
         </nav>
     </div>{{-- /Fixed Header Wrapper --}}
 
     {{-- Main Content --}}
-    <main class="pt-[112px] lg:pt-[92px]">
+    <main class="pt-[96px] lg:pt-[92px]">
         {{ $slot }}
     </main>
 
@@ -178,9 +186,11 @@
         @livewire('location-tracker')
     @endauth
 
-    {{-- Kamer AI Assistant (mounted on every authenticated page so the sidebar button works in The Yard too) --}}
+    {{-- Kamer AI Assistant (mounted on every authenticated page so the sidebar button works in The Yard too).
+         The floating bubble is hidden in yardMode (passed down to the component) because The Yard already
+         exposes Kamer AI through its dedicated sidebar icon, and the bubble overlaps the chatroom UI. --}}
     @auth
-        @livewire('a-i.kamer-chat')
+        @livewire('a-i.kamer-chat', ['hideBubble' => $yardMode])
     @endauth
 
     {{-- Discover modal — teaser of live + upcoming KAMER features --}}

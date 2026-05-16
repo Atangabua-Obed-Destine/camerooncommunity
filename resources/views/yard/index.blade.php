@@ -16,6 +16,7 @@
              PANEL 1 — ROOM LIST
         ══════════════════════════════════════════════════════ --}}
         <div class="yard-panel yard-panel--list"
+             x-data="{ searchOpen: false }"
              :class="{ 'yard-panel--hidden-left': activeRoom && isMobile }"
              x-ref="listPanel">
 
@@ -75,6 +76,12 @@
                             <div x-show="moreOpen" @click.away="moreOpen = false" x-transition x-cloak
                                  class="absolute right-0 top-full mt-1 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-50">
                                 <button type="button"
+                                        @click="moreOpen = false; searchOpen = true; $nextTick(() => $refs.listSearchInput?.focus())"
+                                        class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
+                                    <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
+                                    <span x-text="$store.lang.t('Search', 'Rechercher')"></span>
+                                </button>
+                                <button type="button"
                                         @click="moreOpen = false; openNewChat()"
                                         class="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors text-left">
                                     <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
@@ -131,12 +138,21 @@
 
             {{-- ═══ Default view: search + rooms ═══ --}}
             <div class="flex flex-col flex-1 min-h-0" x-show="!newGroupStep">
-                <div class="yard-search">
+                <div class="yard-search" x-show="searchOpen" x-transition x-cloak>
                     <div class="yard-search__inner">
                         <svg class="yard-search__icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path stroke-linecap="round" d="m21 21-4.35-4.35"/></svg>
                         <input type="text" class="yard-search__input"
+                               x-ref="listSearchInput"
                                :placeholder="$store.lang.t('Search...', 'Rechercher...')"
-                               @input.debounce.300ms="$dispatch('yard-search', { query: $event.target.value })">
+                               @input.debounce.300ms="$dispatch('yard-search', { query: $event.target.value })"
+                               @keydown.escape="searchOpen = false; $event.target.value=''; $dispatch('yard-search', { query: '' })">
+                        <button type="button"
+                                @click="searchOpen = false; const inp = $refs.listSearchInput; if(inp){ inp.value=''; } $dispatch('yard-search', { query: '' })"
+                                class="yard-search__close"
+                                :title="$store.lang.t('Close', 'Fermer')"
+                                :aria-label="$store.lang.t('Close search', 'Fermer la recherche')">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
                     </div>
                 </div>
 

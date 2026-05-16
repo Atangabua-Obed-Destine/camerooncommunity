@@ -29,7 +29,7 @@
 
         {{-- ── Sidebar ─────────────────────────────────────────────────── --}}
         <aside class="hidden lg:flex flex-col w-[320px] shrink-0 bg-white border-r border-slate-200 min-h-[calc(100vh-92px)] sticky top-[92px] self-start">
-            <div class="px-5 pt-5 pb-3 flex items-center justify-between">
+            <div class="px-5 pt-3 pb-2 flex items-center justify-between">
                 <h1 class="text-2xl font-extrabold text-slate-900" x-text="$store.lang.t('People', 'Personnes')"></h1>
             </div>
             <nav class="px-2 pb-6 space-y-1">
@@ -70,10 +70,10 @@
         </aside>
 
         {{-- ── Main area ───────────────────────────────────────────────── --}}
-        <main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 py-6 max-w-6xl mx-auto">
+        <main class="flex-1 min-w-0 px-4 sm:px-6 lg:px-10 pt-3 pb-6 max-w-6xl mx-auto">
 
             {{-- Mobile horizontal tab strip --}}
-            <nav class="lg:hidden -mx-4 px-4 overflow-x-auto mb-4">
+            <nav class="lg:hidden -mx-4 px-4 overflow-x-auto mb-3">
                 <div class="flex gap-2 min-w-max pb-1">
                     @foreach($tabs as $key => $meta)
                         @php $active = $tab === $key; @endphp
@@ -91,7 +91,7 @@
 
             {{-- Search bar (visible on all tabs that show lists) --}}
             @if(in_array($tab, ['suggestions', 'all', 'connections']))
-            <form method="GET" action="{{ route('people') }}" class="mb-5">
+            <form method="GET" action="{{ route('people') }}" class="mb-4">
                 <input type="hidden" name="tab" value="{{ $tab }}">
                 <div class="relative">
                     <svg class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>

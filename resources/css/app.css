@@ -482,9 +482,12 @@
 /* Leave room for the mobile bottom nav (h-14 = 3.5rem) */
 @media (max-width: 1023px) {
     .yard-container {
-        bottom: 3.5rem;
+        /* Mobile header = top bar (56px) + icon tab row (40px) = 96px */
+        top: 96px;
+        bottom: 0;
     }
     .yard-container.yard-container--fullscreen {
+        top: 96px;
         bottom: 0;
     }
 }
@@ -718,7 +721,7 @@
     }
     .yard-panel--info {
         position: fixed;
-        top: 92px;
+        top: 96px;
         left: 0;
         right: 0;
         bottom: 0;
@@ -801,6 +804,24 @@
     color: var(--color-slate-800);
 }
 .yard-search__input::placeholder { color: var(--color-slate-400); }
+.yard-search__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 9999px;
+    color: var(--color-slate-500);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color .15s, color .15s;
+}
+.yard-search__close:hover {
+    background: var(--color-slate-200);
+    color: var(--color-slate-800);
+}
 
 /* ── Scrollable room list ── */
 .yard-rooms {
@@ -6315,6 +6336,59 @@
 }
 .yard-chat__translate-opt:hover { background: #f3f4f6; }
 .yard-chat__translate-opt.is-active { background: #ecfdf5; color: #047857; font-weight: 600; }
+
+/* ── 3-dot overflow menu (WhatsApp-style) ───────────────────────── */
+.yard-chat__overflow { position: relative; }
+.yard-chat__overflow-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 12px 28px -8px rgba(0,0,0,0.18);
+    min-width: 200px;
+    z-index: 70;
+    overflow: hidden;
+    padding: 4px 0;
+}
+.yard-chat__overflow-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    background: transparent;
+    border: 0;
+    font-size: 14px;
+    color: var(--color-slate-700);
+    cursor: pointer;
+}
+.yard-chat__overflow-item:hover { background: #f3f4f6; }
+.yard-chat__overflow-item.is-active { color: #047857; font-weight: 600; }
+.yard-chat__overflow-item svg { color: var(--color-slate-500); flex-shrink: 0; }
+.yard-chat__overflow-item--sub { cursor: pointer; }
+.yard-chat__overflow-submenu {
+    background: #f9fafb;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+}
+.yard-chat__overflow-submenu .yard-chat__overflow-item { padding-top: 8px; padding-bottom: 8px; }
+
+/* Mobile-only items in the overflow menu (Search/Translate/Refresh) */
+.yard-chat__overflow-item--mobile { display: none; }
+
+@media (max-width: 767px) {
+    /* Hide buttons that are now collapsed into the 3-dot menu on mobile */
+    .yard-chat__hide-mobile { display: none !important; }
+    /* Reveal the equivalent items inside the overflow menu */
+    .yard-chat__overflow-item--mobile { display: flex; }
+    /* Tighter spacing so the header has room for the name + status */
+    .yard-chat__header { gap: 6px; padding: 0 4px; }
+    .yard-chat__header-actions { gap: 0; }
+}
 
 /* Share card rendered inside a message bubble */
 .yard-share-card {

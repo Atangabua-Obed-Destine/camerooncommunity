@@ -98,7 +98,7 @@ class StarredMessages extends Component
                 $row->preview = '🎬 ' . __('Video') . ($row->content ? ' · ' . $row->content : '');
             } elseif ($type === MessageType::Audio->value) {
                 $row->preview = '🎤 ' . __('Voice message');
-            } elseif ($type === MessageType::Document->value) {
+            } elseif ($type === MessageType::File->value) {
                 $row->preview = '📄 ' . ($row->media_original_name ?: __('Document'));
             } elseif ($type === MessageType::Poll->value) {
                 $row->preview = '📊 ' . __('Poll');

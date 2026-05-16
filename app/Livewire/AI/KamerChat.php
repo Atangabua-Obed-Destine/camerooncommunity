@@ -13,8 +13,17 @@ class KamerChat extends Component
     public bool $isOpen = false;
     public bool $isLoading = false;
 
-    public function mount()
+    /**
+     * When true, suppresses the floating bubble (the slide-over panel still
+     * works via dispatched events such as `open-kamer-ai` from the Yard
+     * sidebar). Set by the parent layout in yardMode.
+     */
+    public bool $hideBubble = false;
+
+    public function mount(bool $hideBubble = false)
     {
+        $this->hideBubble = $hideBubble;
+
         // Restore session history
         $this->messages = session('kamer_chat_history', []);
 
