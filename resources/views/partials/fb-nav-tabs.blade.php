@@ -17,8 +17,9 @@
 @php
     $isMobile  = ($mode ?? 'desktop') === 'mobile';
     $yardMode  = $yardMode ?? false;
-    $isHome    = request()->routeIs('home');
-    $isYard    = $yardMode || request()->routeIs('yard*');
+    $isHome        = request()->routeIs('home');
+    $isYard        = $yardMode || request()->routeIs('yard*');
+    $isMarketplace = request()->routeIs('marketplace.*');
 
     // Shared geometry — desktop tabs are wider with hover backgrounds;
     // mobile tabs fill row width but share a tighter padding so 6 tabs fit
@@ -59,12 +60,22 @@
     @if($isYard && !$isMobile)<span class="{{ $activeBar }}"></span>@endif
 </a>
 
+{{-- MARKETPLACE --}}
+<a href="{{ route('marketplace.index') }}"
+   class="{{ $tabBase }} group transition-colors {{ $isMarketplace ? '' : 'hover:bg-white/5' }}"
+   :title="$store.lang.t('Marketplace', 'Marketplace')"
+   aria-label="Marketplace">
+    <svg class="{{ $iconSize }} {{ $isMarketplace ? $iconActive : $iconInactive }} transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 13h6"/>
+    </svg>
+    @if($isMarketplace && !$isMobile)<span class="{{ $activeBar }}"></span>@endif
+</a>
+
 @php
     // Coming-soon tabs share the same Alpine snippet: hover (desktop) or
     // tap (mobile) toggles a small label badge below the icon. Tapping
     // does NOT navigate anywhere.
     $soonTabs = [
-        ['key' => 'marketplace',  'en' => 'Marketplace',  'fr' => 'Marketplace'],
         ['key' => 'easygoparcel', 'en' => 'EasyGoParcel', 'fr' => 'EasyGoParcel'],
         ['key' => 'roadfam',      'en' => 'RoadFam',      'fr' => 'RoadFam'],
         ['key' => 'workconnect',  'en' => 'WorkConnect',  'fr' => 'WorkConnect'],
@@ -81,11 +92,6 @@
             :title="$store.lang.t(@js($tab['en'] . ' — Coming Soon'), @js($tab['fr'] . ' — Bientôt'))"
             aria-label="{{ $tab['en'] }}">
         @switch($tab['key'])
-            @case('marketplace')
-                <svg class="{{ $iconSize }} {{ $iconSoon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 13h6"/>
-                </svg>
-                @break
             @case('easygoparcel')
                 <svg class="{{ $iconSize }} {{ $iconSoon }}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>

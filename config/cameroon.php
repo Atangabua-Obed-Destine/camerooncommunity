@@ -382,6 +382,20 @@ return [
         'max_private_group_members' => '200',
         'story_expiry_hours' => '24',
         'marketplace_listing_expiry_days' => '30',
+        // ─── Marketplace (Phase 1) ───
+        'marketplace_enabled' => 'true',
+        'marketplace_default_currency' => 'XAF',
+        'marketplace_fee_percent' => '3.00',
+        'marketplace_max_images' => '10',
+        'marketplace_min_title_length' => '6',
+        'marketplace_min_description_length' => '20',
+        'marketplace_auto_approve' => 'true', // skip pending_review; admins can flip off
+        'marketplace_require_phone' => 'true',
+        'marketplace_allow_free' => 'true',
+        'marketplace_ai_assist_enabled' => 'false', // Phase 3
+        'marketplace_escrow_enabled' => 'false',    // Phase 2
+        'marketplace_offers_enabled' => 'false',    // Phase 2
+        'marketplace_ratings_enabled' => 'false',   // Phase 2
         'sos_radius_km' => '50',
         'minimum_app_version' => '1.0.0',
         'maintenance_mode' => 'false',

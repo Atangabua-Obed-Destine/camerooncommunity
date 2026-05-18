@@ -191,9 +191,21 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
 
     // Solidarity — handled via Livewire components within Yard
 
+    // ─── Marketplace (Phase 1) ───
+    Route::prefix('marketplace')->name('marketplace.')->group(function () {
+        Route::get('/',                         \App\Livewire\Marketplace\FeedBrowse::class)->name('index');
+        Route::get('/sell',                     \App\Livewire\Marketplace\ListingComposer::class)->name('sell');
+        Route::get('/my-listings',              \App\Livewire\Marketplace\MyListings::class)->name('mine');
+        Route::get('/favorites',                \App\Livewire\Marketplace\Favorites::class)->name('favorites');
+        Route::get('/offers',                   \App\Livewire\Marketplace\MyOffers::class)->name('offers');
+        Route::get('/c/{slug}',                 \App\Livewire\Marketplace\FeedBrowse::class)->name('category');
+        Route::get('/listing/{slug}',           \App\Livewire\Marketplace\ListingDetail::class)->name('show');
+        Route::get('/listing/{listing}/edit',   \App\Livewire\Marketplace\ListingComposer::class)
+            ->whereNumber('listing')->name('edit');
+    });
+
     // Coming Soon modules
     $comingSoonModules = [
-        'marche' => 'Marché',
         'easygoparcell' => 'EasyGoParcel',
         'roadfam' => 'RoadFam',
         'camevents' => 'CamEvents',

@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
             RoleSeeder::class,
             SettingsSeeder::class,
             YardRoomSeeder::class,
-            MarketplaceCategorySeeder::class,
+            MarketplaceCategoriesSeeder::class,
             AdminSeeder::class,
         ]);
     }
