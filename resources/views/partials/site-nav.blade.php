@@ -10,12 +10,18 @@
      @if(!$forceScrolled && !$staysTransparent) @scroll.window="scrolled = (window.scrollY > 40)" @endif
      :class="scrolled ? 'bg-white/95 backdrop-blur shadow-sm' : 'bg-transparent'"
      class="fixed top-0 inset-x-0 z-50 transition-all duration-300 pointer-events-auto">
-    {{-- Logo — absolutely positioned, centered across full header height --}}
-    <a href="{{ route('home') }}" class="absolute left-6 sm:left-10 lg:left-12 top-1/2 -translate-y-1/2 z-10 flex items-center">
+    {{-- Logo — anchored to the top header strip (NOT the full nav), so it
+         doesn't drift downward when the mobile dropdown menu opens and the
+         <nav> element grows taller. Height: location strip (28px on sm+) + nav
+         row (64px) = 92px header on desktop; on mobile the location strip is
+         hidden, so we use 64px and let `items-center` keep it vertically nice. --}}
+    <a href="{{ route('home') }}"
+       class="absolute left-4 sm:left-10 lg:left-12 top-0 h-16 sm:h-[92px] z-10 flex items-center">
         @if($__siteLogo ?? null)
-        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-[120px] object-contain">
+        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}"
+             class="h-14 sm:h-20 md:h-24 lg:h-[120px] w-auto max-w-[55vw] sm:max-w-none object-contain">
         @else
-        <span class="text-5xl">🇨🇲</span>
+        <span class="text-4xl sm:text-5xl">🇨🇲</span>
         @endif
     </a>
 
