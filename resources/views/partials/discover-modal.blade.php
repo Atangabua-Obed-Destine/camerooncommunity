@@ -109,7 +109,7 @@
                         <div class="discover-card__icon">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                         </div>
-                        <div class="font-bold text-slate-800 text-sm" x-text="$store.lang.t('The Yard', 'Le Yard')"></div>
+                        <div class="font-bold text-slate-800 text-sm" x-text="$store.lang.t('Go Connect', 'Go Connect')"></div>
                         <div class="text-[11px] text-slate-500 mt-0.5"
                              x-text="$store.lang.t('Chat & connect', 'Discuter & connecter')"></div>
                     </div>
@@ -183,8 +183,8 @@ function discoverModal() {
               descEn: 'KAMER connects Cameroonians across the world — wherever you are, you belong.',
               descFr: 'KAMER connecte les Camerounais du monde entier — où que vous soyez, vous êtes chez vous.' },
             { emoji: '💬',
-              titleEn: 'The Yard is Buzzing',
-              titleFr: 'Le Yard Bouge',
+              titleEn: 'Go Connect is Buzzing',
+              titleFr: 'Go Connect Bouge',
               descEn: 'Public rooms, private chats, group conversations — your daily meeting place.',
               descFr: 'Salons publics, discussions privées, groupes — votre lieu de rencontre quotidien.' },
             { emoji: '❤️',
@@ -200,20 +200,20 @@ function discoverModal() {
             { emoji: '🚀',
               titleEn: 'Much More Coming',
               titleFr: 'Bien Plus Arrive',
-              descEn: 'Marketplace, parcels home, carpooling, jobs — built by us, for us.',
-              descFr: 'Marketplace, colis, covoiturage, emplois — fait par nous, pour nous.' },
+              descEn: 'GoMarket, parcels home, carpooling, jobs — built by us, for us.',
+              descFr: 'GoMarket, colis, covoiturage, emplois — fait par nous, pour nous.' },
         ],
         upcoming: [
             { name: 'Solidarity', emoji: '❤️', color: '#CE1126',
               descEn: 'Mutual aid & community fundraising.',
               descFr: 'Entraide & cagnottes communautaires.' },
-            { name: 'Marketplace', emoji: '🛒', color: '#009639',
+            { name: 'GoMarket', emoji: '🛒', color: '#009639',
               descEn: 'Buy & sell within the diaspora.',
               descFr: 'Achetez & vendez dans la diaspora.' },
             { name: 'EasyGoParcel', emoji: '📦', color: '#0EA5E9',
               descEn: 'Send parcels home with trusted travelers.',
               descFr: 'Envoyez des colis avec des voyageurs vérifiés.' },
-            { name: 'RoadFam', emoji: '🚗', color: '#CE1126',
+            { name: 'GoRide', emoji: '🚗', color: '#CE1126',
               descEn: 'Carpool across cities & borders.',
               descFr: 'Covoiturez entre villes et frontières.' },
             { name: 'WorkConnect', emoji: '💼', color: '#7C3AED',

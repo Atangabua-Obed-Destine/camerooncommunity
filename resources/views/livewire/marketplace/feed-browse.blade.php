@@ -7,7 +7,7 @@
             @if ($this->activeCategory)
                 <span class="mr-1">{{ $this->activeCategory->icon }}</span>{{ $this->activeCategory->localizedName() }}
             @else
-                <span x-data x-text="$store.lang.t('Marketplace','Marketplace')"></span>
+                <span x-data x-text="$store.lang.t('GoMarket','GoMarket')"></span>
             @endif
         </h1>
         <div class="flex items-center gap-1.5">

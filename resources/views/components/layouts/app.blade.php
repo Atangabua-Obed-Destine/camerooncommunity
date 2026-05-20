@@ -123,11 +123,21 @@
 
                 {{-- Right-side actions --}}
                 <div class="ml-auto flex items-center gap-1">
+                    {{-- Kamer AI quick-launch --}}
+                    @auth
+                    <button type="button"
+                            @click="Livewire.dispatch('open-kamer-ai')"
+                            class="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 text-white/85 transition-colors hover:border-white/40 hover:text-white hover:bg-white/10"
+                            :title="$store.lang.t('Ask Kamer AI', 'Demander à Kamer AI')"
+                            aria-label="Kamer AI">
+                        <span class="text-base leading-none">🤖</span>
+                    </button>
+                    @endauth
+
                     {{-- Language Toggle --}}
                     <button @click="$store.lang.toggle()" class="flex items-center gap-1.5 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-white/80 transition-colors hover:border-white/40 hover:text-white"
                             :title="$store.lang.isEn ? 'Passer en français' : 'Switch to English'">
                         <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
-                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
                     </button>
 
                     {{-- Discover (kept here, smaller) --}}

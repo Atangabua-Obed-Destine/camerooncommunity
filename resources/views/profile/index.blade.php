@@ -239,7 +239,7 @@
                     <label class="flex items-start justify-between gap-3 cursor-pointer">
                         <div class="flex-1">
                             <span class="block text-sm font-medium text-slate-700"
-                                  x-text="$store.lang.t('Show away chats in The Yard', 'Afficher les discussions absentes dans Le Yard')"></span>
+                                  x-text="$store.lang.t('Show away chats in Go Connect', 'Afficher les discussions absentes dans Go Connect')"></span>
                             <span class="block text-xs text-slate-500 mt-0.5"
                                   x-text="$store.lang.t('Display chats auto-archived because you switched location.', 'Afficher les discussions auto-archivées suite à un changement de lieu.')"></span>
                         </div>

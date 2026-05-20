@@ -28,7 +28,7 @@
                 <div class="h-12 w-12 rounded-full bg-cm-green/10 flex items-center justify-center text-cm-green">
                     <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.13 2 11.2c0 2.88 1.46 5.45 3.75 7.13V22l3.43-1.88c.9.25 1.85.38 2.82.38 5.52 0 10-4.13 10-9.2S17.52 2 12 2z"/></svg>
                 </div>
-                <span class="text-sm font-semibold text-slate-700" x-text="$store.lang.t('The Yard', 'Le Yard')"></span>
+                <span class="text-sm font-semibold text-slate-700" x-text="$store.lang.t('Go Connect', 'Go Connect')"></span>
             </a>
             <a href="{{ route('people') }}" class="group rounded-xl bg-white border border-slate-200 p-4 hover:border-cm-green hover:shadow-md transition flex flex-col items-center gap-2">
                 <div class="h-12 w-12 rounded-full bg-cm-yellow/20 flex items-center justify-center text-amber-600">
@@ -70,9 +70,9 @@
                 <svg class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h7"/></svg>
             </div>
             <h2 class="text-lg font-bold text-slate-700" x-text="$store.lang.t('Your feed is coming soon', 'Votre fil arrive bientôt')"></h2>
-            <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto" x-text="$store.lang.t('We are putting the finishing touches on the community feed. Meanwhile, jump into The Yard to chat with fellow Cameroonians.', 'Nous peaufinons le fil de la communauté. En attendant, rejoignez Le Yard pour discuter avec d’autres Camerounais.')"></p>
+            <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto" x-text="$store.lang.t('We are putting the finishing touches on the community feed. Meanwhile, jump into Go Connect to chat with fellow Cameroonians.', 'Nous peaufinons le fil de la communauté. En attendant, rejoignez Go Connect pour discuter avec d’autres Camerounais.')"></p>
             <a href="{{ route('yard') }}" class="inline-flex items-center gap-2 mt-4 px-5 py-2 rounded-full bg-cm-green text-white text-sm font-semibold hover:bg-emerald-700 transition">
-                <span x-text="$store.lang.t('Open The Yard', 'Ouvrir Le Yard')"></span>
+                <span x-text="$store.lang.t('Open Go Connect', 'Ouvrir Go Connect')"></span>
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
             </a>
         </div>

@@ -8,6 +8,8 @@
 @php($staysTransparent = $staysTransparent ?? false)
 <nav x-data="{ scrolled: @js($forceScrolled), mobileOpen: false }"
      @if(!$forceScrolled && !$staysTransparent) @scroll.window="scrolled = (window.scrollY > 40)" @endif
+     @click.outside="mobileOpen = false"
+     @keydown.escape.window="mobileOpen = false"
      :class="scrolled ? 'bg-white/95 backdrop-blur shadow-sm' : 'bg-transparent'"
      class="fixed top-0 inset-x-0 z-50 transition-all duration-300 pointer-events-auto">
     {{-- Logo — anchored to the top header strip (NOT the full nav), so it

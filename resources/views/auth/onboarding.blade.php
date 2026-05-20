@@ -143,7 +143,7 @@
 
                 <div class="p-8 text-center">
                     <div class="w-20 h-20 mx-auto rounded-2xl bg-cm-green/10 flex items-center justify-center text-4xl mb-4">💬</div>
-                    <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('The Yard', 'Le Yard')"></h2>
+                    <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('Go Connect', 'Go Connect')"></h2>
                     <p class="text-slate-600 max-w-md mx-auto" x-text="$store.lang.t(
                         'Your digital gathering space. Chat with Cameroonians in your country, city, or private groups. Share moments, get advice, stay connected.',
                         'Votre espace de rencontre numérique. Discutez avec des Camerounais dans votre pays, votre ville, ou des groupes privés.'
@@ -201,7 +201,7 @@
                     <div class="w-20 h-20 mx-auto rounded-2xl bg-cm-red/10 flex items-center justify-center text-4xl mb-4">🤲</div>
                     <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('Solidarity & More', 'Solidarité et Plus')"></h2>
                     <p class="text-slate-600 max-w-md mx-auto" x-text="$store.lang.t(
-                        'Support fellow Cameroonians through community fundraising. Plus, discover marketplace, events, housing and more — coming soon!',
+                        'Support fellow Cameroonians through community fundraising. Plus, discover GoMarket, events, housing and more — coming soon!',
                         'Soutenez vos compatriotes camerounais par le financement communautaire. En plus, découvrez le marché, les événements, le logement et plus encore — bientôt disponible !'
                     )"></p>
                 </div>
@@ -216,7 +216,7 @@
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
                             <div class="text-2xl mb-1">🛒</div>
-                            <p class="text-xs font-semibold text-slate-700" x-text="$store.lang.t('Marketplace', 'Marché')"></p>
+                            <p class="text-xs font-semibold text-slate-700" x-text="$store.lang.t('GoMarket', 'GoMarket')"></p>
                             <span class="inline-block mt-1 text-[10px] font-bold text-cm-yellow bg-cm-yellow/10 rounded-full px-2 py-0.5" x-text="$store.lang.t('Coming Soon', 'Bientôt')"></span>
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
@@ -226,7 +226,7 @@
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
                             <div class="text-2xl mb-1">🚗</div>
-                            <p class="text-xs font-semibold text-slate-700">RoadFam</p>
+                            <p class="text-xs font-semibold text-slate-700">GoRide</p>
                             <span class="inline-block mt-1 text-[10px] font-bold text-cm-yellow bg-cm-yellow/10 rounded-full px-2 py-0.5" x-text="$store.lang.t('Coming Soon', 'Bientôt')"></span>
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
@@ -281,7 +281,7 @@
                         </div>
                         <div class="flex flex-wrap gap-2 pl-11">
                             <span class="inline-block text-xs bg-cm-green/10 text-cm-green font-medium rounded-full px-3 py-1.5 cursor-pointer hover:bg-cm-green/20 transition-colors"
-                                  x-text="$store.lang.t('Show me The Yard', 'Montre-moi le Yard')"></span>
+                                  x-text="$store.lang.t('Show me Go Connect', 'Montre-moi Go Connect')"></span>
                             <span class="inline-block text-xs bg-cm-green/10 text-cm-green font-medium rounded-full px-3 py-1.5 cursor-pointer hover:bg-cm-green/20 transition-colors"
                                   x-text="$store.lang.t('How does Solidarity work?', 'Comment fonctionne la Solidarité ?')"></span>
                             <span class="inline-block text-xs bg-cm-green/10 text-cm-green font-medium rounded-full px-3 py-1.5 cursor-pointer hover:bg-cm-green/20 transition-colors"
@@ -295,7 +295,7 @@
                         <span x-text="$store.lang.t('Back', 'Retour')"></span>
                     </button>
                     <a href="{{ route('yard') }}" class="rounded-xl bg-cm-green px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-cm-green-light flex items-center gap-2">
-                        <span x-text="$store.lang.t('Enter The Yard 🎉', 'Entrer dans le Yard 🎉')"></span>
+                        <span x-text="$store.lang.t('Enter Go Connect 🎉', 'Entrer dans Go Connect 🎉')"></span>
                     </a>
                 </div>
             </div>

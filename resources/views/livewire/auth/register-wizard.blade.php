@@ -5,7 +5,7 @@
     Right: 4-step wizard: Location → Account → Roots → Welcome Home
     ═══════════════════════════════════════════════════════════════════
 --}}
-<div class="min-h-screen flex flex-col lg:flex-row"
+<div class="min-h-screen flex flex-col lg:flex-row bg-white"
      x-data="{
         detecting: false,
         detected: @entangle('gps_detected'),
@@ -208,7 +208,7 @@
                         <span class="text-lg">💬</span>
                     </div>
                     <div>
-                        <p class="text-sm font-bold text-white" x-text="$store.lang.t('The Yard', 'Le Yard')"></p>
+                        <p class="text-sm font-bold text-white" x-text="$store.lang.t('Go Connect', 'Go Connect')"></p>
                         <p class="text-xs text-white/60" x-text="$store.lang.t('Live chat rooms by city & country', 'Salons de discussion par ville et pays')"></p>
                     </div>
                 </div>
@@ -275,9 +275,9 @@
 
             {{-- Mobile-only logo (hidden on lg+) --}}
             <div class="text-center mb-5 lg:hidden">
-                <a href="{{ route('home') }}" class="inline-flex items-center group">
+                <a href="{{ route('home') }}" class="inline-flex items-center justify-center rounded-2xl bg-cm-green px-5 py-3 shadow-lg shadow-cm-green/20 group">
                     @if($__siteLogo ?? null)
-                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-20 object-contain transition-transform group-hover:scale-110">
+                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain transition-transform group-hover:scale-110">
                     @else
                         <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
                     @endif
@@ -705,7 +705,7 @@
                                 <div>
                                     <span class="text-xl block">💬</span>
                                     <span class="text-[11px] font-medium text-slate-700 block mt-0.5"
-                                          x-text="$store.lang.t('The Yard', 'Le Yard')"></span>
+                                          x-text="$store.lang.t('Go Connect', 'Go Connect')"></span>
                                     <span class="text-[10px] text-slate-500" x-text="$store.lang.t('Chat rooms', 'Salons')"></span>
                                 </div>
                                 <div>

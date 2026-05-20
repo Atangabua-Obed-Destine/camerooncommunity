@@ -9,7 +9,7 @@
     {{-- ─── Title + settings ─── --}}
     <div class="flex items-center justify-between px-1">
         <h2 class="text-xl font-extrabold text-slate-900 tracking-tight">
-            <span x-data x-text="$store.lang.t('Marketplace','Marketplace')"></span>
+            <span x-data x-text="$store.lang.t('GoMarket','GoMarket')"></span>
         </h2>
         <button type="button" title="{{ $mpLang === 'fr' ? 'Paramètres' : 'Settings' }}"
                 class="w-9 h-9 grid place-items-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition">

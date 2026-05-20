@@ -17,7 +17,7 @@
 
         {{-- ─── Breadcrumb ─── --}}
         <nav class="text-xs text-slate-600 mb-4 flex items-center gap-1.5 truncate">
-            <a href="{{ route('marketplace.index') }}" wire:navigate class="hover:text-cm-green font-medium">Marketplace</a>
+            <a href="{{ route('marketplace.index') }}" wire:navigate class="hover:text-cm-green font-medium">GoMarket</a>
             @if ($listing->category)
                 <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
                 <a href="{{ route('marketplace.category', ['slug' => $listing->category->slug]) }}" wire:navigate class="hover:text-cm-green font-medium">

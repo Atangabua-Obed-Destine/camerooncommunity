@@ -20,7 +20,7 @@
             <a href="{{ route('marketplace.index') }}" wire:navigate
                class="hidden sm:inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs px-3.5 py-2 rounded-full transition shrink-0">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-                {{ $lang === 'fr' ? 'Marketplace' : 'Marketplace' }}
+                {{ $lang === 'fr' ? 'GoMarket' : 'GoMarket' }}
             </a>
         </div>
 
@@ -37,7 +37,7 @@
                 </p>
                 <a href="{{ route('marketplace.index') }}" wire:navigate
                    class="mt-5 inline-flex items-center gap-2 bg-cm-green text-white px-5 py-2.5 rounded-full text-sm font-bold hover:bg-cm-green/90 shadow-md transition">
-                    {{ $lang === 'fr' ? 'Parcourir le Marketplace' : 'Browse Marketplace' }} →
+                    {{ $lang === 'fr' ? 'Parcourir GoMarket' : 'Browse GoMarket' }} →
                 </a>
             </div>
         @else

@@ -1,4 +1,4 @@
-<x-layouts.admin :title="'The Yard'">
+<x-layouts.admin :title="'Go Connect'">
     <div class="space-y-6">
         {{-- Header --}}
         <div class="flex items-center justify-between">

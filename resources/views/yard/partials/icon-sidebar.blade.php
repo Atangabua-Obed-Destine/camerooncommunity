@@ -8,9 +8,9 @@
         {{-- The Yard (Chats) --}}
         <a href="{{ route('yard') }}"
            class="yard-icon-sidebar__item {{ $active === 'yard' ? 'yard-icon-sidebar__item--active' : '' }}"
-           @mouseenter="tooltip = $store.lang.t('The Yard', 'Le Yard')" @mouseleave="tooltip = ''">
+           @mouseenter="tooltip = $store.lang.t('Go Connect', 'Go Connect')" @mouseleave="tooltip = ''">
             <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('The Yard', 'Le Yard')"></span>
+            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Go Connect', 'Go Connect')"></span>
         </a>
 
         {{-- Discover / Explore --}}
@@ -44,11 +44,11 @@
             <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
         </div>
 
-        {{-- Marketplace --}}
+        {{-- GoMarket --}}
         <div class="yard-icon-sidebar__item yard-icon-sidebar__item--soon"
-             @mouseenter="tooltip = $store.lang.t('Marketplace — Coming Soon', 'Marketplace — Bientôt')" @mouseleave="tooltip = ''">
+             @mouseenter="tooltip = $store.lang.t('GoMarket — Coming Soon', 'GoMarket — Bientôt')" @mouseleave="tooltip = ''">
             <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
-            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Marketplace', 'Marketplace')"></span>
+            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('GoMarket', 'GoMarket')"></span>
             <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
         </div>
 
@@ -60,11 +60,11 @@
             <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
         </div>
 
-        {{-- RoadFam --}}
+        {{-- GoRide --}}
         <div class="yard-icon-sidebar__item yard-icon-sidebar__item--soon"
-             @mouseenter="tooltip = $store.lang.t('RoadFam — Coming Soon', 'RoadFam — Bientôt')" @mouseleave="tooltip = ''">
+             @mouseenter="tooltip = $store.lang.t('GoRide — Coming Soon', 'GoRide — Bientôt')" @mouseleave="tooltip = ''">
             <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg>
-            <span class="yard-icon-sidebar__label">RoadFam</span>
+            <span class="yard-icon-sidebar__label">GoRide</span>
             <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
         </div>
 

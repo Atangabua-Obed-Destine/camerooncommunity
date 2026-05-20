@@ -6,12 +6,12 @@
         <div class="mb-5 flex items-start gap-3">
             <a href="{{ route('marketplace.index') }}" wire:navigate
                class="hidden sm:grid w-11 h-11 place-items-center rounded-full bg-white ring-1 ring-slate-200 text-slate-700 hover:bg-slate-50 hover:ring-cm-green/40 transition shrink-0"
-               title="{{ $lang === 'fr' ? 'Retour au Marketplace' : 'Back to Marketplace' }}">
+               title="{{ $lang === 'fr' ? 'Retour à GoMarket' : 'Back to GoMarket' }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
             </a>
             <div class="flex-1 min-w-0">
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
-                    <span x-data x-text="$store.lang.t('Sell on Marketplace','Vendre sur le Marketplace')"></span>
+                    <span x-data x-text="$store.lang.t('Sell on GoMarket','Vendre sur GoMarket')"></span>
                 </h1>
                 <p class="mt-1 text-sm text-slate-600">
                     <span x-data x-text="$store.lang.t('Reach buyers across Cameroon and the diaspora.','Atteignez des acheteurs au Cameroun et dans la diaspora.')"></span>

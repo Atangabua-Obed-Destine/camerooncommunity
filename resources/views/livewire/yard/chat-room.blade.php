@@ -1661,7 +1661,7 @@
     {{-- Empty state --}}
     <div class="yard-empty">
         <div class="yard-empty__icon">💬</div>
-        <h2 class="yard-empty__title" x-text="$store.lang.t('Welcome to The Yard', 'Bienvenue au Yard')"></h2>
+        <h2 class="yard-empty__title" x-text="$store.lang.t('Welcome to Go Connect', 'Bienvenue sur Go Connect')"></h2>
         <p class="yard-empty__desc" x-text="$store.lang.t(
             'Select a conversation to start chatting.',
             'Choisissez une conversation pour commencer.'

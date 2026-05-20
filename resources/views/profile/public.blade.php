@@ -242,7 +242,7 @@
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="font-bold text-slate-900">
-                            <span x-text="$store.lang.t('Marketplace listings', 'Annonces du Marketplace')"></span>
+                            <span x-text="$store.lang.t('GoMarket listings', 'Annonces GoMarket')"></span>
                             <span class="text-slate-400 font-normal text-sm">· {{ $stats['listings'] }}</span>
                         </h2>
                         @if($stats['listings'] > $listings->count())

@@ -31,41 +31,44 @@
     // Responsive icon sizing
     $iconSize = $isMobile ? 'h-6 w-6' : 'h-7 w-7';
 
-    // Active underline / color
-    $activeBar    = 'absolute bottom-0 left-2 right-2 h-1 rounded-t-full bg-cm-yellow';
-    $iconActive   = 'text-cm-yellow';
-    $iconInactive = 'text-white/70 hover:text-white';
-    $iconSoon     = 'text-white/70 hover:text-white';
+    // Live (working) tabs always render bright white + bold so they're clearly
+    // visible & legible. The currently-selected one gets an extra pill wrapper
+    // + slight scale + yellow underline. Coming-soon tabs are dimmed.
+    $activeBar     = 'absolute bottom-0 left-2 right-2 h-1 rounded-t-full bg-cm-yellow';
+    $iconActive    = 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.55)] scale-110';
+    $iconInactive  = 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]';
+    $iconSoon      = 'text-white/40 hover:text-white/70';
+    $activeWrapper = 'bg-white/15 ring-1 ring-white/30';
 @endphp
 
-{{-- HOME / FEED --}}
+{{-- HOME / FEED (labeled "The Yard") --}}
 <a href="{{ route('home') }}"
-   class="{{ $tabBase }} group transition-colors {{ $isHome ? '' : 'hover:bg-white/5' }}"
-   :title="$store.lang.t('Home', 'Accueil')"
-   aria-label="Home">
+   class="{{ $tabBase }} group transition-colors {{ $isHome ? $activeWrapper : 'hover:bg-white/5' }}"
+   :title="$store.lang.t('The Yard', 'Le Yard')"
+   aria-label="The Yard">
     <svg class="{{ $iconSize }} {{ $isHome ? $iconActive : $iconInactive }} transition-colors" fill="currentColor" viewBox="0 0 24 24">
         <path d="M12 2.69 3 11h2v9h5v-6h4v6h5v-9h2L12 2.69z"/>
     </svg>
     @if($isHome && !$isMobile)<span class="{{ $activeBar }}"></span>@endif
 </a>
 
-{{-- THE YARD / MESSENGER --}}
+{{-- THE YARD / MESSENGER (labeled "Go Connect") --}}
 <a href="{{ route('yard') }}"
-   class="{{ $tabBase }} group transition-colors {{ $isYard ? '' : 'hover:bg-white/5' }}"
-   :title="$store.lang.t('The Yard', 'Le Yard')"
-   aria-label="The Yard">
+   class="{{ $tabBase }} group transition-colors {{ $isYard ? $activeWrapper : 'hover:bg-white/5' }}"
+   :title="$store.lang.t('Go Connect', 'Go Connect')"
+   aria-label="Go Connect">
     <svg class="{{ $iconSize }} {{ $isYard ? $iconActive : $iconInactive }} transition-colors" fill="currentColor" viewBox="0 0 24 24">
         <path d="M12 2C6.48 2 2 6.13 2 11.2c0 2.88 1.46 5.45 3.75 7.13V22l3.43-1.88c.9.25 1.85.38 2.82.38 5.52 0 10-4.13 10-9.2S17.52 2 12 2zm1.05 12.3-2.55-2.72-4.95 2.72 5.45-5.78 2.6 2.72 4.9-2.72-5.45 5.78z"/>
     </svg>
     @if($isYard && !$isMobile)<span class="{{ $activeBar }}"></span>@endif
 </a>
 
-{{-- MARKETPLACE --}}
+{{-- MARKETPLACE (labeled "GoMarket") --}}
 <a href="{{ route('marketplace.index') }}"
-   class="{{ $tabBase }} group transition-colors {{ $isMarketplace ? '' : 'hover:bg-white/5' }}"
-   :title="$store.lang.t('Marketplace', 'Marketplace')"
-   aria-label="Marketplace">
-    <svg class="{{ $iconSize }} {{ $isMarketplace ? $iconActive : $iconInactive }} transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+   class="{{ $tabBase }} group transition-colors {{ $isMarketplace ? $activeWrapper : 'hover:bg-white/5' }}"
+   :title="$store.lang.t('GoMarket', 'GoMarket')"
+   aria-label="GoMarket">
+    <svg class="{{ $iconSize }} {{ $isMarketplace ? $iconActive : $iconInactive }} transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="{{ $isMarketplace ? '2.75' : '2.5' }}">
         <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 13h6"/>
     </svg>
     @if($isMarketplace && !$isMobile)<span class="{{ $activeBar }}"></span>@endif
@@ -77,7 +80,7 @@
     // does NOT navigate anywhere.
     $soonTabs = [
         ['key' => 'easygoparcel', 'en' => 'EasyGoParcel', 'fr' => 'EasyGoParcel'],
-        ['key' => 'roadfam',      'en' => 'RoadFam',      'fr' => 'RoadFam'],
+        ['key' => 'roadfam',      'en' => 'GoRide',       'fr' => 'GoRide'],
         ['key' => 'workconnect',  'en' => 'WorkConnect',  'fr' => 'WorkConnect'],
     ];
 @endphp

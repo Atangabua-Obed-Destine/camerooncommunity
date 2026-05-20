@@ -127,7 +127,7 @@
                     ],
                     // Round 2 — engagement style
                     [
-                        ['en' => '💬 I want to chat in The Yard',         'fr' => '💬 Je veux discuter dans Le Yard'],
+                        ['en' => '💬 I want to chat in Go Connect',     'fr' => '💬 Je veux discuter dans Go Connect'],
                         ['en' => '🎉 Show me upcoming events',            'fr' => '🎉 Montrez-moi les événements à venir'],
                         ['en' => '❤️ Help someone in need',               'fr' => '❤️ Aider quelqu\'un dans le besoin'],
                     ],
@@ -281,8 +281,8 @@
                 <div class="text-center py-8">
                     <div class="text-4xl mb-3">🌍</div>
                     <p class="text-sm text-slate-500" x-text="$store.lang.t(
-                        'No communities found for your location yet. You can discover more in The Yard!',
-                        'Aucune communauté trouvée pour votre localisation. Vous en trouverez plus dans le Yard !'
+                        'No communities found for your location yet. You can discover more in Go Connect!',
+                        'Aucune communauté trouvée pour votre localisation. Vous en trouverez plus dans Go Connect !'
                     )"></p>
                 </div>
                 @endforelse
@@ -292,7 +292,7 @@
                 <div class="flex items-start gap-2 bg-blue-50 rounded-xl p-3 border border-blue-100">
                     <span class="text-base shrink-0">💡</span>
                     <p class="text-[11px] text-blue-700 leading-relaxed" x-text="$store.lang.t(
-                        'Tap a room card to select it. You\'ll be able to discover more rooms later in The Yard sidebar.',
+                        'Tap a room card to select it. You\'ll be able to discover more rooms later in the Go Connect sidebar.',
                         'Appuyez sur une carte pour la sélectionner. Vous pourrez découvrir plus de salles dans la barre latérale du Yard.'
                     )"></p>
                 </div>
@@ -474,7 +474,7 @@
                        x-transition:enter="transition ease-out duration-500 delay-500"
                        x-transition:enter-start="opacity-0"
                        x-transition:enter-end="opacity-100"
-                       x-text="$store.lang.t('Welcome to the family. The Yard awaits.', 'Bienvenue dans la famille. Le Yard vous attend.')"></p>
+                       x-text="$store.lang.t('Welcome to the family. Go Connect awaits.', 'Bienvenue dans la famille. Go Connect vous attend.')"></p>
                 </div>
             </div>
 
@@ -489,7 +489,7 @@
                     <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <div class="text-2xl mb-2">💬</div>
                         <p class="text-xs font-semibold text-slate-700" x-text="$store.lang.t('Chat', 'Discuter')"></p>
-                        <p class="text-[10px] text-slate-500 mt-0.5" x-text="$store.lang.t('The Yard', 'Le Yard')"></p>
+                        <p class="text-[10px] text-slate-500 mt-0.5" x-text="$store.lang.t('Go Connect', 'Go Connect')"></p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <div class="text-2xl mb-2">🤲</div>
@@ -506,7 +506,7 @@
                 {{-- CTA Button --}}
                 <button wire:click="completeOnboarding"
                         class="w-full rounded-xl bg-cm-green px-8 py-4 text-base font-bold text-white hover:bg-cm-green/90 transition-all duration-200 flex items-center justify-center gap-3 shadow-xl shadow-cm-green/30 hover:shadow-2xl hover:shadow-cm-green/40 hover:-translate-y-0.5">
-                    <span x-text="$store.lang.t('Enter The Yard 🚀', 'Entrer dans le Yard 🚀')"></span>
+                    <span x-text="$store.lang.t('Enter Go Connect 🚀', 'Entrer dans Go Connect 🚀')"></span>
                 </button>
             </div>
         </div>

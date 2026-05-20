@@ -1,7 +1,7 @@
 <x-layouts.guest>
     <x-slot:title>Login — Cameroon Network</x-slot:title>
 
-    <div class="min-h-screen flex flex-col lg:flex-row">
+    <div class="min-h-screen flex flex-col lg:flex-row bg-white">
 
         {{-- ════════════════════════════════════════════════════════════ --}}
         {{-- LEFT PANEL — Branding, Features & Stats                      --}}
@@ -60,7 +60,7 @@
                             <span class="text-lg">💬</span>
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-white" x-text="$store.lang.t('The Yard', 'Le Yard')"></p>
+                            <p class="text-sm font-bold text-white" x-text="$store.lang.t('Go Connect', 'Go Connect')"></p>
                             <p class="text-xs text-white/60" x-text="$store.lang.t('Live chat rooms by city & country', 'Salons de discussion par ville et pays')"></p>
                         </div>
                     </div>
@@ -127,9 +127,9 @@
 
                 {{-- Mobile-only logo --}}
                 <div class="text-center mb-6 lg:hidden">
-                    <a href="{{ route('home') }}" class="inline-flex items-center group">
+                    <a href="{{ route('home') }}" class="inline-flex items-center justify-center rounded-2xl bg-cm-green px-5 py-3 shadow-lg shadow-cm-green/20 group">
                         @if($__siteLogo ?? null)
-                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-20 object-contain transition-transform group-hover:scale-110">
+                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain transition-transform group-hover:scale-110">
                         @else
                             <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
                         @endif

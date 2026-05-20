@@ -6,7 +6,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 1 — HERO (full viewport)
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="relative z-0 min-h-screen flex items-center overflow-hidden pt-24 sm:pt-28 lg:pt-32">
+    <section class="relative z-0 min-h-screen flex items-start lg:items-center overflow-x-hidden pt-16 sm:pt-20 lg:pt-32 pb-8 lg:pb-0">
         {{-- Background image --}}
         <div class="absolute inset-0 pointer-events-none">
             <img src="{{ asset('images/hero-bg.jpg') }}" alt="" class="h-full w-full object-cover">
@@ -39,12 +39,12 @@
              ═══════════════════════════════════════════════════ --}}
         <x-cameroon-ribbon />
 
-        <div class="relative z-10 mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12 py-20 w-full">
-            <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div class="relative z-10 mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12 py-4 sm:py-8 lg:py-20 w-full">
+            <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                 {{-- Left: Text Content --}}
-                <div data-animate class="space-y-8">
+                <div data-animate class="space-y-4 sm:space-y-6 lg:space-y-8 min-w-0">
                     {{-- GPS Detection Badge --}}
-                    <div x-data="{ country: null }" x-init="
+                    <div class="hidden sm:block" x-data="{ country: null }" x-init="
                         const locMode = @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps'));
                         if (locMode === 'ip') {
                             try {
@@ -62,49 +62,90 @@
                             }, () => {}, { timeout: 5000 });
                         }
                     ">
-                        <div x-show="country" x-transition class="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-4 py-2 text-sm text-cm-yellow border border-cm-yellow/20">
-                            <span class="relative flex h-2 w-2">
+                        <div x-show="country" x-transition class="inline-flex max-w-full items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-3 sm:px-4 py-2 text-xs sm:text-sm text-cm-yellow border border-cm-yellow/20">
+                            <span class="relative flex h-2 w-2 shrink-0">
                                 <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-cm-yellow opacity-75"></span>
                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-cm-yellow"></span>
                             </span>
-                            <span x-text="$store.lang.t(
+                            <span class="truncate" x-text="$store.lang.t(
                                 'Welcome — your ' + country + ' community is right here',
                                 'Bienvenue — votre communauté ' + country + ' est juste ici'
                             )"></span>
                         </div>
                     </div>
 
-                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-white leading-tight">
-                        <span class="whitespace-nowrap" x-text="$store.lang.t('Connecting Cameroonians', 'Connecter les Camerounais')"></span>
-                        <br>
-                        <span class="text-cm-yellow" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
+                    <h1 class="font-extrabold text-white leading-[1.15] tracking-tight text-center lg:text-left">
+                        <span class="block whitespace-nowrap font-black text-[clamp(22px,7.2vw,44px)] lg:text-6xl" x-text="$store.lang.t('Connecting Cameroonians', 'Connecter les Camerounais')"></span>
+                        <span class="block text-cm-yellow text-[clamp(20px,6vw,38px)] sm:text-5xl lg:text-6xl" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
                     </h1>
 
-                    <p class="text-lg sm:text-xl text-slate-300 max-w-3xl leading-relaxed line-clamp-2"
+                    <p class="text-[15px] sm:text-lg lg:text-xl text-white max-w-3xl leading-relaxed"
                        x-text="$store.lang.t(
                            'Connect with Cameroonians in your city and country. Find housing, send packages home, get help — all in one place built just for you.',
                            'Connectez-vous avec les Camerounais de votre ville et pays. Trouvez un logement, envoyez des colis au pays, obtenez de l\'aide — tout en un seul endroit conçu pour vous.'
                        )"></p>
 
                     {{-- CTAs --}}
-                    <div class="flex flex-wrap gap-4">
-                        <a href="{{ route('register') }}" class="inline-flex items-center gap-2 rounded-xl bg-cm-yellow px-8 py-4 text-base font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
-                            <span x-text="$store.lang.t('Join Free', 'Rejoindre Gratuitement')"></span>
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-4">
+                        <a href="{{ route('register') }}" class="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-xl bg-cm-yellow px-3 sm:px-8 py-3 sm:py-4 text-xs sm:text-base font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
+                            <span class="truncate" x-text="$store.lang.t('Join Free', 'Rejoindre Gratuitement')"></span>
+                            <svg class="h-4 w-4 sm:h-5 sm:w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </a>
-                        <a href="#how-it-works" class="inline-flex items-center gap-2 rounded-xl border-2 border-white/30 px-8 py-4 text-base font-bold text-white transition-all hover:bg-white/10 hover:border-white/50">
-                            <span x-text="$store.lang.t('See How It Works', 'Voir Comment Ça Marche')"></span>
+                        <a href="#how-it-works" class="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-xl border-2 border-white/30 px-3 sm:px-8 py-3 sm:py-4 text-xs sm:text-base font-bold text-white transition-all hover:bg-white/10 hover:border-white/50">
+                            <span class="truncate" x-text="$store.lang.t('See How It Works', 'Voir Comment Ça Marche')"></span>
                         </a>
                     </div>
 
+                    {{-- Get the App — Store badges (mobile-first, coming soon) --}}
+                    <div class="pt-1">
+                        <p class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-white/60 mb-2 text-center lg:text-left"
+                           x-text="$store.lang.t('Get the app', 'Téléchargez l’app')"></p>
+                        <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-3 justify-center lg:justify-start">
+                            {{-- App Store --}}
+                            <a href="#"
+                               @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('iOS app coming soon!', 'App iOS bientôt disponible !') } }))"
+                               class="group relative inline-flex flex-1 sm:flex-none min-w-0 items-center gap-2 sm:gap-3 rounded-xl bg-black px-3 sm:px-4 py-2 sm:py-2.5 text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:ring-white/25"
+                               :title="$store.lang.t('Download on the App Store — Coming soon', 'Télécharger sur l’App Store — Bientôt')">
+                                <svg class="h-7 w-7 sm:h-8 sm:w-8 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                    <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
+                                </svg>
+                                <div class="flex flex-col leading-tight min-w-0">
+                                    <span class="text-[9px] sm:text-[10px] uppercase tracking-wide text-white/70" x-text="$store.lang.t('Download on the', 'Télécharger sur l’')"></span>
+                                    <span class="text-sm sm:text-base font-semibold truncate">App Store</span>
+                                </div>
+                                <span class="absolute -top-1.5 -right-1.5 rounded-full bg-cm-yellow px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-cm-green-dark shadow"
+                                      x-text="$store.lang.t('SOON', 'BIENTÔT')"></span>
+                            </a>
+
+                            {{-- Google Play --}}
+                            <a href="#"
+                               @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('Android app coming soon!', 'App Android bientôt disponible !') } }))"
+                               class="group relative inline-flex flex-1 sm:flex-none min-w-0 items-center gap-2 sm:gap-3 rounded-xl bg-black px-3 sm:px-4 py-2 sm:py-2.5 text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:ring-white/25"
+                               :title="$store.lang.t('Get it on Google Play — Coming soon', 'Disponible sur Google Play — Bientôt')">
+                                <svg class="h-7 w-7 sm:h-8 sm:w-8 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#34a853"/>
+                                    <path d="m13.792 12 2.92-2.92 4.06 2.34a1 1 0 0 1 0 1.74l-4.06 2.34L13.792 12z" fill="#fbbc04"/>
+                                    <path d="m16.713 9.08-2.92 2.92L3.61 1.814A1 1 0 0 1 4.43 1.7l12.282 7.38z" fill="#ea4335"/>
+                                    <path d="m13.792 12 2.92 2.92L4.43 22.3a1 1 0 0 1-.82-.114L13.792 12z" fill="#4285f4"/>
+                                </svg>
+                                <div class="flex flex-col leading-tight min-w-0">
+                                    <span class="text-[9px] sm:text-[10px] uppercase tracking-wide text-white/70" x-text="$store.lang.t('Get it on', 'Disponible sur')"></span>
+                                    <span class="text-sm sm:text-base font-semibold truncate">Google Play</span>
+                                </div>
+                                <span class="absolute -top-1.5 -right-1.5 rounded-full bg-cm-yellow px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-cm-green-dark shadow"
+                                      x-text="$store.lang.t('SOON', 'BIENTÔT')"></span>
+                            </a>
+                        </div>
+                    </div>
+
                     {{-- User Counter --}}
-                    <div class="flex items-center gap-3 text-slate-400" data-animate>
-                        <div class="flex -space-x-2">
+                    <div class="flex items-center gap-3 text-slate-300 flex-wrap" data-animate>
+                        <div class="flex -space-x-2 shrink-0">
                             <div class="w-8 h-8 rounded-full bg-cm-yellow/80 border-2 border-cm-green flex items-center justify-center text-xs font-bold text-cm-green-dark">A</div>
                             <div class="w-8 h-8 rounded-full bg-cm-red/80 border-2 border-cm-green flex items-center justify-center text-xs font-bold text-white">E</div>
                             <div class="w-8 h-8 rounded-full bg-white/80 border-2 border-cm-green flex items-center justify-center text-xs font-bold text-cm-green">N</div>
                         </div>
-                        <p class="text-sm">
+                        <p class="text-xs sm:text-sm min-w-0">
                             <span class="font-bold text-cm-yellow" data-count-to="{{ max($memberCount, 50) }}" data-count-duration="2000">0</span>
                             <span x-text="$store.lang.t(' Cameroonians already connected', ' Camerounais déjà connectés')"></span>
                         </p>
@@ -112,8 +153,8 @@
                 </div>
 
                 {{-- Right: Animated Hero Slider --}}
-                <div data-animate class="hidden lg:block">
-                    <div class="relative ml-auto w-[420px]"
+                <div data-animate class="block">
+                    <div class="relative mx-auto lg:ml-auto lg:mr-0 w-full max-w-[340px] sm:max-w-[380px] lg:w-[420px] lg:max-w-none"
                          x-data="{
                             current: 0,
                             slides: 3,
@@ -387,7 +428,7 @@
         </div>
 
         {{-- Scroll indicator --}}
-        <div class="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
+        <div class="hidden lg:block absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
             <svg class="w-6 h-6 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
         </div>
     </section>
@@ -421,7 +462,7 @@
                        )"></p>
                     <div class="mt-4 flex items-center gap-2 text-cm-green font-semibold text-sm">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                        <span x-text="$store.lang.t('Solved by The Yard', 'Résolu par Le Yard')"></span>
+                        <span x-text="$store.lang.t('Solved by Go Connect', 'Résolu par Go Connect')"></span>
                     </div>
                 </div>
 
@@ -483,11 +524,11 @@
 
             @php
                 $modules = [
-                    ['name' => 'The Yard', 'nameFr' => 'Le Yard', 'icon' => '💬', 'desc' => 'Real-time chat rooms for your country and city', 'descFr' => 'Salons de discussion en temps réel pour votre pays et ville', 'live' => true],
+                    ['name' => 'Go Connect', 'nameFr' => 'Go Connect', 'icon' => '💬', 'desc' => 'Real-time chat rooms for your country and city', 'descFr' => 'Salons de discussion en temps réel pour votre pays et ville', 'live' => true],
                     ['name' => 'Solidarity', 'nameFr' => 'Solidarité', 'icon' => '🤝', 'desc' => 'Community fundraising for those in need', 'descFr' => 'Collectes communautaires pour ceux dans le besoin', 'live' => false],
                     ['name' => 'Marché', 'nameFr' => 'Marché', 'icon' => '🛒', 'desc' => 'Buy and sell within the community', 'descFr' => 'Achetez et vendez au sein de la communauté', 'live' => false],
                     ['name' => 'EasyGoParcel', 'nameFr' => 'EasyGoParcel', 'icon' => '📦', 'desc' => 'Send parcels home with trusted travellers', 'descFr' => 'Envoyez des colis au pays avec des voyageurs de confiance', 'live' => false],
-                    ['name' => 'RoadFam', 'nameFr' => 'RoadFam', 'icon' => '🚗', 'desc' => 'Ride sharing for community events and travel', 'descFr' => 'Covoiturage pour événements et voyages communautaires', 'live' => false],
+                    ['name' => 'GoRide', 'nameFr' => 'GoRide', 'icon' => '🚗', 'desc' => 'Ride sharing for community events and travel', 'descFr' => 'Covoiturage pour événements et voyages communautaires', 'live' => false],
                     ['name' => 'CamEvents', 'nameFr' => 'CamEvents', 'icon' => '🎉', 'desc' => 'Discover and create community events', 'descFr' => 'Découvrez et créez des événements communautaires', 'live' => false],
                     ['name' => 'KamerNest', 'nameFr' => 'KamerNest', 'icon' => '🏠', 'desc' => 'Find trusted housing from the community', 'descFr' => 'Trouvez un logement de confiance dans la communauté', 'live' => false],
                     ['name' => 'WorkConnect', 'nameFr' => 'WorkConnect', 'icon' => '💼', 'desc' => 'Job listings and career opportunities', 'descFr' => 'Offres d\'emploi et opportunités de carrière', 'live' => false],
@@ -527,14 +568,14 @@
                 {{-- Left: Copy --}}
                 <div class="space-y-6">
                     <div class="inline-flex items-center gap-2 rounded-full bg-cm-green/10 px-4 py-2 text-sm font-semibold text-cm-green">
-                        💬 <span x-text="$store.lang.t('The Yard', 'Le Yard')"></span>
+                        💬 <span x-text="$store.lang.t('Go Connect', 'Go Connect')"></span>
                     </div>
                     <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
                         x-text="$store.lang.t('Where your community gathers.', 'Où votre communauté se rassemble.')"></h2>
                     <p class="text-lg text-slate-600 leading-relaxed"
                        x-text="$store.lang.t(
-                           'The Yard is your home base. Country-wide and city-specific chat rooms connect you with Cameroonians wherever you are. Share experiences, ask for help, celebrate together.',
-                           'Le Yard est votre base. Des salons nationaux et par ville vous connectent avec les Camerounais où que vous soyez. Partagez, demandez de l\'aide, célébrez ensemble.'
+                           'Go Connect is your home base. Country-wide and city-specific chat rooms connect you with Cameroonians wherever you are. Share experiences, ask for help, celebrate together.',
+                           'Go Connect est votre base. Des salons nationaux et par ville vous connectent avec les Camerounais où que vous soyez. Partagez, demandez de l\'aide, célébrez ensemble.'
                        )"></p>
 
                     <div class="space-y-4">
@@ -570,7 +611,7 @@
                     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
                         {{-- Room list header --}}
                         <div class="bg-cm-green px-5 py-4">
-                            <h3 class="text-white font-bold text-lg">The Yard</h3>
+                            <h3 class="text-white font-bold text-lg">Go Connect</h3>
                             <p class="text-slate-400 text-sm">Your rooms</p>
                         </div>
                         {{-- Room entries --}}
@@ -755,7 +796,7 @@
                         ['value' => max($memberCount, 150), 'label' => 'Members in the UK', 'labelFr' => 'Membres au Royaume-Uni', 'suffix' => '+'],
                         ['value' => max($regionCount, 12), 'label' => 'Regions with active communities', 'labelFr' => 'Régions avec communautés actives', 'suffix' => ''],
                         ['value' => 8, 'label' => 'Solidarity campaigns completed', 'labelFr' => 'Campagnes de solidarité complétées', 'suffix' => ''],
-                        ['value' => 2400, 'label' => 'Messages sent in The Yard', 'labelFr' => 'Messages envoyés dans Le Yard', 'suffix' => '+'],
+                        ['value' => 2400, 'label' => 'Messages sent in Go Connect', 'labelFr' => 'Messages envoyés dans Go Connect', 'suffix' => '+'],
                     ];
                 @endphp
 
@@ -791,8 +832,8 @@
                             'city' => 'London',
                             'initial' => 'AT',
                             'color' => 'bg-cm-green',
-                            'quote' => 'When I first moved to London, I didn\'t know a single person. The Yard connected me with 50 Cameroonians in my city within the first week. It\'s like having a piece of home.',
-                            'quoteFr' => 'Quand je suis arrivée à Londres, je ne connaissais personne. Le Yard m\'a connectée avec 50 Camerounais dans ma ville en une semaine. C\'est comme avoir un morceau de chez soi.',
+                            'quote' => 'When I first moved to London, I didn\'t know a single person. Go Connect connected me with 50 Cameroonians in my city within the first week. It\'s like having a piece of home.',
+                            'quoteFr' => 'Quand je suis arrivée à Londres, je ne connaissais personne. Go Connect m\'a connectée avec 50 Camerounais dans ma ville en une semaine. C\'est comme avoir un morceau de chez soi.',
                         ],
                         [
                             'name' => 'Emmanuel Fru',
@@ -919,59 +960,12 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 11 — FOOTER
          ═══════════════════════════════════════════════════════════════ --}}
-    <footer class="bg-slate-900 text-slate-400 py-8">
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
-            <div class="grid md:grid-cols-4 gap-6">
-                {{-- Brand --}}
-                <div class="md:col-span-2">
-                    <div class="flex items-center gap-2 mb-2">
-                        @if($__siteLogo ?? null)
-                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-10 object-contain">
-                        @else
-                            <span class="text-2xl">🇨🇲</span>
-                        @endif
-                    </div>
-                    <p class="text-sm leading-snug max-w-sm"
-                       x-text="$store.lang.t('Connecting Cameroonians. Wherever They Are.', 'Connecter les Camerounais. Où Qu\'Ils Soient.')"></p>
-                    <div class="mt-3 flex items-center gap-4">
-                        <a href="#" class="text-slate-500 hover:text-white transition-colors">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                        </a>
-                        <a href="#" class="text-slate-500 hover:text-white transition-colors">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0C8.74 0 8.333.015 7.053.072 5.775.132 4.905.333 4.14.63c-.789.306-1.459.717-2.126 1.384S.935 3.35.63 4.14C.333 4.905.131 5.775.072 7.053.012 8.333 0 8.74 0 12s.015 3.667.072 4.947c.06 1.277.261 2.148.558 2.913.306.788.717 1.459 1.384 2.126.667.666 1.336 1.079 2.126 1.384.766.296 1.636.499 2.913.558C8.333 23.988 8.74 24 12 24s3.667-.015 4.947-.072c1.277-.06 2.148-.262 2.913-.558.788-.306 1.459-.718 2.126-1.384.666-.668 1.079-1.338 1.384-2.126.296-.765.499-1.636.558-2.913.06-1.28.072-1.687.072-4.947s-.015-3.667-.072-4.947c-.06-1.277-.262-2.149-.558-2.913-.306-.789-.718-1.459-1.384-2.126C21.319 1.347 20.651.935 19.86.63c-.765-.297-1.636-.499-2.913-.558C15.667.012 15.26 0 12 0zm0 2.16c3.203 0 3.585.016 4.85.071 1.17.055 1.805.249 2.227.415.562.217.96.477 1.382.896.419.42.679.819.896 1.381.164.422.36 1.057.413 2.227.057 1.266.07 1.646.07 4.85s-.015 3.585-.074 4.85c-.061 1.17-.256 1.805-.421 2.227-.224.562-.479.96-.899 1.382-.419.419-.824.679-1.38.896-.42.164-1.065.36-2.235.413-1.274.057-1.649.07-4.859.07-3.211 0-3.586-.015-4.859-.074-1.171-.061-1.816-.256-2.236-.421-.569-.224-.96-.479-1.379-.899-.421-.419-.69-.824-.9-1.38-.165-.42-.359-1.065-.42-2.235-.045-1.26-.061-1.649-.061-4.844 0-3.196.016-3.586.061-4.861.061-1.17.255-1.814.42-2.234.21-.57.479-.96.9-1.381.419-.419.81-.689 1.379-.898.42-.166 1.051-.361 2.221-.421 1.275-.045 1.65-.06 4.859-.06l.045.03zm0 3.678a6.162 6.162 0 100 12.324 6.162 6.162 0 100-12.324zM12 16c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4zm7.846-10.405a1.441 1.441 0 11-2.882 0 1.441 1.441 0 012.882 0z"/></svg>
-                        </a>
-                        <a href="#" class="text-slate-500 hover:text-white transition-colors">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>
-                        </a>
-                    </div>
-                </div>
-
-                {{-- Navigation --}}
-                <div>
-                    <h3 class="mb-2 font-semibold text-white text-sm uppercase tracking-wider" x-text="$store.lang.t('Platform', 'Plateforme')"></h3>
-                    <ul class="space-y-1.5 text-sm">
-                        <li><a href="{{ route('about') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('About', 'À Propos')"></a></li>
-                        <li><a href="{{ route('contact') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Contact', 'Contact')"></a></li>
-                    </ul>
-                </div>
-
-                {{-- Legal --}}
-                <div>
-                    <h3 class="mb-2 font-semibold text-white text-sm uppercase tracking-wider" x-text="$store.lang.t('Legal', 'Juridique')"></h3>
-                    <ul class="space-y-1.5 text-sm">
-                        <li><a href="{{ route('legal.privacy') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a></li>
-                        <li><a href="{{ route('legal.terms') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')"></a></li>
-                    </ul>
-                    {{-- Footer Language Toggle --}}
-                    <div class="mt-3">
-                        <button @click="$store.lang.toggle()" class="inline-flex items-center gap-2 rounded-full border border-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-300 transition-colors hover:border-cm-yellow hover:text-cm-yellow">
-                            🌐 <span x-text="$store.lang.isEn ? 'English' : 'Français'"></span>
-                            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
-                        </button>
-                    </div>
-                </div>
+    <footer class="bg-slate-900 text-slate-400 py-1.5 sm:py-3">
+        <div class="mx-auto max-w-[1440px] px-4 sm:px-10 lg:px-12">
+            <div class="flex flex-row items-center justify-center gap-4 sm:gap-6 text-[11px] sm:text-sm leading-tight">
+                <a href="{{ route('legal.privacy') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a>
+                <a href="{{ route('legal.terms') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')"></a>
             </div>
-
         </div>
     </footer>
 

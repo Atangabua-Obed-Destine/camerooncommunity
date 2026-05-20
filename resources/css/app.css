@@ -750,8 +750,8 @@
     gap: 8px;
     height: 56px;
     padding: 0 8px;
-    background: linear-gradient(135deg, #015083 0%, #01395e 100%);
-    border-bottom: 1px solid rgba(1,80,131,0.3);
+    background: #fff;
+    border-bottom: 1px solid var(--color-slate-200);
     flex-shrink: 0;
 }
 .yard-header__btn {
@@ -761,18 +761,18 @@
     align-items: center;
     justify-content: center;
     border-radius: 9999px;
-    color: rgba(255,255,255,0.7);
+    color: var(--color-slate-500);
     transition: background 0.15s, color 0.15s;
 }
 .yard-header__btn:hover {
-    background: rgba(255,255,255,0.12);
-    color: #fff;
+    background: var(--color-slate-100);
+    color: var(--color-slate-800);
 }
 .yard-header__title {
     flex: 1;
     font-size: 1.2rem;
     font-weight: 700;
-    color: #fff;
+    color: var(--color-slate-900);
 }
 
 /* ── Collapsible search ── */
@@ -926,7 +926,7 @@
     padding: 5px 12px;
     border-radius: 9999px;
     font-size: 0.72rem;
-    font-weight: 500;
+    font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
     border: none;
@@ -1239,7 +1239,7 @@
 }
 .yard-room__name {
     font-size: 0.95rem;
-    font-weight: 600;
+    font-weight: 700;
     color: var(--color-slate-900);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1254,7 +1254,8 @@
 }
 .yard-room__preview {
     font-size: 0.82rem;
-    color: var(--color-slate-500);
+    font-weight: 600;
+    color: var(--color-slate-700);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3725,12 +3726,13 @@
     align-items: center;
     gap: 20px;
     padding: 14px 16px;
-    background: linear-gradient(135deg, #015083 0%, #01395e 100%);
-    color: #fff;
+    background: #fff;
+    color: var(--color-slate-900);
+    border-bottom: 1px solid var(--color-slate-200);
     min-height: 52px;
 }
 .wa-info-header__close {
-    color: #fff;
+    color: var(--color-slate-600);
     background: none;
     border: none;
     cursor: pointer;
@@ -3738,7 +3740,7 @@
     border-radius: 50%;
     transition: background 0.15s;
 }
-.wa-info-header__close:hover { background: rgba(255,255,255,0.15); }
+.wa-info-header__close:hover { background: var(--color-slate-100); }
 .wa-info-header__title {
     font-size: 1rem;
     font-weight: 600;
