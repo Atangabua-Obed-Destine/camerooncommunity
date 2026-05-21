@@ -6,7 +6,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 1 — HERO (full viewport)
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="relative z-0 min-h-screen flex items-start lg:items-center overflow-x-hidden pt-16 sm:pt-20 lg:pt-32 pb-8 lg:pb-0">
+    <section class="relative z-0 min-h-screen flex items-start lg:items-center overflow-x-hidden pt-16 sm:pt-20 lg:pt-32 pb-28 md:pb-8 lg:pb-0">
         {{-- Background image --}}
         <div class="absolute inset-0 pointer-events-none">
             <img src="{{ asset('images/hero-bg.jpg') }}" alt="" class="h-full w-full object-cover">
@@ -16,7 +16,7 @@
 
         {{-- Animated geometric SVG background --}}
         <div class="absolute inset-0 overflow-hidden opacity-20 pointer-events-none">
-            <svg class="absolute -top-20 -left-20 w-96 h-96 animate-pulse-soft" viewBox="0 0 200 200">
+            <svg class="hidden md:block absolute -top-20 -left-20 w-96 h-96 animate-pulse-soft" viewBox="0 0 200 200">
                 <circle cx="100" cy="100" r="80" fill="none" stroke="#FCD116" stroke-width="1.5"/>
                 <circle cx="100" cy="100" r="60" fill="none" stroke="#FCD116" stroke-width="1"/>
                 <circle cx="100" cy="100" r="40" fill="none" stroke="#FCD116" stroke-width="0.5"/>
@@ -35,14 +35,54 @@
         </div>
 
         {{-- ═══════════════════════════════════════════════════
-             CAMEROON FLAG RIBBON — Top Right Corner
+             CAMEROON FLAG RIBBON — Top Right Corner (desktop/tablet)
              ═══════════════════════════════════════════════════ --}}
-        <x-cameroon-ribbon />
+        <div class="hidden md:block">
+            <x-cameroon-ribbon />
+        </div>
+
+        {{-- Mobile-only: Cameroon flag PNG (top right) + world-map mini-graphic to its left --}}
+        <div class="md:hidden absolute top-16 -right-4 z-[2] pointer-events-none">
+            <img src="{{ asset('images/cameroonflag.png') }}" alt="" class="w-40 sm:w-48 select-none">
+        </div>
+        {{-- Mini world-map graphic (mobile-only) — cities connected to Cameroon --}}
+        <div class="md:hidden absolute top-16 left-2 z-[2] w-44 h-44 pointer-events-none">
+            {{-- Faint continents backdrop --}}
+            <svg viewBox="0 0 200 200" class="absolute inset-0 w-full h-full opacity-25" fill="none" stroke="white" stroke-width="0.6">
+                <path d="M40,40 C55,30 80,30 95,40 C110,35 125,45 120,60 C130,65 125,80 110,75 C105,90 80,90 70,80 C55,85 40,75 45,60 C35,55 30,45 40,40Z"/>
+                <path d="M105,55 C120,45 150,45 165,55 C175,65 170,80 160,80 C150,90 130,85 120,75 C110,80 100,70 105,55Z"/>
+                <path d="M70,110 C90,100 115,110 120,130 C115,150 90,160 70,150 C50,145 50,120 70,110Z"/>
+                <path d="M130,135 C145,125 165,135 165,150 C160,165 140,170 130,160 C120,155 120,140 130,135Z"/>
+            </svg>
+            {{-- Dashed connection lines from Cameroon (center) to cities --}}
+            <svg viewBox="0 0 200 200" class="absolute inset-0 w-full h-full" fill="none" preserveAspectRatio="none">
+                <line x1="105" y1="120" x2="25"  y2="35"  stroke="#FCD116" stroke-width="0.8" stroke-dasharray="3 2" class="hero-map-line" style="--delay:0s"/>
+                <line x1="105" y1="120" x2="70"  y2="20"  stroke="#FCD116" stroke-width="0.8" stroke-dasharray="3 2" class="hero-map-line" style="--delay:0.3s"/>
+                <line x1="105" y1="120" x2="130" y2="25"  stroke="#FCD116" stroke-width="0.8" stroke-dasharray="3 2" class="hero-map-line" style="--delay:0.6s"/>
+                <line x1="105" y1="120" x2="175" y2="60"  stroke="#FCD116" stroke-width="0.8" stroke-dasharray="3 2" class="hero-map-line" style="--delay:0.9s"/>
+                <line x1="105" y1="120" x2="185" y2="120" stroke="#FCD116" stroke-width="0.8" stroke-dasharray="3 2" class="hero-map-line" style="--delay:1.2s"/>
+            </svg>
+            {{-- City pills --}}
+            <div class="absolute text-[7px] font-bold text-white bg-cm-green/85 rounded-full px-1.5 py-0.5 hero-city-dot whitespace-nowrap" style="top:12%; left:0%; --delay:0s">🇺🇸 NYC</div>
+            <div class="absolute text-[7px] font-bold text-white bg-cm-green/85 rounded-full px-1.5 py-0.5 hero-city-dot whitespace-nowrap" style="top:4%; left:30%; --delay:0.3s">🇬🇧 LDN</div>
+            <div class="absolute text-[7px] font-bold text-white bg-cm-green/85 rounded-full px-1.5 py-0.5 hero-city-dot whitespace-nowrap" style="top:8%; left:60%; --delay:0.6s">🇫🇷 PAR</div>
+            <div class="absolute text-[7px] font-bold text-white bg-cm-green/85 rounded-full px-1.5 py-0.5 hero-city-dot whitespace-nowrap" style="top:25%; right:0%; --delay:0.9s">🇦🇪 DXB</div>
+            <div class="absolute text-[7px] font-bold text-white bg-cm-green/85 rounded-full px-1.5 py-0.5 hero-city-dot whitespace-nowrap" style="top:55%; right:0%; --delay:1.2s">🇦🇺 SYD</div>
+            {{-- Cameroon flag dot at center --}}
+            <div class="absolute" style="top:58%; left:50%; transform:translate(-50%,-50%)">
+                <div class="w-3 h-3 bg-cm-yellow rounded-sm animate-pulse-soft shadow shadow-cm-yellow/60"></div>
+            </div>
+            {{-- Caption --}}
+            <div class="absolute left-0 right-0 text-center" style="top:70%;">
+                <p class="text-cm-yellow text-[10px] font-extrabold tracking-wider">🇨🇲 CAMEROON</p>
+                <p class="text-white/70 text-[8px] mt-0.5" x-text="$store.lang.t('One Nation. Every Continent.', 'Une Nation. Tous les Continents.')"></p>
+            </div>
+        </div>
 
         <div class="relative z-10 mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12 py-4 sm:py-8 lg:py-20 w-full">
             <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                 {{-- Left: Text Content --}}
-                <div data-animate class="space-y-4 sm:space-y-6 lg:space-y-8 min-w-0">
+                <div data-animate class="space-y-4 sm:space-y-6 lg:space-y-8 min-w-0 pt-36 md:pt-0">
                     {{-- GPS Detection Badge --}}
                     <div class="hidden sm:block" x-data="{ country: null }" x-init="
                         const locMode = @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps'));
@@ -74,9 +114,18 @@
                         </div>
                     </div>
 
-                    <h1 class="font-extrabold text-white leading-[1.15] tracking-tight text-center lg:text-left">
-                        <span class="block whitespace-nowrap font-black text-[clamp(22px,7.2vw,44px)] lg:text-6xl" x-text="$store.lang.t('Connecting Cameroonians', 'Connecter les Camerounais')"></span>
-                        <span class="block text-cm-yellow text-[clamp(20px,6vw,38px)] sm:text-5xl lg:text-6xl" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
+                    <h1 class="font-extrabold text-white tracking-tight">
+                        {{-- Mobile variant: stacked, left-aligned, oversized 'Cameroonians' --}}
+                        <span class="block md:hidden text-left leading-[1.02]">
+                            <span class="block font-bold text-[clamp(28px,9vw,44px)]" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
+                            <span class="block font-black text-[clamp(36px,12vw,60px)]" x-text="$store.lang.t('Cameroonians', 'Camerounais')"></span>
+                            <span class="block text-center text-cm-yellow font-bold text-[clamp(28px,9vw,48px)] mt-3" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
+                        </span>
+                        {{-- Desktop/tablet variant: unchanged --}}
+                        <span class="hidden md:block text-center lg:text-left leading-[1.15]">
+                            <span class="block whitespace-nowrap font-black text-[clamp(22px,7.2vw,44px)] lg:text-6xl" x-text="$store.lang.t('Connecting Cameroonians', 'Connecter les Camerounais')"></span>
+                            <span class="block text-cm-yellow text-[clamp(20px,6vw,38px)] sm:text-5xl lg:text-6xl" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
+                        </span>
                     </h1>
 
                     <p class="text-[15px] sm:text-lg lg:text-xl text-white max-w-3xl leading-relaxed"
@@ -87,17 +136,17 @@
 
                     {{-- CTAs --}}
                     <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-4">
-                        <a href="{{ route('register') }}" class="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-xl bg-cm-yellow px-3 sm:px-8 py-3 sm:py-4 text-xs sm:text-base font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
+                        <a href="{{ route('register') }}" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-cm-yellow px-5 sm:px-8 py-2.5 sm:py-4 text-sm sm:text-base font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
                             <span class="truncate" x-text="$store.lang.t('Join Free', 'Rejoindre Gratuitement')"></span>
                             <svg class="h-4 w-4 sm:h-5 sm:w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </a>
-                        <a href="#how-it-works" class="inline-flex flex-1 sm:flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-xl border-2 border-white/30 px-3 sm:px-8 py-3 sm:py-4 text-xs sm:text-base font-bold text-white transition-all hover:bg-white/10 hover:border-white/50">
+                        <a href="#how-it-works" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full border border-white/40 px-5 sm:px-8 py-2.5 sm:py-4 text-sm sm:text-base font-semibold text-white transition-all hover:bg-white/10 hover:border-white/60">
                             <span class="truncate" x-text="$store.lang.t('See How It Works', 'Voir Comment Ça Marche')"></span>
                         </a>
                     </div>
 
-                    {{-- Get the App — Store badges (mobile-first, coming soon) --}}
-                    <div class="pt-1">
+                    {{-- Get the App — Store badges (tablet/desktop; mobile uses fixed bottom bar) --}}
+                    <div class="pt-1 hidden md:block">
                         <p class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-white/60 mb-2 text-center lg:text-left"
                            x-text="$store.lang.t('Get the app', 'Téléchargez l’app')"></p>
                         <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-3 justify-center lg:justify-start">
@@ -138,8 +187,8 @@
                         </div>
                     </div>
 
-                    {{-- User Counter --}}
-                    <div class="flex items-center gap-3 text-slate-300 flex-wrap" data-animate>
+                    {{-- User Counter (desktop/tablet; mobile copy is rendered below the lady) --}}
+                    <div class="hidden md:flex items-center gap-3 text-slate-300 flex-wrap" data-animate>
                         <div class="flex -space-x-2 shrink-0">
                             <div class="w-8 h-8 rounded-full bg-cm-yellow/80 border-2 border-cm-green flex items-center justify-center text-xs font-bold text-cm-green-dark">A</div>
                             <div class="w-8 h-8 rounded-full bg-cm-red/80 border-2 border-cm-green flex items-center justify-center text-xs font-bold text-white">E</div>
@@ -152,8 +201,8 @@
                     </div>
                 </div>
 
-                {{-- Right: Animated Hero Slider --}}
-                <div data-animate class="block">
+                {{-- Right: Animated Hero Slider (hidden on mobile — replaced by lady.png overlay) --}}
+                <div data-animate class="hidden md:block">
                     <div class="relative mx-auto lg:ml-auto lg:mr-0 w-full max-w-[340px] sm:max-w-[380px] lg:w-[420px] lg:max-w-none"
                          x-data="{
                             current: 0,
@@ -424,6 +473,30 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        {{-- Mobile-only: Lady.png + Partner overlay (bottom-right of hero) --}}
+        <div class="md:hidden absolute inset-x-0 bottom-0 z-[3] pointer-events-none">
+            {{-- Partner With Us overlay text (left side, above lady) --}}
+            <div class="absolute left-4 right-1/2 bottom-44 text-white">
+                <p class="font-semibold text-base leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
+                <p class="text-sm text-white/80 mt-1" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
+            </div>
+            {{-- Lady image (bottom-right, slight overflow) --}}
+            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-10 bottom-28 w-[19rem] sm:w-[24rem] max-w-[85%] object-contain select-none drop-shadow-2xl">
+
+            {{-- Mobile user counter (sits below the lady, above the fixed download bar) --}}
+            <div class="absolute inset-x-0 bottom-20 px-4 flex items-center gap-3 text-slate-200">
+                <div class="flex -space-x-2 shrink-0">
+                    <div class="w-7 h-7 rounded-full bg-cm-yellow/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-cm-green-dark">A</div>
+                    <div class="w-7 h-7 rounded-full bg-cm-red/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-white">E</div>
+                    <div class="w-7 h-7 rounded-full bg-white/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-cm-green">N</div>
+                </div>
+                <p class="text-xs min-w-0">
+                    <span class="font-bold text-cm-yellow" data-count-to="{{ max($memberCount, 50) }}" data-count-duration="2000">0</span>
+                    <span x-text="$store.lang.t(' Cameroonians already connected', ' Camerounais déjà connectés')"></span>
+                </p>
             </div>
         </div>
 
@@ -960,7 +1033,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 11 — FOOTER
          ═══════════════════════════════════════════════════════════════ --}}
-    <footer class="bg-slate-900 text-slate-400 py-1.5 sm:py-3">
+    <footer class="hidden md:block bg-slate-900 text-slate-400 py-1.5 sm:py-3">
         <div class="mx-auto max-w-[1440px] px-4 sm:px-10 lg:px-12">
             <div class="flex flex-row items-center justify-center gap-4 sm:gap-6 text-[11px] sm:text-sm leading-tight">
                 <a href="{{ route('legal.privacy') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a>
@@ -968,6 +1041,42 @@
             </div>
         </div>
     </footer>
+
+    {{-- ═══════════════════════════════════════════════════════════════
+         MOBILE-ONLY: Fixed bottom "Download Our App" bar
+         ═══════════════════════════════════════════════════════════════ --}}
+    <div class="md:hidden fixed inset-x-0 bottom-0 z-40 bg-cm-green/95 backdrop-blur border-t border-white/10 px-4 py-3 flex items-center justify-center gap-3 shadow-[0_-4px_18px_rgba(0,0,0,0.25)]">
+        {{-- Profile / Login (pinned to extreme left) --}}
+        <a href="{{ route('login') }}"
+           aria-label="{{ __('Login') }}"
+           class="absolute left-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/30 text-white transition-colors hover:bg-white/20">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+        </a>
+        <span class="text-white font-semibold text-sm tracking-wide" x-text="$store.lang.t('Download Our App', 'Téléchargez notre app')"></span>
+        {{-- Google Play icon --}}
+        <a href="#"
+           @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('Android app coming soon!', 'App Android bientôt disponible !') } }))"
+           aria-label="Google Play"
+           class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 transition-colors hover:bg-white/20">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#34a853"/>
+                <path d="m13.792 12 2.92-2.92 4.06 2.34a1 1 0 0 1 0 1.74l-4.06 2.34L13.792 12z" fill="#fbbc04"/>
+                <path d="m16.713 9.08-2.92 2.92L3.61 1.814A1 1 0 0 1 4.43 1.7l12.282 7.38z" fill="#ea4335"/>
+                <path d="m13.792 12 2.92 2.92L4.43 22.3a1 1 0 0 1-.82-.114L13.792 12z" fill="#4285f4"/>
+            </svg>
+        </a>
+        {{-- Apple App Store icon --}}
+        <a href="#"
+           @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('iOS app coming soon!', 'App iOS bientôt disponible !') } }))"
+           aria-label="App Store"
+           class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black ring-1 ring-white/20 transition-colors hover:bg-white/90">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
+            </svg>
+        </a>
+    </div>
 
     {{-- ═══════════════════════════════════════════════════════════════
          KAMER AI — Floating Chat Bubble
