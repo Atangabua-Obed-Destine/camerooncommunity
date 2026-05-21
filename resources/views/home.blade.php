@@ -42,7 +42,7 @@
         </div>
 
         {{-- Mobile-only: Cameroon flag PNG (top right) + world-map mini-graphic to its left --}}
-        <div class="md:hidden absolute top-16 -right-4 z-[2] pointer-events-none">
+        <div class="md:hidden absolute top-16 -right-8 z-[2] pointer-events-none">
             <img src="{{ asset('images/cameroonflag.png') }}" alt="" class="w-40 sm:w-48 select-none">
         </div>
         {{-- Mini world-map graphic (mobile-only) — cities connected to Cameroon --}}
@@ -116,9 +116,9 @@
 
                     <h1 class="font-extrabold text-white tracking-tight">
                         {{-- Mobile variant: stacked, left-aligned, oversized 'Cameroonians' --}}
-                        <span class="block md:hidden text-left leading-[1.02]">
-                            <span class="block font-bold text-[clamp(28px,9vw,44px)]" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
-                            <span class="block font-black text-[clamp(36px,12vw,60px)]" x-text="$store.lang.t('Cameroonians', 'Camerounais')"></span>
+                        <span class="block md:hidden text-center leading-[1.02]">
+                            <span class="block font-bold text-[clamp(28px,9vw,44px)] -translate-x-8" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
+                            <span class="block font-black text-[clamp(36px,12vw,60px)] -mt-2" x-text="$store.lang.t('Cameroonians', 'Camerounais')"></span>
                             <span class="block text-center text-cm-yellow font-bold text-[clamp(28px,9vw,48px)] mt-3" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
                         </span>
                         {{-- Desktop/tablet variant: unchanged --}}
@@ -136,12 +136,11 @@
 
                     {{-- CTAs --}}
                     <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-4">
-                        <a href="{{ route('register') }}" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-cm-yellow px-5 sm:px-8 py-2.5 sm:py-4 text-sm sm:text-base font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
+                        <a href="{{ route('register') }}" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-cm-yellow px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
                             <span class="truncate" x-text="$store.lang.t('Join Free', 'Rejoindre Gratuitement')"></span>
-                            <svg class="h-4 w-4 sm:h-5 sm:w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                         </a>
-                        <a href="#how-it-works" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full border border-white/40 px-5 sm:px-8 py-2.5 sm:py-4 text-sm sm:text-base font-semibold text-white transition-all hover:bg-white/10 hover:border-white/60">
-                            <span class="truncate" x-text="$store.lang.t('See How It Works', 'Voir Comment Ça Marche')"></span>
+                        <a href="#how-it-works" @click.prevent="window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full border border-white/40 px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/60">
+                            <span class="truncate" x-text="$store.lang.t('How It Works', 'Comment Ça Marche')"></span>
                         </a>
                     </div>
 
@@ -479,12 +478,12 @@
         {{-- Mobile-only: Lady.png + Partner overlay (bottom-right of hero) --}}
         <div class="md:hidden absolute inset-x-0 bottom-0 z-[3] pointer-events-none">
             {{-- Partner With Us overlay text (left side, above lady) --}}
-            <div class="absolute left-4 right-1/2 bottom-44 text-white">
+            <div class="absolute left-4 right-1/2 bottom-56 text-white">
                 <p class="font-semibold text-base leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
                 <p class="text-sm text-white/80 mt-1" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
             </div>
             {{-- Lady image (bottom-right, slight overflow) --}}
-            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-10 bottom-28 w-[19rem] sm:w-[24rem] max-w-[85%] object-contain select-none drop-shadow-2xl">
+            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-20 bottom-28 w-[24rem] sm:w-[30rem] max-w-[100%] object-contain object-right select-none drop-shadow-2xl">
 
             {{-- Mobile user counter (sits below the lady, above the fixed download bar) --}}
             <div class="absolute inset-x-0 bottom-20 px-4 flex items-center gap-3 text-slate-200">
@@ -1078,129 +1077,5 @@
         </a>
     </div>
 
-    {{-- ═══════════════════════════════════════════════════════════════
-         KAMER AI — Floating Chat Bubble
-         ═══════════════════════════════════════════════════════════════ --}}
-    <div x-data="{
-            open: false,
-            messages: [],
-            input: '',
-            loading: false,
-            send(text) {
-                const question = (text ?? this.input).trim();
-                if (!question || this.loading) return;
-                this.messages.push({ role: 'user', content: question });
-                this.input = '';
-                this.loading = true;
-                fetch('{{ route('kamer.chat.public') }}', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content },
-                    body: JSON.stringify({ message: question, lang: this.$store.lang.current })
-                })
-                .then(r => r.json())
-                .then(data => { this.messages.push({ role: 'assistant', content: data.reply || 'Sorry, I could not process that.' }); })
-                .catch(() => { this.messages.push({ role: 'assistant', content: this.$store.lang.t('I\'m temporarily unavailable. Please try again later.', 'Je suis temporairement indisponible. Veuillez réessayer plus tard.') }); })
-                .finally(() => { this.loading = false; });
-            }
-         }" class="fixed bottom-6 right-6 z-50">
-        {{-- Chat Panel --}}
-        <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 scale-95" x-transition:enter-end="opacity-100 translate-y-0 scale-100" x-transition:leave="transition ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 scale-100" x-transition:leave-end="opacity-0 translate-y-4 scale-95"
-             class="mb-4 w-80 sm:w-96 rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
-            {{-- Header --}}
-            <div class="bg-cm-green px-4 py-3 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <div class="w-8 h-8 rounded-full bg-cm-yellow flex items-center justify-center text-sm font-bold text-cm-green-dark">K</div>
-                    <div>
-                        <p class="text-white font-semibold text-sm">Kamer</p>
-                        <p class="text-slate-400 text-xs" x-text="$store.lang.t('AI Assistant', 'Assistant IA')"></p>
-                    </div>
-                </div>
-                <button @click="open = false" class="text-white/70 hover:text-white">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-
-            {{-- Messages --}}
-            <div class="h-72 overflow-y-auto p-4 space-y-3 chat-scroll">
-                {{-- Welcome message --}}
-                <div class="flex gap-2" x-show="messages.length === 0">
-                    <div class="w-7 h-7 rounded-full bg-cm-yellow shrink-0 flex items-center justify-center text-xs font-bold text-cm-green-dark">K</div>
-                    <div class="bg-slate-100 rounded-lg rounded-tl-none px-3 py-2 max-w-[85%]">
-                        <p class="text-sm text-slate-700" x-text="$store.lang.t(
-                            'Hi! I\'m Kamer, your guide to Cameroon Network. Ask me anything — what is this platform? How does it work? Is it available in your city?',
-                            'Salut ! Je suis Kamer, votre guide pour Cameroon Network. Posez-moi vos questions — c\'est quoi cette plateforme ? Comment ça marche ? C\'est disponible dans votre ville ?'
-                        )"></p>
-                    </div>
-                </div>
-
-                <template x-for="(msg, i) in messages" :key="i">
-                    <div>
-                        {{-- User message --}}
-                        <div x-show="msg.role === 'user'" class="flex justify-end">
-                            <div class="bg-cm-green rounded-lg rounded-tr-none px-3 py-2 max-w-[85%]">
-                                <p class="text-sm text-white" x-text="msg.content"></p>
-                            </div>
-                        </div>
-                        {{-- Kamer response --}}
-                        <div x-show="msg.role === 'assistant'" class="flex gap-2">
-                            <div class="w-7 h-7 rounded-full bg-cm-yellow shrink-0 flex items-center justify-center text-xs font-bold text-cm-green-dark">K</div>
-                            <div class="bg-slate-100 rounded-lg rounded-tl-none px-3 py-2 max-w-[85%]">
-                                <p class="text-sm text-slate-700" x-text="msg.content"></p>
-                            </div>
-                        </div>
-                    </div>
-                </template>
-
-                <div x-show="loading" class="flex gap-2">
-                    <div class="w-7 h-7 rounded-full bg-cm-yellow shrink-0 flex items-center justify-center text-xs font-bold text-cm-green-dark">K</div>
-                    <div class="bg-slate-100 rounded-lg rounded-tl-none px-3 py-2">
-                        <div class="flex gap-1">
-                            <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0s"></span>
-                            <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.15s"></span>
-                            <span class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.3s"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Quick suggestions (visible until conversation gets going) --}}
-            <div class="px-3 pt-2 pb-1" x-show="messages.length < 2">
-                <p class="text-[10px] uppercase tracking-wide text-slate-400 font-semibold mb-1.5"
-                   x-text="$store.lang.t('Try asking', 'Essayez de demander')"></p>
-                <div class="flex flex-wrap gap-1.5">
-                    <template x-for="s in (
-                        $store.lang.current === 'fr'
-                            ? ['C\'est quoi cette plateforme ?', 'Comment fonctionne la Solidarité ?', 'C\'est gratuit ?', 'Disponible dans ma ville ?']
-                            : ['What is this platform?', 'How does Solidarity work?', 'Is it free?', 'Available in my city?']
-                    )" :key="s">
-                        <button type="button"
-                                @click="send(s)"
-                                class="px-3 py-1.5 text-xs bg-cm-green/5 text-cm-green rounded-full border border-cm-green/20 hover:bg-cm-green/10 transition-colors"
-                                x-text="s"></button>
-                    </template>
-                </div>
-            </div>
-
-            {{-- Input --}}
-            <div class="border-t border-slate-200 px-3 py-3 flex gap-2">
-                <input x-ref="chatInput" x-model="input"
-                       @keydown.enter.prevent="send()"
-                       type="text"
-                       class="flex-1 rounded-full border border-slate-200 px-4 py-2 text-sm outline-none focus:border-cm-green focus:ring-1 focus:ring-cm-green"
-                       :placeholder="$store.lang.t('Ask Kamer anything...', 'Demandez à Kamer...')"
-                       :disabled="loading">
-                <button type="button" @click="send()"
-                        :disabled="loading || !input.trim()"
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-cm-green text-white hover:bg-cm-green-light transition-colors disabled:opacity-50">
-                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                </button>
-            </div>
-        </div>
-
-        {{-- Floating Button --}}
-        <button @click="open = !open" class="flex h-14 w-14 items-center justify-center rounded-full bg-cm-green text-white shadow-lg shadow-cm-green/30 transition-all hover:bg-cm-green-light hover:shadow-xl hover:scale-105">
-            <span x-show="!open" class="text-xl">🤖</span>
-            <svg x-show="open" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-    </div>
+    {{-- Kamer AI floating bubble is provided by the guest layout via @livewire('a-i.kamer-chat') --}}
 </x-layouts.guest>

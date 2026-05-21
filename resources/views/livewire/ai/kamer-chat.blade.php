@@ -2,7 +2,7 @@
     {{-- Floating Kamer Button --}}
     @if(! $hideBubble && app(App\Services\AIService::class)->isAvailable())
     <button wire:click="toggle"
-            class="fixed bottom-6 right-6 z-40 w-14 h-14 bg-gradient-to-br from-cm-green to-cm-green/80 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center group
+            class="fixed bottom-2 right-4 md:bottom-6 md:right-6 z-40 w-11 h-11 md:w-14 md:h-14 bg-gradient-to-br from-cm-green to-cm-green/80 text-white rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center justify-center group
                    {{ $isOpen ? 'max-lg:hidden' : '' }}"
             aria-label="Open Kamer AI">
         <span class="text-2xl group-hover:scale-110 transition-transform">🤖</span>
