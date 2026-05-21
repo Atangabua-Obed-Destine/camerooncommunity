@@ -118,7 +118,7 @@
                     <h1 class="font-extrabold text-white tracking-tight">
                         {{-- Mobile variant: stacked, left-aligned, oversized 'Cameroonians' --}}
                         <span class="block md:hidden text-center leading-[1.02]">
-                            <span class="block font-bold text-[clamp(26px,8.5vw,42px)] -translate-x-[5vw]" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
+                            <span class="block font-bold text-[clamp(26px,8.5vw,42px)] -translate-x-[9vw]" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
                             <span class="block font-black text-[clamp(34px,11.5vw,58px)] -mt-2" x-text="$store.lang.t('Cameroonians', 'Camerounais')"></span>
                             <span class="block text-center text-cm-yellow font-bold text-[clamp(26px,8.5vw,46px)] mt-3" x-text="$store.lang.t('Wherever You Are', 'Où Que Vous Soyez')"></span>
                         </span>
@@ -485,7 +485,7 @@
         {{-- Mobile-only: Lady.png + counter overlay (bottom-right of hero) --}}
         <div class="md:hidden absolute inset-x-0 bottom-0 z-[3] pointer-events-none">
             {{-- Lady image (bottom-right corner, scaled smaller to stay clear of text) --}}
-            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-[10vw] bottom-8 w-[clamp(220px,40vh,500px)] max-h-[clamp(320px,55vh,580px)] [@media(max-height:820px)]:-right-[8vw] [@media(max-height:820px)]:w-[clamp(180px,32vh,320px)] [@media(max-height:820px)]:max-h-[clamp(260px,45vh,420px)] min-[420px]:-right-[14vw] min-[420px]:w-[clamp(260px,48vh,560px)] min-[420px]:max-h-[clamp(360px,62vh,640px)] object-contain object-bottom select-none drop-shadow-2xl">
+            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-[18vw] bottom-8 w-[clamp(240px,46vh,540px)] max-h-[clamp(340px,62vh,620px)] [@media(max-height:820px)]:-right-[8vw] [@media(max-height:820px)]:w-[clamp(180px,32vh,320px)] [@media(max-height:820px)]:max-h-[clamp(260px,45vh,420px)] min-[420px]:-right-[14vw] min-[420px]:w-[clamp(260px,48vh,560px)] min-[420px]:max-h-[clamp(360px,62vh,640px)] object-contain object-bottom select-none drop-shadow-2xl">
 
             {{-- Mobile user counter (sits at very bottom of hero) --}}
             <div class="absolute inset-x-0 bottom-0 px-4 flex items-center gap-3 text-slate-200">
