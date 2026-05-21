@@ -119,12 +119,12 @@
                         <span class="block md:hidden text-center leading-[1.02]">
                             <span class="block font-bold text-[clamp(28px,9vw,44px)] -translate-x-8" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
                             <span class="block font-black text-[clamp(36px,12vw,60px)] -mt-2" x-text="$store.lang.t('Cameroonians', 'Camerounais')"></span>
-                            <span class="block text-center text-cm-yellow font-bold text-[clamp(28px,9vw,48px)] mt-3" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
+                            <span class="block text-center text-cm-yellow font-bold text-[clamp(28px,9vw,48px)] mt-3" x-text="$store.lang.t('Wherever You Are', 'Où Que Vous Soyez')"></span>
                         </span>
                         {{-- Desktop/tablet variant: unchanged --}}
                         <span class="hidden md:block text-center lg:text-left leading-[1.15]">
                             <span class="block whitespace-nowrap font-black text-[clamp(22px,7.2vw,44px)] lg:text-6xl" x-text="$store.lang.t('Connecting Cameroonians', 'Connecter les Camerounais')"></span>
-                            <span class="block text-cm-yellow text-[clamp(20px,6vw,38px)] sm:text-5xl lg:text-6xl" x-text="$store.lang.t('Wherever You Are.', 'Où Que Vous Soyez.')"></span>
+                            <span class="block text-cm-yellow text-[clamp(20px,6vw,38px)] sm:text-5xl lg:text-6xl" x-text="$store.lang.t('Wherever You Are', 'Où Que Vous Soyez')"></span>
                         </span>
                     </h1>
 
@@ -478,7 +478,7 @@
         {{-- Mobile-only: Lady.png + Partner overlay (bottom-right of hero) --}}
         <div class="md:hidden absolute inset-x-0 bottom-0 z-[3] pointer-events-none">
             {{-- Partner With Us overlay text (left side, above lady) --}}
-            <div class="absolute left-4 right-1/2 bottom-56 text-white">
+            <div class="absolute left-4 right-1/2 bottom-72 text-white">
                 <p class="font-semibold text-base leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
                 <p class="text-sm text-white/80 mt-1" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
             </div>
@@ -1054,24 +1054,26 @@
             </svg>
         </a>
         <span class="text-white font-semibold text-sm tracking-wide" x-text="$store.lang.t('Download Our App', 'Téléchargez notre app')"></span>
+        {{-- Vertical separator --}}
+        <span class="h-5 w-px bg-white/30" aria-hidden="true"></span>
         {{-- Google Play icon --}}
         <a href="#"
            @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('Android app coming soon!', 'App Android bientôt disponible !') } }))"
            aria-label="Google Play"
-           class="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20 transition-colors hover:bg-white/20">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#34a853"/>
-                <path d="m13.792 12 2.92-2.92 4.06 2.34a1 1 0 0 1 0 1.74l-4.06 2.34L13.792 12z" fill="#fbbc04"/>
-                <path d="m16.713 9.08-2.92 2.92L3.61 1.814A1 1 0 0 1 4.43 1.7l12.282 7.38z" fill="#ea4335"/>
-                <path d="m13.792 12 2.92 2.92L4.43 22.3a1 1 0 0 1-.82-.114L13.792 12z" fill="#4285f4"/>
+           class="flex items-center justify-center text-white transition-transform hover:scale-110">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z"/>
+                <path d="m13.792 12 2.92-2.92 4.06 2.34a1 1 0 0 1 0 1.74l-4.06 2.34L13.792 12z"/>
+                <path d="m16.713 9.08-2.92 2.92L3.61 1.814A1 1 0 0 1 4.43 1.7l12.282 7.38z"/>
+                <path d="m13.792 12 2.92 2.92L4.43 22.3a1 1 0 0 1-.82-.114L13.792 12z"/>
             </svg>
         </a>
         {{-- Apple App Store icon --}}
         <a href="#"
            @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('iOS app coming soon!', 'App iOS bientôt disponible !') } }))"
            aria-label="App Store"
-           class="flex h-9 w-9 items-center justify-center rounded-full bg-white text-black ring-1 ring-white/20 transition-colors hover:bg-white/90">
-            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+           class="flex items-center justify-center text-white transition-transform hover:scale-110">
+            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
             </svg>
         </a>
