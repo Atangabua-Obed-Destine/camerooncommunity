@@ -146,9 +146,9 @@
                     </div>
 
                     {{-- Mobile-only Partner With Us blurb (flows in column instead of overlapping) --}}
-                    <div class="md:hidden max-w-[55vw] text-white">
+                    <div class="md:hidden max-w-[55vw] text-white mt-20">
                         <p class="font-semibold text-sm leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
-                        <p class="text-xs text-white/80 mt-0.5" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
+                        <p class="text-xs font-bold text-white/80 mt-0.5" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
                     </div>
 
                     {{-- Get the App — Store badges (tablet/desktop; mobile uses fixed bottom bar) --}}
@@ -485,7 +485,7 @@
         {{-- Mobile-only: Lady.png + counter overlay (bottom-right of hero) --}}
         <div class="md:hidden absolute inset-x-0 bottom-0 z-[3] pointer-events-none">
             {{-- Lady image (bottom-right corner, scaled smaller to stay clear of text) --}}
-            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-[10vw] bottom-8 w-[clamp(220px,40vh,500px)] max-h-[clamp(320px,55vh,580px)] [@media(max-height:820px)]:-right-[8vw] [@media(max-height:820px)]:w-[clamp(180px,32vh,320px)] [@media(max-height:820px)]:max-h-[clamp(260px,45vh,420px)] object-contain object-bottom select-none drop-shadow-2xl">
+            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-[10vw] bottom-8 w-[clamp(220px,40vh,500px)] max-h-[clamp(320px,55vh,580px)] [@media(max-height:820px)]:-right-[8vw] [@media(max-height:820px)]:w-[clamp(180px,32vh,320px)] [@media(max-height:820px)]:max-h-[clamp(260px,45vh,420px)] min-[420px]:-right-[14vw] min-[420px]:w-[clamp(260px,48vh,560px)] min-[420px]:max-h-[clamp(360px,62vh,640px)] object-contain object-bottom select-none drop-shadow-2xl">
 
             {{-- Mobile user counter (sits at very bottom of hero) --}}
             <div class="absolute inset-x-0 bottom-0 px-4 flex items-center gap-3 text-slate-200">
