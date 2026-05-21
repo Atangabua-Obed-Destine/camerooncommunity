@@ -83,7 +83,7 @@
         <div class="relative z-10 mx-auto max-w-[1440px] px-4 sm:px-8 lg:px-12 py-4 sm:py-8 lg:py-20 w-full">
             <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
                 {{-- Left: Text Content --}}
-                <div data-animate class="space-y-4 sm:space-y-6 lg:space-y-8 min-w-0 pt-36 md:pt-0">
+                <div data-animate class="space-y-4 sm:space-y-6 lg:space-y-8 min-w-0 pt-40 md:pt-0">
                     {{-- GPS Detection Badge --}}
                     <div class="hidden sm:block" x-data="{ country: null }" x-init="
                         const locMode = @js(\App\Models\PlatformSetting::getValue('location_detection_mode', 'gps'));
@@ -137,12 +137,18 @@
 
                     {{-- CTAs --}}
                     <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-4">
-                        <a href="{{ route('register') }}" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-cm-yellow px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg font-extrabold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
+                        <a href="{{ route('register') }}" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-cm-yellow px-3.5 sm:px-6 py-1.5 sm:py-3 text-sm sm:text-lg font-extrabold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
                             <span class="truncate" x-text="$store.lang.t('Join Free', 'Rejoindre Gratuitement')"></span>
                         </a>
-                        <a href="#how-it-works" @click.prevent="window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full border border-white/40 px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg font-extrabold text-white transition-all hover:bg-white/10 hover:border-white/60">
+                        <a href="#how-it-works" @click.prevent="window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full border border-white/40 px-3.5 sm:px-6 py-1.5 sm:py-3 text-sm sm:text-lg font-extrabold text-white transition-all hover:bg-white/10 hover:border-white/60">
                             <span class="truncate" x-text="$store.lang.t('How It Works', 'Comment Ça Marche')"></span>
                         </a>
+                    </div>
+
+                    {{-- Mobile-only Partner With Us blurb (flows in column instead of overlapping) --}}
+                    <div class="md:hidden max-w-[55vw] text-white">
+                        <p class="font-semibold text-sm leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
+                        <p class="text-xs text-white/80 mt-0.5" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
                     </div>
 
                     {{-- Get the App — Store badges (tablet/desktop; mobile uses fixed bottom bar) --}}
@@ -476,17 +482,12 @@
             </div>
         </div>
 
-        {{-- Mobile-only: Lady.png + Partner overlay (bottom-right of hero) --}}
+        {{-- Mobile-only: Lady.png + counter overlay (bottom-right of hero) --}}
         <div class="md:hidden absolute inset-x-0 bottom-0 z-[3] pointer-events-none">
-            {{-- Partner With Us overlay text (left side, above lady) --}}
-            <div class="absolute left-4 right-1/2 bottom-56 text-white">
-                <p class="font-semibold text-base leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
-                <p class="text-sm text-white/80 mt-1" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
-            </div>
-            {{-- Lady image (bottom-right, slight overflow) --}}
-            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-[20vw] bottom-6 w-[95vw] max-w-[32rem] sm:max-w-[36rem] object-contain object-right select-none drop-shadow-2xl">
+            {{-- Lady image (bottom-right corner, scaled smaller to stay clear of text) --}}
+            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-[10vw] bottom-8 w-[clamp(220px,40vh,500px)] max-h-[clamp(320px,55vh,580px)] [@media(max-height:820px)]:-right-[8vw] [@media(max-height:820px)]:w-[clamp(180px,32vh,320px)] [@media(max-height:820px)]:max-h-[clamp(260px,45vh,420px)] object-contain object-bottom select-none drop-shadow-2xl">
 
-            {{-- Mobile user counter (sits below the lady, above the fixed download bar) --}}
+            {{-- Mobile user counter (sits at very bottom of hero) --}}
             <div class="absolute inset-x-0 bottom-0 px-4 flex items-center gap-3 text-slate-200">
                 <div class="flex -space-x-2 shrink-0">
                     <div class="w-7 h-7 rounded-full bg-cm-yellow/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-cm-green-dark">A</div>
