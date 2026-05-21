@@ -1,12 +1,13 @@
 <x-layouts.guest>
     <x-slot:title>Cameroon Network — Connecting Cameroonians. Wherever They Are.</x-slot:title>
 
+    <div class="flex flex-col min-h-screen md:block md:min-h-0">
     @include('partials.site-nav', ['staysTransparent' => true])
 
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 1 — HERO (full viewport)
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="relative z-0 min-h-screen flex items-start lg:items-center overflow-x-hidden pt-16 sm:pt-20 lg:pt-32 pb-28 md:pb-8 lg:pb-0">
+    <section class="relative z-0 md:min-h-screen md:h-auto flex-1 md:flex-none md:overflow-visible overflow-hidden flex items-start lg:items-center pt-16 sm:pt-20 lg:pt-32 pb-8 md:pb-8 lg:pb-0">
         {{-- Background image --}}
         <div class="absolute inset-0 pointer-events-none">
             <img src="{{ asset('images/hero-bg.jpg') }}" alt="" class="h-full w-full object-cover">
@@ -117,9 +118,9 @@
                     <h1 class="font-extrabold text-white tracking-tight">
                         {{-- Mobile variant: stacked, left-aligned, oversized 'Cameroonians' --}}
                         <span class="block md:hidden text-center leading-[1.02]">
-                            <span class="block font-bold text-[clamp(28px,9vw,44px)] -translate-x-8" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
-                            <span class="block font-black text-[clamp(36px,12vw,60px)] -mt-2" x-text="$store.lang.t('Cameroonians', 'Camerounais')"></span>
-                            <span class="block text-center text-cm-yellow font-bold text-[clamp(28px,9vw,48px)] mt-3" x-text="$store.lang.t('Wherever You Are', 'Où Que Vous Soyez')"></span>
+                            <span class="block font-bold text-[clamp(26px,8.5vw,42px)] -translate-x-[5vw]" x-text="$store.lang.t('Connecting', 'Connecter les')"></span>
+                            <span class="block font-black text-[clamp(34px,11.5vw,58px)] -mt-2" x-text="$store.lang.t('Cameroonians', 'Camerounais')"></span>
+                            <span class="block text-center text-cm-yellow font-bold text-[clamp(26px,8.5vw,46px)] mt-3" x-text="$store.lang.t('Wherever You Are', 'Où Que Vous Soyez')"></span>
                         </span>
                         {{-- Desktop/tablet variant: unchanged --}}
                         <span class="hidden md:block text-center lg:text-left leading-[1.15]">
@@ -128,18 +129,18 @@
                         </span>
                     </h1>
 
-                    <p class="text-[15px] sm:text-lg lg:text-xl text-white max-w-3xl leading-relaxed"
+                    <p class="text-[15px] sm:text-lg lg:text-xl font-bold text-white max-w-3xl leading-relaxed"
                        x-text="$store.lang.t(
-                           'Connect with Cameroonians in your city and country. Find housing, send packages home, get help — all in one place built just for you.',
-                           'Connectez-vous avec les Camerounais de votre ville et pays. Trouvez un logement, envoyez des colis au pays, obtenez de l\'aide — tout en un seul endroit conçu pour vous.'
+                           'Connect with Cameroonians in your city and country. Find housing, send packages home, get help all in one place built just for you.',
+                           'Connectez-vous avec les Camerounais de votre ville et pays. Trouvez un logement, envoyez des colis au pays, obtenez de l\'aide tout en un seul endroit conçu pour vous.'
                        )"></p>
 
                     {{-- CTAs --}}
                     <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-4">
-                        <a href="{{ route('register') }}" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-cm-yellow px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
+                        <a href="{{ route('register') }}" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full bg-cm-yellow px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg font-extrabold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:shadow-cm-yellow/30 hover:-translate-y-0.5">
                             <span class="truncate" x-text="$store.lang.t('Join Free', 'Rejoindre Gratuitement')"></span>
                         </a>
-                        <a href="#how-it-works" @click.prevent="window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full border border-white/40 px-4 sm:px-6 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/60">
+                        <a href="#how-it-works" @click.prevent="window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="inline-flex flex-none min-w-0 justify-center items-center gap-1.5 sm:gap-2 rounded-full border border-white/40 px-4 sm:px-6 py-2 sm:py-3 text-base sm:text-lg font-extrabold text-white transition-all hover:bg-white/10 hover:border-white/60">
                             <span class="truncate" x-text="$store.lang.t('How It Works', 'Comment Ça Marche')"></span>
                         </a>
                     </div>
@@ -478,21 +479,21 @@
         {{-- Mobile-only: Lady.png + Partner overlay (bottom-right of hero) --}}
         <div class="md:hidden absolute inset-x-0 bottom-0 z-[3] pointer-events-none">
             {{-- Partner With Us overlay text (left side, above lady) --}}
-            <div class="absolute left-4 right-1/2 bottom-72 text-white">
+            <div class="absolute left-4 right-1/2 bottom-56 text-white">
                 <p class="font-semibold text-base leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
                 <p class="text-sm text-white/80 mt-1" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
             </div>
             {{-- Lady image (bottom-right, slight overflow) --}}
-            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-20 bottom-28 w-[24rem] sm:w-[30rem] max-w-[100%] object-contain object-right select-none drop-shadow-2xl">
+            <img src="{{ asset('images/lady.png') }}" alt="" class="absolute -right-[20vw] bottom-6 w-[95vw] max-w-[32rem] sm:max-w-[36rem] object-contain object-right select-none drop-shadow-2xl">
 
             {{-- Mobile user counter (sits below the lady, above the fixed download bar) --}}
-            <div class="absolute inset-x-0 bottom-20 px-4 flex items-center gap-3 text-slate-200">
+            <div class="absolute inset-x-0 bottom-0 px-4 flex items-center gap-3 text-slate-200">
                 <div class="flex -space-x-2 shrink-0">
                     <div class="w-7 h-7 rounded-full bg-cm-yellow/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-cm-green-dark">A</div>
                     <div class="w-7 h-7 rounded-full bg-cm-red/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-white">E</div>
                     <div class="w-7 h-7 rounded-full bg-white/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-cm-green">N</div>
                 </div>
-                <p class="text-xs min-w-0">
+                <p class="text-xs font-bold min-w-0">
                     <span class="font-bold text-cm-yellow" data-count-to="{{ max($memberCount, 50) }}" data-count-duration="2000">0</span>
                     <span x-text="$store.lang.t(' Cameroonians already connected', ' Camerounais déjà connectés')"></span>
                 </p>
@@ -511,7 +512,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 2 — THE PROBLEM
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="py-20 lg:py-28 bg-white" data-animate>
+    <section class="hidden md:block py-20 lg:py-28 bg-white" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
@@ -586,7 +587,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 3 — MODULE PREVIEW GRID
          ═══════════════════════════════════════════════════════════════ --}}
-    <section id="features" class="py-20 lg:py-28 bg-slate-50" data-animate>
+    <section id="features" class="hidden md:block py-20 lg:py-28 bg-slate-50" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
@@ -634,7 +635,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 4 — THE YARD FEATURE HIGHLIGHT
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="py-20 lg:py-28 bg-white" data-animate>
+    <section class="hidden md:block py-20 lg:py-28 bg-white" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 {{-- Left: Copy --}}
@@ -730,7 +731,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 5 — SOLIDARITY HIGHLIGHT
          ═══════════════════════════════════════════════════════════════ --}}
-    <section id="solidarity" class="py-20 lg:py-28 bg-gradient-to-br from-cm-yellow/10 via-cm-yellow/5 to-white" data-animate>
+    <section id="solidarity" class="hidden md:block py-20 lg:py-28 bg-gradient-to-br from-cm-yellow/10 via-cm-yellow/5 to-white" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 {{-- Left: Solidarity Card Mockup --}}
@@ -817,7 +818,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 6 — HOW IT WORKS
          ═══════════════════════════════════════════════════════════════ --}}
-    <section id="how-it-works" class="py-20 lg:py-28 bg-white" data-animate>
+    <section id="how-it-works" class="hidden md:block py-20 lg:py-28 bg-white" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
@@ -860,7 +861,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 7 — COMMUNITY STATS
          ═══════════════════════════════════════════════════════════════ --}}
-    <section id="community" class="py-20 lg:py-28 bg-cm-green" data-animate>
+    <section id="community" class="hidden md:block py-20 lg:py-28 bg-cm-green" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
                 @php
@@ -888,7 +889,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 8 — TESTIMONIALS
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="py-20 lg:py-28 bg-white" data-animate>
+    <section class="hidden md:block py-20 lg:py-28 bg-white" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="text-center max-w-3xl mx-auto mb-16">
                 <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
@@ -947,7 +948,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 9 — THE VISION
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="py-20 lg:py-28 bg-slate-900 text-white" data-animate>
+    <section class="hidden md:block py-20 lg:py-28 bg-slate-900 text-white" data-animate>
         <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
             <div class="grid lg:grid-cols-2 gap-16 items-center">
                 <div class="space-y-6">
@@ -1012,7 +1013,7 @@
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 10 — FINAL CTA
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="py-20 lg:py-28 bg-cm-green" data-animate>
+    <section class="hidden md:block py-20 lg:py-28 bg-cm-green" data-animate>
         <div class="mx-auto max-w-4xl px-6 sm:px-10 lg:px-12 text-center">
             <h2 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white"
                 x-text="$store.lang.t('Your community is already waiting for you.', 'Votre communauté vous attend déjà.')"></h2>
@@ -1042,9 +1043,9 @@
     </footer>
 
     {{-- ═══════════════════════════════════════════════════════════════
-         MOBILE-ONLY: Fixed bottom "Download Our App" bar
+         MOBILE-ONLY: "Download Our App" bar (directly below hero)
          ═══════════════════════════════════════════════════════════════ --}}
-    <div class="md:hidden fixed inset-x-0 bottom-0 z-40 bg-cm-green/95 backdrop-blur border-t border-white/10 px-4 py-3 flex items-center justify-center gap-3 shadow-[0_-4px_18px_rgba(0,0,0,0.25)]">
+    <div class="md:hidden relative z-40 bg-cm-green/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-2 shadow-[0_-4px_18px_rgba(0,0,0,0.25)]">
         {{-- Profile / Login (pinned to extreme left) --}}
         <a href="{{ route('login') }}"
            aria-label="{{ __('Login') }}"
@@ -1055,7 +1056,7 @@
         </a>
         <span class="text-white font-semibold text-sm tracking-wide" x-text="$store.lang.t('Download Our App', 'Téléchargez notre app')"></span>
         {{-- Vertical separator --}}
-        <span class="h-5 w-px bg-white/30" aria-hidden="true"></span>
+        <span class="h-5 w-px bg-white" aria-hidden="true"></span>
         {{-- Google Play icon --}}
         <a href="#"
            @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('Android app coming soon!', 'App Android bientôt disponible !') } }))"
@@ -1072,11 +1073,12 @@
         <a href="#"
            @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('iOS app coming soon!', 'App iOS bientôt disponible !') } }))"
            aria-label="App Store"
-           class="flex items-center justify-center text-white transition-transform hover:scale-110">
+           class="-ml-1.5 flex items-center justify-center text-white transition-transform hover:scale-110">
             <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                 <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
             </svg>
         </a>
+    </div>
     </div>
 
     {{-- Kamer AI floating bubble is provided by the guest layout via @livewire('a-i.kamer-chat') --}}
