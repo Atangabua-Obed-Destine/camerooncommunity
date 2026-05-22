@@ -109,7 +109,7 @@
                         <div class="discover-card__icon">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                         </div>
-                        <div class="font-bold text-slate-800 text-sm" x-text="$store.lang.t('Go Connect', 'Go Connect')"></div>
+                        <div class="font-bold text-slate-800 text-sm" x-text="$store.lang.t('GoConnect', 'GoConnect')"></div>
                         <div class="text-[11px] text-slate-500 mt-0.5"
                              x-text="$store.lang.t('Chat & connect', 'Discuter & connecter')"></div>
                     </div>
@@ -183,8 +183,8 @@ function discoverModal() {
               descEn: 'KAMER connects Cameroonians across the world — wherever you are, you belong.',
               descFr: 'KAMER connecte les Camerounais du monde entier — où que vous soyez, vous êtes chez vous.' },
             { emoji: '💬',
-              titleEn: 'Go Connect is Buzzing',
-              titleFr: 'Go Connect Bouge',
+              titleEn: 'GoConnect is Buzzing',
+              titleFr: 'GoConnect Bouge',
               descEn: 'Public rooms, private chats, group conversations — your daily meeting place.',
               descFr: 'Salons publics, discussions privées, groupes — votre lieu de rencontre quotidien.' },
             { emoji: '❤️',

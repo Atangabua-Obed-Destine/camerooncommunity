@@ -301,7 +301,7 @@
                     <span class="yard-empty-bubble yard-empty-bubble--b">🇨🇲</span>
                     <span class="yard-empty-bubble yard-empty-bubble--c">🤝</span>
                 </div>
-                <p class="yard-empty-title" x-text="$store.lang.t('Welcome to Go Connect', 'Bienvenue sur Go Connect')"></p>
+                <p class="yard-empty-title" x-text="$store.lang.t('Welcome to GoConnect', 'Bienvenue sur GoConnect')"></p>
                 <p class="yard-empty-hint" x-text="$store.lang.t('Start chatting with fellow Cameroonians. Pick where you want to begin.', 'Commencez \u00e0 discuter avec des compatriotes. Choisissez par o\u00f9 commencer.')"></p>
 
                 <div class="yard-empty-actions">

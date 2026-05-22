@@ -139,7 +139,7 @@
 
         {{-- Footer --}}
         <div class="nb-foot">
-            <a href="{{ route('yard') }}" class="nb-foot__link" @click="open = false" x-text="$store.lang.t('Open Go Connect', 'Ouvrir Go Connect')"></a>
+            <a href="{{ route('yard') }}" class="nb-foot__link" @click="open = false" x-text="$store.lang.t('Open GoConnect', 'Ouvrir GoConnect')"></a>
         </div>
     </div>
 </div>

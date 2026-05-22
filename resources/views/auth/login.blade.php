@@ -4,6 +4,19 @@
     <div class="min-h-screen flex flex-col lg:flex-row bg-white">
 
         {{-- ════════════════════════════════════════════════════════════ --}}
+        {{-- TOP NAV BAR (mobile only — desktop shows logo in left panel) --}}
+        {{-- ════════════════════════════════════════════════════════════ --}}
+        <nav class="lg:hidden sticky top-0 z-30 bg-gradient-to-l from-white via-blue-400 to-cm-green backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center">
+            <a href="{{ route('home') }}" class="inline-flex items-center group">
+                @if($__siteLogo ?? null)
+                    <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-10 object-contain transition-transform group-hover:scale-110">
+                @else
+                    <span class="text-2xl transition-transform group-hover:scale-110">🇨🇲</span>
+                @endif
+            </a>
+        </nav>
+
+        {{-- ════════════════════════════════════════════════════════════ --}}
         {{-- LEFT PANEL — Branding, Features & Stats                      --}}
         {{-- Hidden on mobile, shown lg+                                   --}}
         {{-- ════════════════════════════════════════════════════════════ --}}
@@ -46,7 +59,7 @@
                 <div class="mt-10 mb-8">
                     <h1 class="text-3xl xl:text-4xl font-extrabold text-white leading-tight whitespace-nowrap"
                         x-text="$store.lang.t('Welcome Back!', 'Bon Retour !')"></h1>
-                    <p class="mt-3 text-sm text-white/70 leading-relaxed whitespace-nowrap"
+                    <p class="mt-3 text-sm font-bold text-white leading-relaxed whitespace-nowrap"
                        x-text="$store.lang.t(
                            'Your community is always here for you. Sign in to reconnect.',
                            'Votre communauté est toujours là pour vous. Connectez-vous pour retrouver les vôtres.'
@@ -60,8 +73,8 @@
                             <span class="text-lg">💬</span>
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-white" x-text="$store.lang.t('Go Connect', 'Go Connect')"></p>
-                            <p class="text-xs text-white/60" x-text="$store.lang.t('Live chat rooms by city & country', 'Salons de discussion par ville et pays')"></p>
+                            <p class="text-sm font-extrabold text-white" x-text="$store.lang.t('GoConnect', 'GoConnect')"></p>
+                            <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Live chat rooms by city & country', 'Salons de discussion par ville et pays')"></p>
                         </div>
                     </div>
 
@@ -70,8 +83,8 @@
                             <span class="text-lg">🤝</span>
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-white" x-text="$store.lang.t('Solidarity', 'Solidarité')"></p>
-                            <p class="text-xs text-white/60" x-text="$store.lang.t('Crowdfund & support each other', 'Financez et soutenez-vous mutuellement')"></p>
+                            <p class="text-sm font-extrabold text-white" x-text="$store.lang.t('Solidarity', 'Solidarité')"></p>
+                            <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Crowdfund & support each other', 'Financez et soutenez-vous mutuellement')"></p>
                         </div>
                     </div>
 
@@ -80,8 +93,8 @@
                             <span class="text-lg">🤖</span>
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-white">Kamer AI</p>
-                            <p class="text-xs text-white/60" x-text="$store.lang.t('Your personal Cameroon guide', 'Votre guide personnel du Cameroun')"></p>
+                            <p class="text-sm font-extrabold text-white">Kamer AI</p>
+                            <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Your personal Cameroon guide', 'Votre guide personnel du Cameroun')"></p>
                         </div>
                     </div>
 
@@ -90,8 +103,8 @@
                             <span class="text-lg">🌍</span>
                         </div>
                         <div>
-                            <p class="text-sm font-bold text-white" x-text="$store.lang.t('Global Network', 'Réseau Mondial')"></p>
-                            <p class="text-xs text-white/60" x-text="$store.lang.t('Cameroonians in 20+ countries', 'Camerounais dans 20+ pays')"></p>
+                            <p class="text-sm font-extrabold text-white" x-text="$store.lang.t('Global Network', 'Réseau Mondial')"></p>
+                            <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Cameroonians in 20+ countries', 'Camerounais dans 20+ pays')"></p>
                         </div>
                     </div>
                 </div>
@@ -100,17 +113,17 @@
                 <div class="flex items-center gap-6 pt-6 border-t border-white/10">
                     <div>
                         <p class="text-2xl font-extrabold text-white">{{ number_format(\App\Models\User::withoutGlobalScopes()->count()) }}+</p>
-                        <p class="text-[11px] text-white/50 font-medium" x-text="$store.lang.t('Members', 'Membres')"></p>
+                        <p class="text-[11px] text-white font-bold" x-text="$store.lang.t('Members', 'Membres')"></p>
                     </div>
                     <div class="w-px h-8 bg-white/10"></div>
                     <div>
                         <p class="text-2xl font-extrabold text-white">{{ \App\Models\YardRoom::where('is_active', true)->distinct('country')->count('country') }}+</p>
-                        <p class="text-[11px] text-white/50 font-medium" x-text="$store.lang.t('Countries', 'Pays')"></p>
+                        <p class="text-[11px] text-white font-bold" x-text="$store.lang.t('Countries', 'Pays')"></p>
                     </div>
                     <div class="w-px h-8 bg-white/10"></div>
                     <div>
                         <p class="text-2xl font-extrabold text-white">24/7</p>
-                        <p class="text-[11px] text-white/50 font-medium" x-text="$store.lang.t('Active', 'Actif')"></p>
+                        <p class="text-[11px] text-white font-bold" x-text="$store.lang.t('Active', 'Actif')"></p>
                     </div>
                 </div>
             </div>
@@ -124,17 +137,6 @@
             <x-cameroon-ribbon size="sm" />
 
             <div class="w-full max-w-md px-5 sm:px-8 py-10 lg:py-6 relative z-10">
-
-                {{-- Mobile-only logo --}}
-                <div class="text-center mb-6 lg:hidden">
-                    <a href="{{ route('home') }}" class="inline-flex items-center justify-center rounded-2xl bg-cm-green px-5 py-3 shadow-lg shadow-cm-green/20 group">
-                        @if($__siteLogo ?? null)
-                            <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain transition-transform group-hover:scale-110">
-                        @else
-                            <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
-                        @endif
-                    </a>
-                </div>
 
                 {{-- User Icon --}}
                 <div class="flex justify-center mb-5">
@@ -151,7 +153,7 @@
 
                     <div class="p-6 sm:p-8">
                         <h2 class="text-2xl font-extrabold text-slate-900 text-center" x-text="$store.lang.t('Welcome Back', 'Bienvenue')"></h2>
-                        <p class="mt-1 text-sm text-slate-500 text-center" x-text="$store.lang.t('Sign in to your community.', 'Connectez-vous à votre communauté.')"></p>
+                        <p class="mt-1 text-sm font-bold text-slate-700 text-center" x-text="$store.lang.t('Sign in to your community.', 'Connectez-vous à votre communauté.')"></p>
 
                         @if(session('status'))
                             <div class="mt-4 rounded-xl bg-cm-green/10 border border-cm-green/20 px-4 py-3 text-sm text-cm-green">
@@ -163,7 +165,7 @@
                             @csrf
                             {{-- Email --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1" x-text="$store.lang.t('Email Address', 'Adresse Email')"></label>
+                                <label class="block text-sm font-bold text-slate-900 mb-1" x-text="$store.lang.t('Email Address', 'Adresse Email')"></label>
                                 <div class="relative">
                                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
@@ -178,8 +180,8 @@
                             {{-- Password --}}
                             <div x-data="{ show: false }">
                                 <div class="flex items-center justify-between mb-1">
-                                    <label class="block text-sm font-medium text-slate-700" x-text="$store.lang.t('Password', 'Mot de Passe')"></label>
-                                    <a href="{{ route('password.request') }}" class="text-xs text-cm-green hover:underline font-medium" x-text="$store.lang.t('Forgot password?', 'Mot de passe oublié ?')"></a>
+                                    <label class="block text-sm font-bold text-slate-900" x-text="$store.lang.t('Password', 'Mot de Passe')"></label>
+                                    <a href="{{ route('password.request') }}" class="text-xs text-cm-green hover:underline font-bold" x-text="$store.lang.t('Forgot password?', 'Mot de passe oublié ?')"></a>
                                 </div>
                                 <div class="relative">
                                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -199,7 +201,7 @@
                             {{-- Remember Me --}}
                             <label class="flex items-center gap-2 cursor-pointer">
                                 <input name="remember" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-cm-green focus:ring-cm-green">
-                                <span class="text-sm text-slate-600" x-text="$store.lang.t('Remember me', 'Se souvenir de moi')"></span>
+                                <span class="text-sm font-bold text-slate-800" x-text="$store.lang.t('Remember me', 'Se souvenir de moi')"></span>
                             </label>
 
                             <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-cm-green to-blue-700 py-3.5 text-sm font-bold text-white shadow-lg shadow-cm-green/20 transition-all hover:shadow-xl hover:shadow-cm-green/30 hover:-translate-y-0.5">
@@ -209,9 +211,9 @@
                     </div>
                 </div>
 
-                <p class="mt-6 text-center text-sm text-slate-500">
+                <p class="mt-6 text-center text-sm font-bold text-slate-700">
                     <span x-text="$store.lang.t('Don\'t have an account?', 'Vous n\'avez pas de compte ?')"></span>
-                    <a href="{{ route('register') }}" class="ml-1 font-semibold text-cm-green hover:underline" x-text="$store.lang.t('Sign up', 'Inscrivez-vous')"></a>
+                    <a href="{{ route('register') }}" class="ml-1 font-extrabold text-cm-green hover:underline" x-text="$store.lang.t('Sign up', 'Inscrivez-vous')"></a>
                 </p>
             </div>
         </div>

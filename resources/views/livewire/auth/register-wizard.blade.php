@@ -150,6 +150,19 @@
      x-init="$nextTick(() => detectLocation())"
 >
     {{-- ════════════════════════════════════════════════════════════ --}}
+    {{-- TOP NAV BAR (mobile only — desktop shows logo in left panel) --}}
+    {{-- ════════════════════════════════════════════════════════════ --}}
+    <nav class="lg:hidden sticky top-0 z-30 bg-gradient-to-l from-white via-blue-400 to-cm-green backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center">
+        <a href="{{ route('home') }}" class="inline-flex items-center group">
+            @if($__siteLogo ?? null)
+                <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-10 object-contain transition-transform group-hover:scale-110">
+            @else
+                <span class="text-2xl transition-transform group-hover:scale-110">🇨🇲</span>
+            @endif
+        </a>
+    </nav>
+
+    {{-- ════════════════════════════════════════════════════════════ --}}
     {{-- LEFT PANEL — Branding, Features & Stats                      --}}
     {{-- Hidden on mobile, shown lg+                                   --}}
     {{-- ════════════════════════════════════════════════════════════ --}}
@@ -194,7 +207,7 @@
                 <h1 class="text-3xl xl:text-4xl font-extrabold text-white leading-tight">
                     <span x-text="$store.lang.t('Join the Family', 'Rejoignez la Famille')"></span> 🎉
                 </h1>
-                <p class="mt-3 text-sm text-white/70 leading-relaxed whitespace-nowrap"
+                <p class="mt-3 text-sm text-white font-bold leading-relaxed whitespace-nowrap"
                    x-text="$store.lang.t(
                        'Connect with Cameroonians wherever you are. Your community is waiting.',
                        'Connectez-vous avec les Camerounais où que vous soyez. Votre communauté vous attend.'
@@ -208,8 +221,8 @@
                         <span class="text-lg">💬</span>
                     </div>
                     <div>
-                        <p class="text-sm font-bold text-white" x-text="$store.lang.t('Go Connect', 'Go Connect')"></p>
-                        <p class="text-xs text-white/60" x-text="$store.lang.t('Live chat rooms by city & country', 'Salons de discussion par ville et pays')"></p>
+                        <p class="text-sm font-bold text-white" x-text="$store.lang.t('GoConnect', 'GoConnect')"></p>
+                        <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Live chat rooms by city & country', 'Salons de discussion par ville et pays')"></p>
                     </div>
                 </div>
 
@@ -219,7 +232,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-bold text-white" x-text="$store.lang.t('Solidarity', 'Solidarité')"></p>
-                        <p class="text-xs text-white/60" x-text="$store.lang.t('Crowdfund & support each other', 'Financez et soutenez-vous mutuellement')"></p>
+                        <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Crowdfund & support each other', 'Financez et soutenez-vous mutuellement')"></p>
                     </div>
                 </div>
 
@@ -229,7 +242,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-bold text-white">Kamer AI</p>
-                        <p class="text-xs text-white/60" x-text="$store.lang.t('Your personal Cameroon guide', 'Votre guide personnel du Cameroun')"></p>
+                        <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Your personal Cameroon guide', 'Votre guide personnel du Cameroun')"></p>
                     </div>
                 </div>
 
@@ -239,7 +252,7 @@
                     </div>
                     <div>
                         <p class="text-sm font-bold text-white" x-text="$store.lang.t('Global Network', 'Réseau Mondial')"></p>
-                        <p class="text-xs text-white/60" x-text="$store.lang.t('Cameroonians in 20+ countries', 'Camerounais dans 20+ pays')"></p>
+                        <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Cameroonians in 20+ countries', 'Camerounais dans 20+ pays')"></p>
                     </div>
                 </div>
             </div>
@@ -248,17 +261,17 @@
             <div class="flex items-center gap-6 pt-6 border-t border-white/10">
                 <div>
                     <p class="text-2xl font-extrabold text-white">{{ number_format(\App\Models\User::withoutGlobalScopes()->count()) }}+</p>
-                    <p class="text-[11px] text-white/50 font-medium" x-text="$store.lang.t('Members', 'Membres')"></p>
+                    <p class="text-[11px] text-white font-bold" x-text="$store.lang.t('Members', 'Membres')"></p>
                 </div>
                 <div class="w-px h-8 bg-white/10"></div>
                 <div>
                     <p class="text-2xl font-extrabold text-white">{{ \App\Models\YardRoom::where('is_active', true)->distinct('country')->count('country') }}+</p>
-                    <p class="text-[11px] text-white/50 font-medium" x-text="$store.lang.t('Countries', 'Pays')"></p>
+                    <p class="text-[11px] text-white font-bold" x-text="$store.lang.t('Countries', 'Pays')"></p>
                 </div>
                 <div class="w-px h-8 bg-white/10"></div>
                 <div>
                     <p class="text-2xl font-extrabold text-white">24/7</p>
-                    <p class="text-[11px] text-white/50 font-medium" x-text="$store.lang.t('Active', 'Actif')"></p>
+                    <p class="text-[11px] text-white font-bold" x-text="$store.lang.t('Active', 'Actif')"></p>
                 </div>
             </div>
         </div>
@@ -272,17 +285,6 @@
         <x-cameroon-ribbon size="sm" />
 
         <div class="w-full max-w-lg px-5 sm:px-8 py-8 lg:py-6 relative z-10">
-
-            {{-- Mobile-only logo (hidden on lg+) --}}
-            <div class="text-center mb-5 lg:hidden">
-                <a href="{{ route('home') }}" class="inline-flex items-center justify-center rounded-2xl bg-cm-green px-5 py-3 shadow-lg shadow-cm-green/20 group">
-                    @if($__siteLogo ?? null)
-                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain transition-transform group-hover:scale-110">
-                    @else
-                        <span class="text-3xl transition-transform group-hover:scale-110">🇨🇲</span>
-                    @endif
-                </a>
-            </div>
 
             {{-- ══ Progress Bar ══ --}}
             @php
@@ -310,7 +312,7 @@
                                 <span>{{ $meta['icon'] }}</span>
                             @endif
                         </div>
-                        <span class="text-[10px] font-semibold hidden sm:block transition-colors {{ $step >= $i ? 'text-cm-green' : 'text-slate-400' }} {{ $clickable ? 'group-hover:underline' : '' }}"
+                        <span class="text-[10px] font-bold hidden sm:block transition-colors {{ $step >= $i ? 'text-cm-green' : 'text-slate-400' }} {{ $clickable ? 'group-hover:underline' : '' }}"
                               x-text="$store.lang.t('{{ $meta['en'] }}', '{{ $meta['fr'] }}')"></span>
                     </button>
                     @if($i < 3)
@@ -330,13 +332,13 @@
                 </div>
                 <div class="flex-1 relative bg-white rounded-2xl rounded-tl-md px-4 py-3 shadow-sm border border-slate-200/80">
                     <div class="absolute -left-2 top-3 w-2 h-2 bg-white border-l border-t border-slate-200/80 rotate-[-45deg]"></div>
-                    <p class="text-sm text-slate-700 leading-relaxed font-medium"
+                    <p class="text-sm font-bold text-slate-900 leading-relaxed"
                        wire:key="ai-msg-{{ $step }}-{{ $current_country }}-{{ $username }}">
                         {{ $aiMessage }}
                     </p>
                     <div class="mt-1 flex items-center gap-1.5">
                         <span class="w-1.5 h-1.5 rounded-full bg-cm-green animate-pulse"></span>
-                        <span class="text-[10px] font-semibold text-cm-green">Kamer AI</span>
+                        <span class="text-[10px] font-extrabold text-cm-green">Kamer AI</span>
                     </div>
                 </div>
             </div>
@@ -354,14 +356,6 @@
                     {{-- ═══════════ STEP 1 — Personalize ═══════════ --}}
                     @if($step === 1)
                     <div wire:key="step-1">
-                        <h2 class="text-2xl font-extrabold text-slate-900"
-                            x-text="$store.lang.t('Let\'s personalize your experience', 'Personnalisons votre expérience')"></h2>
-                        <p class="mt-1 text-sm text-slate-500"
-                           x-text="$store.lang.t(
-                               'Tell us which community you\'d like to join — you can change this anytime.',
-                               'Dites-nous à quelle communauté vous souhaitez vous joindre — modifiable à tout moment.'
-                           )"></p>
-
                         <div class="mt-6 space-y-4">
                             {{-- GPS Radar Animation --}}
                             <div x-show="detecting" x-transition class="flex flex-col items-center py-6 gap-3">
@@ -376,7 +370,7 @@
                                         </svg>
                                     </div>
                                 </div>
-                                <span class="text-sm font-medium text-cm-green animate-pulse"
+                                <span class="text-sm font-bold text-cm-green animate-pulse"
                                       x-text="$store.lang.t('Setting things up for you...', 'Préparation de votre espace...')"></span>
                             </div>
 
@@ -427,17 +421,15 @@
                                         <span>{{ $current_region }}{{ $current_region && $current_country ? ', ' : '' }}{{ $current_country }}</span>
                                     </p>
                                     @if($this->communityStats['country_users'] > 0)
-                                    <p class="text-xs text-slate-500 mt-0.5">
-                                        {{ $this->communityStats['country_users'] }}
-                                        <span x-text="$store.lang.t(' Cameroonians already here', ' Camerounais déjà ici')"></span> 🎉
-                                    </p>
+                                    <p class="text-xs font-bold text-slate-700 mt-0.5"
+                                       x-text="$store.lang.t('Join your community today!', 'Rejoignez votre communauté aujourd\'hui !')"></p>
                                     @endif
                                 </div>
                             </div>
 
                             {{-- Country Selector --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
+                                <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Current Country', 'Pays Actuel')"></label>
                                 <select wire:model.live="current_country" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
                                         :disabled="detecting || (detected && !insecureContext && !poorAccuracy && accuracySource !== 'ip')">
@@ -454,7 +446,7 @@
 
                             {{-- Region / State / Province --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
+                                <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Region / State / Province', 'R\u00e9gion / \u00c9tat / Province')"></label>
                                 <input wire:model="current_region" type="text"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed"
@@ -465,14 +457,14 @@
 
                             {{-- Language Toggle (compact pill — saves space) --}}
                             <div class="flex items-center justify-between gap-3">
-                                <label class="text-sm font-medium text-slate-700"
+                                <label class="text-sm font-bold text-slate-900"
                                        x-text="$store.lang.t('Preferred Language', 'Langue Préférée')"></label>
                                 <div class="inline-flex rounded-full bg-slate-100 p-0.5 text-xs font-semibold">
                                     <label class="cursor-pointer">
                                         <input wire:model.live="language_pref" type="radio" value="en" class="sr-only"
                                                @change="$store.lang.current = 'en'">
                                         <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors"
-                                              :class="$wire.language_pref === 'en' ? 'bg-white text-cm-green shadow-sm' : 'text-slate-500'">
+                                              :class="$wire.language_pref === 'en' ? 'bg-cm-yellow text-cm-green shadow-sm' : 'text-slate-500'">
                                             🇬🇧 EN
                                         </span>
                                     </label>
@@ -480,7 +472,7 @@
                                         <input wire:model.live="language_pref" type="radio" value="fr" class="sr-only"
                                                @change="$store.lang.current = 'fr'">
                                         <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-colors"
-                                              :class="$wire.language_pref === 'fr' ? 'bg-white text-cm-green shadow-sm' : 'text-slate-500'">
+                                              :class="$wire.language_pref === 'fr' ? 'bg-cm-yellow text-cm-green shadow-sm' : 'text-slate-500'">
                                             🇫🇷 FR
                                         </span>
                                     </label>
@@ -489,7 +481,7 @@
 
                             {{-- Retry GPS --}}
                             <button type="button" @click="detectLocation()" x-show="!detecting"
-                                    class="text-xs text-cm-green font-medium hover:underline flex items-center gap-1.5">
+                                    class="text-xs text-cm-green font-bold hover:underline flex items-center gap-1.5">
                                 <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                                 <span x-text="$store.lang.t('Not your area? Refresh', 'Mauvaise zone ? Actualiser')"></span>
                             </button>
@@ -513,21 +505,21 @@
                     <div wire:key="step-2">
                         <h2 class="text-2xl font-extrabold text-slate-900"
                             x-text="$store.lang.t('Create Your Account', 'Créez Votre Compte')"></h2>
-                        <p class="mt-1 text-sm text-slate-500"
+                        <p class="mt-1 text-sm font-bold text-slate-700"
                            x-text="$store.lang.t('This takes under a minute — we promise.', 'Ça prend moins d\'une minute — promis.')"></p>
 
                         <div class="mt-6 space-y-4">
                             {{-- Username --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
+                                <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Username', 'Nom d\'utilisateur')"></label>
                                 <input wire:model.live.debounce.500ms="username" type="text"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
-                                       placeholder="Calaan">
+                                       placeholder="Calann">
                                 @if($username)
                                     <p class="mt-1 text-xs text-slate-500">
                                         <span x-text="$store.lang.t('You\'ll be known as:', 'Vous serez connu sous:')"></span>
-                                        <span class="font-semibold text-cm-green">{{ strtolower(preg_replace('/\s+/', '', trim($username))) }}-<span class="text-slate-400">*****</span></span>
+                                        <span class="font-extrabold text-cm-green">{{ strtolower(preg_replace('/\s+/', '', trim($username))) }}-<span class="text-slate-400">*****</span></span>
                                     </p>
                                 @endif
                                 @error('username') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
@@ -535,7 +527,7 @@
 
                             {{-- Email --}}
                             <div>
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
+                                <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Email Address', 'Adresse Email')"></label>
                                 <input wire:model.live.debounce.600ms="email" type="email"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
@@ -567,7 +559,7 @@
                                 get reqSymbol() { return /[^A-Za-z0-9]/.test(this.pwd); },
                                 get strength()  { return (this.reqLength?1:0) + (this.reqUpper?1:0) + (this.reqNumber?1:0) + (this.reqSymbol?1:0); }
                             }">
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
+                                <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Password', 'Mot de Passe')"></label>
                                 <div class="relative">
                                     <input wire:model.blur="password" :type="show ? 'text' : 'password'"
@@ -586,33 +578,46 @@
                                              :class="i <= strength ? (strength <= 1 ? 'bg-cm-red' : (strength <= 2 ? 'bg-cm-yellow' : 'bg-cm-green')) : 'bg-slate-100'"></div>
                                     </template>
                                 </div>
-                                <p class="mt-1 text-xs font-medium" :class="strength <= 1 ? 'text-cm-red' : (strength <= 2 ? 'text-cm-yellow-dark' : 'text-cm-green')"
+                                <p class="mt-1 text-xs font-bold" :class="strength <= 1 ? 'text-cm-red' : (strength <= 2 ? 'text-cm-yellow-dark' : 'text-cm-green')"
                                    x-text="strength === 0 ? '' : (strength <= 1 ? $store.lang.t('Weak — like watered garri', 'Faible — comme du garri dilué') : (strength <= 2 ? $store.lang.t('Getting there...', 'On y arrive...') : (strength <= 3 ? $store.lang.t('Solid! 💪', 'Solide ! 💪') : $store.lang.t('Fort like ndolé! 🔥', 'Fort comme le ndolé ! 🔥'))))"></p>
 
                                 {{-- Live requirements checklist --}}
-                                <ul class="mt-2 space-y-1 text-xs">
-                                    <template x-for="req in [
-                                        { ok: reqLength, en: 'At least 8 characters',          fr: 'Au moins 8 caractères' },
-                                        { ok: reqUpper,  en: 'One uppercase letter (A-Z)',     fr: 'Une lettre majuscule (A-Z)' },
-                                        { ok: reqLower,  en: 'One lowercase letter (a-z)',     fr: 'Une lettre minuscule (a-z)' },
-                                        { ok: reqNumber, en: 'One number (0-9)',               fr: 'Un chiffre (0-9)' },
-                                        { ok: reqSymbol, en: 'One symbol (!@#$...)',           fr: 'Un symbole (!@#$...)' }
-                                    ]" :key="req.en">
-                                        <li class="flex items-center gap-2 transition-colors duration-200"
-                                            :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
-                                            <svg x-show="req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                            <svg x-show="!req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
-                                            <span x-text="$store.lang.t(req.en, req.fr)"></span>
-                                        </li>
-                                    </template>
-                                </ul>
+                                <div class="mt-2 grid grid-cols-2 gap-x-3 text-xs">
+                                    <ul class="space-y-1">
+                                        <template x-for="req in [
+                                            { ok: reqLength, en: 'At least 8 characters',      fr: 'Au moins 8 caractères' },
+                                            { ok: reqUpper,  en: 'One uppercase letter (A-Z)', fr: 'Une lettre majuscule (A-Z)' },
+                                            { ok: reqLower,  en: 'One lowercase letter (a-z)', fr: 'Une lettre minuscule (a-z)' }
+                                        ]" :key="req.en">
+                                            <li class="flex items-center gap-2 transition-colors duration-200"
+                                                :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
+                                                <svg x-show="req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                                <svg x-show="!req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+                                                <span x-text="$store.lang.t(req.en, req.fr)"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                    <ul class="space-y-1">
+                                        <template x-for="req in [
+                                            { ok: reqNumber, en: 'One number (0-9)',     fr: 'Un chiffre (0-9)' },
+                                            { ok: reqSymbol, en: 'One symbol (!@#$...)', fr: 'Un symbole (!@#$...)' }
+                                        ]" :key="req.en">
+                                            <li class="flex items-center gap-2 transition-colors duration-200"
+                                                :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
+                                                <svg x-show="req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                                                <svg x-show="!req.ok" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+                                                <span x-text="$store.lang.t(req.en, req.fr)"></span>
+                                            </li>
+                                        </template>
+                                    </ul>
+                                </div>
                                 @error('password') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 
                             {{-- Confirm Password --}}
                             <div x-data="{ show: false, confirm: @js($password_confirmation), pwd: @js($password) }"
                                  x-init="$watch('confirm', v => $wire.set('password_confirmation', v, false))">
-                                <label class="block text-sm font-medium text-slate-700 mb-1"
+                                <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Confirm Password', 'Confirmer le Mot de Passe')"></label>
                                 <div class="relative">
                                     <input x-model="confirm"
@@ -668,7 +673,7 @@
                     <div wire:key="step-3">
                         <h2 class="text-2xl font-extrabold text-slate-900"
                             x-text="$store.lang.t('Welcome Home! 🎉', 'Bienvenue Chez Vous ! 🎉')"></h2>
-                        <p class="mt-1 text-sm text-slate-500"
+                        <p class="mt-1 text-sm font-bold text-slate-700"
                            x-text="$store.lang.t('Review your details and join the family.', 'Vérifiez vos informations et rejoignez la famille.')"></p>
 
                         {{-- Summary Cards --}}
@@ -677,10 +682,10 @@
                             <div class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 border border-slate-100">
                                 <span class="text-xl">📍</span>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-xs text-slate-500 font-medium" x-text="$store.lang.t('Location', 'Position')"></p>
+                                    <p class="text-xs font-bold text-slate-700" x-text="$store.lang.t('Location', 'Position')"></p>
                                     <p class="text-sm font-semibold text-slate-900 truncate">{{ $current_region ? "$current_region, " : '' }}{{ $current_country }}</p>
                                 </div>
-                                <span class="text-[10px] uppercase tracking-wide text-slate-400 font-medium"
+                                <span class="text-[10px] uppercase tracking-wide text-slate-700 font-bold"
                                       x-text="$store.lang.t('Auto', 'Auto')"></span>
                             </div>
 
@@ -688,11 +693,11 @@
                             <div class="flex items-center gap-3 rounded-xl bg-slate-50 px-4 py-3 border border-slate-100">
                                 <span class="text-xl">👤</span>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-xs text-slate-500 font-medium" x-text="$store.lang.t('Account', 'Compte')"></p>
+                                    <p class="text-xs font-bold text-slate-700" x-text="$store.lang.t('Account', 'Compte')"></p>
                                     <p class="text-sm font-semibold text-slate-900 truncate">@ {{ strtolower(preg_replace('/\s+/', '', trim($username))) }}-****</p>
-                                    <p class="text-xs text-slate-500 truncate">{{ $email }}</p>
+                                    <p class="text-xs font-bold text-slate-700 truncate">{{ $email }}</p>
                                 </div>
-                                <button wire:click="$set('step', 2)" class="text-xs text-cm-green font-medium hover:underline"
+                                <button wire:click="$set('step', 2)" class="text-xs text-cm-green font-bold hover:underline"
                                         x-text="$store.lang.t('Edit', 'Modifier')"></button>
                             </div>
                         </div>
@@ -704,20 +709,20 @@
                             <div class="grid grid-cols-3 gap-3 text-center">
                                 <div>
                                     <span class="text-xl block">💬</span>
-                                    <span class="text-[11px] font-medium text-slate-700 block mt-0.5"
-                                          x-text="$store.lang.t('Go Connect', 'Go Connect')"></span>
-                                    <span class="text-[10px] text-slate-500" x-text="$store.lang.t('Chat rooms', 'Salons')"></span>
+                                    <span class="text-[11px] font-bold text-slate-900 block mt-0.5"
+                                          x-text="$store.lang.t('GoConnect', 'GoConnect')"></span>
+                                    <span class="text-[10px] font-bold text-slate-700" x-text="$store.lang.t('Chat rooms', 'Salons')"></span>
                                 </div>
                                 <div>
                                     <span class="text-xl block">🤝</span>
-                                    <span class="text-[11px] font-medium text-slate-700 block mt-0.5"
+                                    <span class="text-[11px] font-bold text-slate-900 block mt-0.5"
                                           x-text="$store.lang.t('Solidarity', 'Solidarité')"></span>
-                                    <span class="text-[10px] text-slate-500" x-text="$store.lang.t('Crowdfund', 'Financer')"></span>
+                                    <span class="text-[10px] font-bold text-slate-700" x-text="$store.lang.t('Crowdfund', 'Financer')"></span>
                                 </div>
                                 <div>
                                     <span class="text-xl block">🤖</span>
-                                    <span class="text-[11px] font-medium text-slate-700 block mt-0.5">Kamer AI</span>
-                                    <span class="text-[10px] text-slate-500" x-text="$store.lang.t('Your guide', 'Votre guide')"></span>
+                                    <span class="text-[11px] font-bold text-slate-900 block mt-0.5">Kamer AI</span>
+                                    <span class="text-[10px] font-bold text-slate-700" x-text="$store.lang.t('Your guide', 'Votre guide')"></span>
                                 </div>
                             </div>
                         </div>
@@ -726,7 +731,7 @@
                         <div class="mt-4 flex items-center gap-2 rounded-xl bg-cm-yellow/10 border border-cm-yellow/30 px-4 py-2.5"
                              x-data="{ show: false }" x-init="setTimeout(() => show = true, 500)" x-show="show" x-transition>
                             <span class="text-lg">⭐</span>
-                            <p class="text-xs font-medium text-cm-yellow-dark"
+                            <p class="text-xs font-bold text-cm-yellow-dark"
                                x-text="$store.lang.t(
                                    'You\'re early! You could be a Founding Member.',
                                    'Vous êtes parmi les premiers ! Vous pourriez être Membre Fondateur.'
@@ -737,7 +742,7 @@
                         <div class="mt-4">
                             <label class="flex items-start gap-3 cursor-pointer">
                                 <input wire:model="terms" type="checkbox" class="mt-0.5 h-5 w-5 rounded border-slate-300 text-cm-green focus:ring-cm-green">
-                                <span class="text-sm text-slate-600" x-html="$store.lang.t(
+                                <span class="text-sm font-bold text-slate-800" x-html="$store.lang.t(
                                     'I agree to the <a href=\'{{ route('legal.terms') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Terms of Service</a> and <a href=\'{{ route('legal.privacy') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Privacy Policy</a>',
                                     'J\'accepte les <a href=\'{{ route('legal.terms') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Conditions d\'Utilisation</a> et la <a href=\'{{ route('legal.privacy') }}\' target=\'_blank\' rel=\'noopener\' class=\'text-cm-green hover:underline font-medium\'>Politique de Confidentialité</a>'
                                 )"></span>
@@ -769,9 +774,9 @@
             </div>
 
             {{-- Login link --}}
-            <p class="mt-6 text-center text-sm text-slate-500">
+            <p class="mt-6 text-center text-sm font-bold text-slate-700">
                 <span x-text="$store.lang.t('Already have an account?', 'Vous avez déjà un compte ?')"></span>
-                <a href="{{ route('login') }}" class="ml-1 font-semibold text-cm-green hover:underline" x-text="$store.lang.t('Sign in', 'Connectez-vous')"></a>
+                <a href="{{ route('login') }}" class="ml-1 font-extrabold text-cm-green hover:underline" x-text="$store.lang.t('Sign in', 'Connectez-vous')"></a>
             </p>
         </div>
     </div>

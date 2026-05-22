@@ -130,6 +130,10 @@
                 <a href="{{ route('yard') }}" class="rounded-full bg-cm-green px-5 py-2 text-white font-bold text-sm hover:bg-cm-green-light transition-colors"
                    x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
             @else
+                <a href="{{ route('legal.terms') }}" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
+                   x-text="$store.lang.t('Terms', 'Conditions')">Terms</a>
+                <a href="{{ route('legal.privacy') }}" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
+                   x-text="$store.lang.t('Privacy', 'Confidentialité')">Privacy</a>
                 <a href="{{ route('login') }}" :class="scrolled ? 'text-cm-green hover:underline' : 'text-white hover:underline'" class="transition-colors font-bold drop-shadow-sm"
                    x-text="$store.lang.t('Sign In', 'Connexion')">Sign In</a>
                 <a href="{{ route('register') }}" class="rounded-full bg-cm-yellow px-5 py-2 text-cm-green-dark font-bold text-sm hover:bg-cm-yellow/90 transition-colors shadow-sm"
@@ -159,6 +163,10 @@
                 <a href="{{ route('yard') }}" class="block w-full text-center rounded-xl bg-cm-green py-3 text-white font-bold hover:bg-cm-green-light"
                    x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
             @else
+                <a href="{{ route('legal.terms') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
+                   x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')">Terms of Service</a>
+                <a href="{{ route('legal.privacy') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
+                   x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')">Privacy Policy</a>
                 <div class="flex gap-3">
                     <a href="{{ route('login') }}" class="flex-1 text-center rounded-xl border border-slate-300 py-3 text-slate-700 font-bold hover:bg-slate-50"
                        x-text="$store.lang.t('Sign In', 'Connexion')">Sign In</a>

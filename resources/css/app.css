@@ -923,9 +923,9 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    padding: 5px 12px;
+    padding: 6px 14px;
     border-radius: 9999px;
-    font-size: 0.72rem;
+    font-size: 0.85rem;
     font-weight: 700;
     white-space: nowrap;
     cursor: pointer;
@@ -947,12 +947,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 20px;
-    height: 18px;
-    padding: 0 6px;
+    min-width: 22px;
+    height: 20px;
+    padding: 0 7px;
     margin-left: 4px;
     border-radius: 9999px;
-    font-size: 0.65rem;
+    font-size: 0.72rem;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 0.02em;

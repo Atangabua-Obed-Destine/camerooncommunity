@@ -15,7 +15,7 @@
             ],
             [
                 'icon' => '💬',
-                'en' => ['title' => 'Your messages belong to you', 'body' => "Conversations in Go Connect are stored to deliver them across your devices. We do not read them. We do not train AI on them. Reports of abuse are reviewed by humans, not algorithms."],
+                'en' => ['title' => 'Your messages belong to you', 'body' => "Conversations in GoConnect are stored to deliver them across your devices. We do not read them. We do not train AI on them. Reports of abuse are reviewed by humans, not algorithms."],
                 'fr' => ['title' => 'Vos messages vous appartiennent', 'body' => "Les conversations du Yard sont stockées pour être livrées sur vos appareils. Nous ne les lisons pas. Nous n'entraînons aucune IA dessus. Les signalements sont examinés par des humains, pas des algorithmes."],
             ],
             [

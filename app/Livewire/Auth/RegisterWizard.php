@@ -209,8 +209,8 @@ class RegisterWizard extends Component
 
         if ($stats['country_users'] > 0) {
             return $fr
-                ? "Trouvé ! 📍 Vous êtes à {$loc}. Déjà {$stats['country_users']} Camerounais ici — on vous attend ! 🇨🇲"
-                : "Found you! 📍 You're in {$loc}. Already {$stats['country_users']} Cameroonians here — they're waiting for you! 🇨🇲";
+                ? "Trouvé ! 📍 Vous êtes à {$loc}. Votre communauté vous attend ! 🇨🇲"
+                : "Found you! 📍 You're in {$loc}. Your community is waiting for you! 🇨🇲";
         }
 
         return $fr

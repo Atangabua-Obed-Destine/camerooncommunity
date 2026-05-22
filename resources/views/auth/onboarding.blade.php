@@ -143,7 +143,7 @@
 
                 <div class="p-8 text-center">
                     <div class="w-20 h-20 mx-auto rounded-2xl bg-cm-green/10 flex items-center justify-center text-4xl mb-4">💬</div>
-                    <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('Go Connect', 'Go Connect')"></h2>
+                    <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('GoConnect', 'GoConnect')"></h2>
                     <p class="text-slate-600 max-w-md mx-auto" x-text="$store.lang.t(
                         'Your digital gathering space. Chat with Cameroonians in your country, city, or private groups. Share moments, get advice, stay connected.',
                         'Votre espace de rencontre numérique. Discutez avec des Camerounais dans votre pays, votre ville, ou des groupes privés.'
@@ -281,7 +281,7 @@
                         </div>
                         <div class="flex flex-wrap gap-2 pl-11">
                             <span class="inline-block text-xs bg-cm-green/10 text-cm-green font-medium rounded-full px-3 py-1.5 cursor-pointer hover:bg-cm-green/20 transition-colors"
-                                  x-text="$store.lang.t('Show me Go Connect', 'Montre-moi Go Connect')"></span>
+                                  x-text="$store.lang.t('Show me GoConnect', 'Montre-moi GoConnect')"></span>
                             <span class="inline-block text-xs bg-cm-green/10 text-cm-green font-medium rounded-full px-3 py-1.5 cursor-pointer hover:bg-cm-green/20 transition-colors"
                                   x-text="$store.lang.t('How does Solidarity work?', 'Comment fonctionne la Solidarité ?')"></span>
                             <span class="inline-block text-xs bg-cm-green/10 text-cm-green font-medium rounded-full px-3 py-1.5 cursor-pointer hover:bg-cm-green/20 transition-colors"
@@ -295,7 +295,7 @@
                         <span x-text="$store.lang.t('Back', 'Retour')"></span>
                     </button>
                     <a href="{{ route('yard') }}" class="rounded-xl bg-cm-green px-8 py-3 text-sm font-bold text-white transition-colors hover:bg-cm-green-light flex items-center gap-2">
-                        <span x-text="$store.lang.t('Enter Go Connect 🎉', 'Entrer dans Go Connect 🎉')"></span>
+                        <span x-text="$store.lang.t('Enter GoConnect 🎉', 'Entrer dans GoConnect 🎉')"></span>
                     </a>
                 </div>
             </div>

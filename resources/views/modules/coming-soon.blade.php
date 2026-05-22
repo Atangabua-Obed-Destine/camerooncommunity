@@ -70,7 +70,7 @@
 
             {{-- Back link --}}
             <div class="mt-8">
-                <a href="{{ route('yard') }}" class="text-sm text-cm-green font-medium hover:underline" x-text="$store.lang.t('← Back to Go Connect', '← Retour à Go Connect')"></a>
+                <a href="{{ route('yard') }}" class="text-sm text-cm-green font-medium hover:underline" x-text="$store.lang.t('← Back to GoConnect', '← Retour à GoConnect')"></a>
             </div>
         </div>
     </div>

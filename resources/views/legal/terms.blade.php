@@ -25,8 +25,8 @@
             ],
             [
                 'icon' => '🔄',
-                'en' => ['title' => 'Changes & ending the agreement', 'body' => "We may update these terms as the platform evolves. Major changes will be announced in Go Connect. You can leave at any time by deleting your account — no questions asked, no strings attached."],
-                'fr' => ['title' => 'Modifications & fin de l\'accord', 'body' => "Nous pouvons mettre à jour ces conditions au fur et à mesure de l'évolution de la plateforme. Les changements majeurs seront annoncés dans Go Connect. Vous pouvez partir à tout moment en supprimant votre compte — sans questions, sans conditions."],
+                'en' => ['title' => 'Changes & ending the agreement', 'body' => "We may update these terms as the platform evolves. Major changes will be announced in GoConnect. You can leave at any time by deleting your account — no questions asked, no strings attached."],
+                'fr' => ['title' => 'Modifications & fin de l\'accord', 'body' => "Nous pouvons mettre à jour ces conditions au fur et à mesure de l'évolution de la plateforme. Les changements majeurs seront annoncés dans GoConnect. Vous pouvez partir à tout moment en supprimant votre compte — sans questions, sans conditions."],
             ],
         ];
     @endphp

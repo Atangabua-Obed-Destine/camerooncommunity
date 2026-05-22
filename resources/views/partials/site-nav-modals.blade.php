@@ -49,7 +49,7 @@
                     <div class="p-6 sm:p-8">
                         @php
                             $features = [
-                                ['icon' => '💬', 'en' => 'Go Connect', 'fr' => 'Go Connect', 'desc_en' => 'Real-time chat rooms grouped by country, region, and city.', 'desc_fr' => 'Salons de discussion en temps réel par pays, région et ville.', 'live' => true, 'color' => 'from-emerald-500 to-emerald-600'],
+                                ['icon' => '💬', 'en' => 'GoConnect', 'fr' => 'GoConnect', 'desc_en' => 'Real-time chat rooms grouped by country, region, and city.', 'desc_fr' => 'Salons de discussion en temps réel par pays, région et ville.', 'live' => true, 'color' => 'from-emerald-500 to-emerald-600'],
                                 ['icon' => '🤝', 'en' => 'Solidarity', 'fr' => 'Solidarité', 'desc_en' => 'Community-powered fundraising for those who need it most.', 'desc_fr' => 'Collectes communautaires pour ceux qui en ont le plus besoin.', 'live' => false, 'color' => 'from-rose-500 to-pink-600'],
                                 ['icon' => '✨', 'en' => 'Kamer AI', 'fr' => 'Kamer AI', 'desc_en' => 'Your personal guide — answers in English, French, or Pidgin.', 'desc_fr' => 'Votre guide personnel — réponses en anglais, français ou pidgin.', 'live' => true, 'color' => 'from-indigo-500 to-purple-600'],
                                 ['icon' => '🛒', 'en' => 'GoMarket', 'fr' => 'GoMarket', 'desc_en' => 'Buy and sell within your trusted local community.', 'desc_fr' => 'Achetez et vendez au sein de votre communauté locale.', 'live' => false, 'color' => 'from-amber-500 to-orange-600'],
@@ -126,7 +126,7 @@
                             $steps = [
                                 ['icon' => '👤', 'en' => 'Create your free account', 'fr' => 'Créez votre compte gratuit', 'desc_en' => 'Just your name, email and a password. No phone numbers, no ID upload.', 'desc_fr' => 'Juste votre nom, e-mail et un mot de passe. Pas de numéro, pas de pièce d\'identité.'],
                                 ['icon' => '📍', 'en' => 'Tell us where you are', 'fr' => 'Dites-nous où vous êtes', 'desc_en' => 'GPS or city pick — we use it to suggest the right rooms for you.', 'desc_fr' => 'GPS ou choix de ville — on l\'utilise pour vous suggérer les bons salons.'],
-                                ['icon' => '🏠', 'en' => 'Step into Go Connect', 'fr' => 'Entrez dans Go Connect', 'desc_en' => 'Join your country, region, and city rooms instantly. Say "ashia" 👋', 'desc_fr' => 'Rejoignez vos salons pays, région et ville instantanément. Dites « ashia » 👋'],
+                                ['icon' => '🏠', 'en' => 'Step into GoConnect', 'fr' => 'Entrez dans GoConnect', 'desc_en' => 'Join your country, region, and city rooms instantly. Say "ashia" 👋', 'desc_fr' => 'Rejoignez vos salons pays, région et ville instantanément. Dites « ashia » 👋'],
                                 ['icon' => '🚀', 'en' => 'Build, share, support', 'fr' => 'Construisez, partagez, soutenez', 'desc_en' => 'Help a neighbour, raise funds, find friends — that\'s the Cameroonian way.', 'desc_fr' => 'Aidez un voisin, levez des fonds, trouvez des amis — c\'est la voie camerounaise.'],
                             ];
                         @endphp

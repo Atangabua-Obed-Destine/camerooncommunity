@@ -201,8 +201,8 @@
                             <div class="w-8 h-8 rounded-full bg-white/80 border-2 border-cm-green flex items-center justify-center text-xs font-bold text-cm-green">N</div>
                         </div>
                         <p class="text-xs sm:text-sm min-w-0">
-                            <span class="font-bold text-cm-yellow" data-count-to="{{ max($memberCount, 50) }}" data-count-duration="2000">0</span>
-                            <span x-text="$store.lang.t(' Cameroonians already connected', ' Camerounais déjà connectés')"></span>
+                            <span class="font-bold text-cm-yellow" x-text="$store.lang.t('Cameroonians worldwide', 'Camerounais dans le monde')"></span>
+                            <span class="text-slate-300" x-text="$store.lang.t(' — join your community!', ' — rejoignez votre communauté !')"></span>
                         </p>
                     </div>
                 </div>
@@ -495,8 +495,8 @@
                     <div class="w-7 h-7 rounded-full bg-white/80 border-2 border-cm-green flex items-center justify-center text-[11px] font-bold text-cm-green">N</div>
                 </div>
                 <p class="text-xs font-bold min-w-0">
-                    <span class="font-bold text-cm-yellow" data-count-to="{{ max($memberCount, 50) }}" data-count-duration="2000">0</span>
-                    <span x-text="$store.lang.t(' Cameroonians already connected', ' Camerounais déjà connectés')"></span>
+                    <span class="font-bold text-cm-yellow" x-text="$store.lang.t('Cameroonians worldwide', 'Camerounais dans le monde')"></span>
+                    <span x-text="$store.lang.t(' — join your community!', ' — rejoignez votre communauté !')"></span>
                 </p>
             </div>
         </div>
@@ -536,7 +536,7 @@
                        )"></p>
                     <div class="mt-4 flex items-center gap-2 text-cm-green font-semibold text-sm">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                        <span x-text="$store.lang.t('Solved by Go Connect', 'Résolu par Go Connect')"></span>
+                        <span x-text="$store.lang.t('Solved by GoConnect', 'Résolu par GoConnect')"></span>
                     </div>
                 </div>
 
@@ -598,7 +598,7 @@
 
             @php
                 $modules = [
-                    ['name' => 'Go Connect', 'nameFr' => 'Go Connect', 'icon' => '💬', 'desc' => 'Real-time chat rooms for your country and city', 'descFr' => 'Salons de discussion en temps réel pour votre pays et ville', 'live' => true],
+                    ['name' => 'GoConnect', 'nameFr' => 'GoConnect', 'icon' => '💬', 'desc' => 'Real-time chat rooms for your country and city', 'descFr' => 'Salons de discussion en temps réel pour votre pays et ville', 'live' => true],
                     ['name' => 'Solidarity', 'nameFr' => 'Solidarité', 'icon' => '🤝', 'desc' => 'Community fundraising for those in need', 'descFr' => 'Collectes communautaires pour ceux dans le besoin', 'live' => false],
                     ['name' => 'Marché', 'nameFr' => 'Marché', 'icon' => '🛒', 'desc' => 'Buy and sell within the community', 'descFr' => 'Achetez et vendez au sein de la communauté', 'live' => false],
                     ['name' => 'EasyGoParcel', 'nameFr' => 'EasyGoParcel', 'icon' => '📦', 'desc' => 'Send parcels home with trusted travellers', 'descFr' => 'Envoyez des colis au pays avec des voyageurs de confiance', 'live' => false],
@@ -642,14 +642,14 @@
                 {{-- Left: Copy --}}
                 <div class="space-y-6">
                     <div class="inline-flex items-center gap-2 rounded-full bg-cm-green/10 px-4 py-2 text-sm font-semibold text-cm-green">
-                        💬 <span x-text="$store.lang.t('Go Connect', 'Go Connect')"></span>
+                        💬 <span x-text="$store.lang.t('GoConnect', 'GoConnect')"></span>
                     </div>
                     <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
                         x-text="$store.lang.t('Where your community gathers.', 'Où votre communauté se rassemble.')"></h2>
                     <p class="text-lg text-slate-600 leading-relaxed"
                        x-text="$store.lang.t(
-                           'Go Connect is your home base. Country-wide and city-specific chat rooms connect you with Cameroonians wherever you are. Share experiences, ask for help, celebrate together.',
-                           'Go Connect est votre base. Des salons nationaux et par ville vous connectent avec les Camerounais où que vous soyez. Partagez, demandez de l\'aide, célébrez ensemble.'
+                           'GoConnect is your home base. Country-wide and city-specific chat rooms connect you with Cameroonians wherever you are. Share experiences, ask for help, celebrate together.',
+                           'GoConnect est votre base. Des salons nationaux et par ville vous connectent avec les Camerounais où que vous soyez. Partagez, demandez de l\'aide, célébrez ensemble.'
                        )"></p>
 
                     <div class="space-y-4">
@@ -685,7 +685,7 @@
                     <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
                         {{-- Room list header --}}
                         <div class="bg-cm-green px-5 py-4">
-                            <h3 class="text-white font-bold text-lg">Go Connect</h3>
+                            <h3 class="text-white font-bold text-lg">GoConnect</h3>
                             <p class="text-slate-400 text-sm">Your rooms</p>
                         </div>
                         {{-- Room entries --}}
@@ -870,7 +870,7 @@
                         ['value' => max($memberCount, 150), 'label' => 'Members in the UK', 'labelFr' => 'Membres au Royaume-Uni', 'suffix' => '+'],
                         ['value' => max($regionCount, 12), 'label' => 'Regions with active communities', 'labelFr' => 'Régions avec communautés actives', 'suffix' => ''],
                         ['value' => 8, 'label' => 'Solidarity campaigns completed', 'labelFr' => 'Campagnes de solidarité complétées', 'suffix' => ''],
-                        ['value' => 2400, 'label' => 'Messages sent in Go Connect', 'labelFr' => 'Messages envoyés dans Go Connect', 'suffix' => '+'],
+                        ['value' => 2400, 'label' => 'Messages sent in GoConnect', 'labelFr' => 'Messages envoyés dans GoConnect', 'suffix' => '+'],
                     ];
                 @endphp
 
@@ -906,8 +906,8 @@
                             'city' => 'London',
                             'initial' => 'AT',
                             'color' => 'bg-cm-green',
-                            'quote' => 'When I first moved to London, I didn\'t know a single person. Go Connect connected me with 50 Cameroonians in my city within the first week. It\'s like having a piece of home.',
-                            'quoteFr' => 'Quand je suis arrivée à Londres, je ne connaissais personne. Go Connect m\'a connectée avec 50 Camerounais dans ma ville en une semaine. C\'est comme avoir un morceau de chez soi.',
+                            'quote' => 'When I first moved to London, I didn\'t know a single person. GoConnect connected me with 50 Cameroonians in my city within the first week. It\'s like having a piece of home.',
+                            'quoteFr' => 'Quand je suis arrivée à Londres, je ne connaissais personne. GoConnect m\'a connectée avec 50 Camerounais dans ma ville en une semaine. C\'est comme avoir un morceau de chez soi.',
                         ],
                         [
                             'name' => 'Emmanuel Fru',

@@ -39,7 +39,7 @@
                     $navItems = [
                         ['route' => 'admin.dashboard', 'icon' => '📊', 'label_en' => 'Dashboard', 'label_fr' => 'Tableau de Bord'],
                         ['route' => 'admin.users', 'icon' => '👥', 'label_en' => 'Users', 'label_fr' => 'Utilisateurs'],
-                        ['route' => 'admin.yard', 'icon' => '💬', 'label_en' => 'Go Connect', 'label_fr' => 'Go Connect'],
+                        ['route' => 'admin.yard', 'icon' => '💬', 'label_en' => 'GoConnect', 'label_fr' => 'GoConnect'],
                         ['route' => 'admin.solidarity', 'icon' => '🤲', 'label_en' => 'Solidarity', 'label_fr' => 'Solidarité'],
                         ['route' => 'admin.moderation', 'icon' => '🛡️', 'label_en' => 'Moderation', 'label_fr' => 'Modération'],
                         ['route' => 'admin.reports', 'icon' => '🚩', 'label_en' => 'Reports', 'label_fr' => 'Signalements'],
