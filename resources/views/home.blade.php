@@ -1,13 +1,13 @@
 <x-layouts.guest>
     <x-slot:title>Cameroon Network — Connecting Cameroonians. Wherever They Are.</x-slot:title>
 
-    <div class="flex flex-col min-h-screen md:block md:min-h-0">
+    <div class="fixed inset-0 flex flex-col overflow-hidden md:static md:block md:overflow-visible md:h-auto md:min-h-0">
     @include('partials.site-nav', ['staysTransparent' => true])
 
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 1 — HERO (full viewport)
          ═══════════════════════════════════════════════════════════════ --}}
-    <section class="relative z-0 md:min-h-screen md:h-auto min-h-[640px] flex-1 md:flex-none md:overflow-visible overflow-hidden flex items-start lg:items-center pt-16 sm:pt-20 lg:pt-32 pb-8 md:pb-8 lg:pb-0">
+    <section class="relative z-0 md:min-h-screen md:h-auto flex-1 min-h-0 md:flex-none md:overflow-visible overflow-hidden flex items-start lg:items-center pt-16 sm:pt-20 lg:pt-32 pb-8 md:pb-8 lg:pb-0">
         {{-- Background image --}}
         <div class="absolute inset-0 pointer-events-none">
             <img src="{{ asset('images/hero-bg.jpg') }}" alt="" class="h-full w-full object-cover">

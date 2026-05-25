@@ -6,14 +6,15 @@
         {{-- ════════════════════════════════════════════════════════════ --}}
         {{-- TOP NAV BAR (mobile only — desktop shows logo in left panel) --}}
         {{-- ════════════════════════════════════════════════════════════ --}}
-        <nav class="lg:hidden sticky top-0 z-30 bg-gradient-to-l from-white via-blue-400 to-cm-green backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center">
-            <a href="{{ route('home') }}" class="inline-flex items-center group">
+        <nav class="lg:hidden sticky top-0 z-30 bg-gradient-to-l from-white via-blue-400 to-cm-green backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center relative overflow-hidden">
+            <a href="{{ route('home') }}" class="inline-flex items-center group relative z-10">
                 @if($__siteLogo ?? null)
                     <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-10 object-contain transition-transform group-hover:scale-110">
                 @else
                     <span class="text-2xl transition-transform group-hover:scale-110">🇨🇲</span>
                 @endif
             </a>
+            <x-cameroon-ribbon size="sm" />
         </nav>
 
         {{-- ════════════════════════════════════════════════════════════ --}}
@@ -132,9 +133,11 @@
         {{-- ════════════════════════════════════════════════════════════ --}}
         {{-- RIGHT PANEL — Login Form                                     --}}
         {{-- ════════════════════════════════════════════════════════════ --}}
-        <div class="flex-1 min-h-screen bg-slate-50/50 flex items-center justify-center overflow-y-auto relative">
-            {{-- Cameroon Flag Ribbon --}}
-            <x-cameroon-ribbon size="sm" />
+        <div class="flex-1 lg:min-h-screen bg-slate-50/50 flex items-center justify-center overflow-y-auto relative">
+            {{-- Cameroon Flag Ribbon (desktop only — mobile shows it on the nav) --}}
+            <div class="hidden lg:block">
+                <x-cameroon-ribbon size="sm" />
+            </div>
 
             <div class="w-full max-w-md px-5 sm:px-8 py-10 lg:py-6 relative z-10">
 
@@ -170,7 +173,7 @@
                                     <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
                                         <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>
                                     </div>
-                                    <input name="email" type="email" value="{{ old('email') }}" required autofocus
+                                    <input name="email" type="email" value="{{ old('email') }}" required
                                            class="w-full rounded-xl border border-slate-300 pl-11 pr-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                                            placeholder="you@example.com">
                                 </div>
@@ -213,7 +216,7 @@
 
                 <p class="mt-6 text-center text-sm font-bold text-slate-700">
                     <span x-text="$store.lang.t('Don\'t have an account?', 'Vous n\'avez pas de compte ?')"></span>
-                    <a href="{{ route('register') }}" class="ml-1 font-extrabold text-cm-green hover:underline" x-text="$store.lang.t('Sign up', 'Inscrivez-vous')"></a>
+                    <a href="{{ route('register') }}" class="ml-2 inline-block rounded-full bg-cm-yellow px-4 py-1.5 font-extrabold text-cm-green-dark shadow-sm hover:bg-cm-yellow/90 transition-colors" x-text="$store.lang.t('Sign up', 'Inscrivez-vous')"></a>
                 </p>
             </div>
         </div>

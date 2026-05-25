@@ -152,14 +152,15 @@
     {{-- ════════════════════════════════════════════════════════════ --}}
     {{-- TOP NAV BAR (mobile only — desktop shows logo in left panel) --}}
     {{-- ════════════════════════════════════════════════════════════ --}}
-    <nav class="lg:hidden sticky top-0 z-30 bg-gradient-to-l from-white via-blue-400 to-cm-green backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center">
-        <a href="{{ route('home') }}" class="inline-flex items-center group">
+    <nav class="lg:hidden sticky top-0 z-30 bg-gradient-to-l from-white via-blue-400 to-cm-green backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center relative overflow-hidden">
+        <a href="{{ route('home') }}" class="inline-flex items-center group relative z-10">
             @if($__siteLogo ?? null)
                 <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-10 object-contain transition-transform group-hover:scale-110">
             @else
                 <span class="text-2xl transition-transform group-hover:scale-110">🇨🇲</span>
             @endif
         </a>
+        <x-cameroon-ribbon size="sm" />
     </nav>
 
     {{-- ════════════════════════════════════════════════════════════ --}}
@@ -280,9 +281,11 @@
     {{-- ════════════════════════════════════════════════════════════ --}}
     {{-- RIGHT PANEL — Registration Wizard Form                       --}}
     {{-- ════════════════════════════════════════════════════════════ --}}
-    <div class="flex-1 min-h-screen bg-slate-50/50 flex items-start lg:items-center justify-center overflow-y-auto relative">
-        {{-- Cameroon Flag Ribbon --}}
-        <x-cameroon-ribbon size="sm" />
+    <div class="flex-1 lg:min-h-screen bg-slate-50/50 flex items-start lg:items-center justify-center overflow-y-auto relative">
+        {{-- Cameroon Flag Ribbon (desktop only — mobile shows it on the nav) --}}
+        <div class="hidden lg:block">
+            <x-cameroon-ribbon size="sm" />
+        </div>
 
         <div class="w-full max-w-lg px-5 sm:px-8 py-8 lg:py-6 relative z-10">
 
@@ -586,8 +589,8 @@
                                     <ul class="space-y-1">
                                         <template x-for="req in [
                                             { ok: reqLength, en: 'At least 8 characters',      fr: 'Au moins 8 caractères' },
-                                            { ok: reqUpper,  en: 'One uppercase letter (A-Z)', fr: 'Une lettre majuscule (A-Z)' },
-                                            { ok: reqLower,  en: 'One lowercase letter (a-z)', fr: 'Une lettre minuscule (a-z)' }
+                                            { ok: reqUpper,  en: '1 uppercase letter (A-Z)', fr: '1 lettre majuscule (A-Z)' },
+                                            { ok: reqLower,  en: '1 lowercase letter (a-z)', fr: '1 lettre minuscule (a-z)' }
                                         ]" :key="req.en">
                                             <li class="flex items-center gap-2 transition-colors duration-200"
                                                 :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
@@ -599,8 +602,8 @@
                                     </ul>
                                     <ul class="space-y-1">
                                         <template x-for="req in [
-                                            { ok: reqNumber, en: 'One number (0-9)',     fr: 'Un chiffre (0-9)' },
-                                            { ok: reqSymbol, en: 'One symbol (!@#$...)', fr: 'Un symbole (!@#$...)' }
+                                            { ok: reqNumber, en: '1 number (0-9)',     fr: '1 chiffre (0-9)' },
+                                            { ok: reqSymbol, en: '1 symbol (!@#$...)', fr: '1 symbole (!@#$...)' }
                                         ]" :key="req.en">
                                             <li class="flex items-center gap-2 transition-colors duration-200"
                                                 :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
@@ -776,7 +779,7 @@
             {{-- Login link --}}
             <p class="mt-6 text-center text-sm font-bold text-slate-700">
                 <span x-text="$store.lang.t('Already have an account?', 'Vous avez déjà un compte ?')"></span>
-                <a href="{{ route('login') }}" class="ml-1 font-extrabold text-cm-green hover:underline" x-text="$store.lang.t('Sign in', 'Connectez-vous')"></a>
+                <a href="{{ route('login') }}" class="ml-2 inline-block rounded-full bg-cm-yellow px-4 py-1.5 font-extrabold text-cm-green-dark shadow-sm hover:bg-cm-yellow/90 transition-colors" x-text="$store.lang.t('Sign in', 'Connectez-vous')"></a>
             </p>
         </div>
     </div>

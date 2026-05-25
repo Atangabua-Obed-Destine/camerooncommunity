@@ -18,7 +18,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-screen bg-slate-900 text-slate-900 antialiased overflow-x-hidden">
+<body class="min-h-[100dvh] bg-slate-900 text-slate-900 antialiased overflow-x-hidden">
     {{ $slot }}
 
     {{-- Kamer AI Assistant for visitors (only on non-auth pages) --}}
