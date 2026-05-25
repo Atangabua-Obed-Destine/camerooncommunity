@@ -1,7 +1,7 @@
 <x-layouts.guest>
     <x-slot:title>Login — Cameroon Network</x-slot:title>
 
-    <div class="min-h-screen flex flex-col lg:flex-row bg-white">
+    <div class="fixed inset-0 flex flex-col overflow-hidden lg:static lg:flex-row lg:overflow-visible lg:min-h-screen bg-white">
 
         {{-- ════════════════════════════════════════════════════════════ --}}
         {{-- TOP NAV BAR (mobile only — desktop shows logo in left panel) --}}

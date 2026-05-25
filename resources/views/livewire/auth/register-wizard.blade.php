@@ -5,7 +5,7 @@
     Right: 4-step wizard: Location → Account → Roots → Welcome Home
     ═══════════════════════════════════════════════════════════════════
 --}}
-<div class="min-h-screen flex flex-col lg:flex-row bg-white"
+<div class="fixed inset-0 flex flex-col overflow-hidden lg:static lg:flex-row lg:overflow-visible lg:min-h-screen bg-white"
      x-data="{
         detecting: false,
         detected: @entangle('gps_detected'),
