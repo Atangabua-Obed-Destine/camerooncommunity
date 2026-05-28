@@ -127,6 +127,20 @@ class ChatRoom extends Component
         $query = YardMessage::where('room_id', $this->room->id)
             ->with(['user:id,name,username,avatar', 'parent:id,content,user_id', 'parent.user:id,name,username', 'poll.options']);
 
+        // WhatsApp-style history privacy: a member should never see messages
+        // that were posted to the room before they joined. We use the
+        // viewer's own joined_at as the cut-off. DMs are excluded because
+        // both participants effectively "join" when the conversation starts
+        // and there is no prior history anyway.
+        if ($this->room->room_type !== \App\Enums\RoomType::DirectMessage) {
+            $joinedAt = YardRoomMember::where('room_id', $this->room->id)
+                ->where('user_id', auth()->id())
+                ->value('joined_at');
+            if ($joinedAt) {
+                $query->where('created_at', '>=', $joinedAt);
+            }
+        }
+
         // Block-aware: hide messages authored by users with whom the viewer
         // has any block in either direction (mutual hide), in every room type.
         // The viewer's own messages are always shown.
@@ -214,10 +228,22 @@ class ChatRoom extends Component
             return collect();
         }
 
-        return YardMessage::where('room_id', $this->room->id)
+        $query = YardMessage::where('room_id', $this->room->id)
             ->where('is_pinned', true)
-            ->with('user:id,name,username')
-            ->orderByDesc('pinned_at')
+            ->with('user:id,name,username');
+
+        // Same WhatsApp-style history cut-off as the main message feed:
+        // don't expose pinned messages that pre-date the viewer's join.
+        if ($this->room->room_type !== \App\Enums\RoomType::DirectMessage) {
+            $joinedAt = YardRoomMember::where('room_id', $this->room->id)
+                ->where('user_id', auth()->id())
+                ->value('joined_at');
+            if ($joinedAt) {
+                $query->where('created_at', '>=', $joinedAt);
+            }
+        }
+
+        return $query->orderByDesc('pinned_at')
             ->limit(5)
             ->get();
     }

@@ -15,6 +15,10 @@ class OnboardingFlow extends Component
 {
     // Step tracking: 1=AI Chat, 2=Community Discovery, 3=Profile Polish, 4=Launch
     public int $step = 1;
+    // Furthest step the visitor has unlocked — bumped whenever the flow
+    // advances. Used so the visitor can swipe / click back to any visited
+    // step without being able to skip ahead past unfinished work.
+    public int $maxStep = 1;
 
     // AI Chat state
     public array $chatMessages = [];
@@ -200,6 +204,7 @@ class OnboardingFlow extends Component
         }
 
         $this->step = 3;
+        $this->maxStep = max($this->maxStep, 3);
     }
 
     /**
@@ -214,6 +219,7 @@ class OnboardingFlow extends Component
         }
 
         $this->step = 4;
+        $this->maxStep = 4;
     }
 
     /**
@@ -222,6 +228,7 @@ class OnboardingFlow extends Component
     public function skipBio(): void
     {
         $this->step = 4;
+        $this->maxStep = 4;
     }
 
     /**
@@ -236,7 +243,11 @@ class OnboardingFlow extends Component
 
     public function goToStep(int $step): void
     {
-        if ($step >= 1 && $step <= 4 && $step <= $this->step) {
+        // Allow jumping to any step the visitor has already unlocked, both
+        // backwards (review previous step) and forwards (return to where they
+        // left off after a back-swipe). Steps that haven't been reached yet
+        // are still gated by the Continue button on the current step.
+        if ($step >= 1 && $step <= 4 && $step <= $this->maxStep) {
             $this->step = $step;
         }
     }
@@ -244,6 +255,7 @@ class OnboardingFlow extends Component
     public function nextStep(): void
     {
         $this->step = min($this->step + 1, 4);
+        $this->maxStep = max($this->maxStep, $this->step);
     }
 
     public function render()

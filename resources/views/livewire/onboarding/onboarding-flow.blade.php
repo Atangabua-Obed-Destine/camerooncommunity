@@ -1,19 +1,21 @@
 <div class="flex items-start justify-center pt-2 pb-8 px-4"
      x-data="onboardingFlow()"
-     x-init="$nextTick(() => typewriterInit())">
+     x-init="$nextTick(() => typewriterInit())"
+     @touchstart.passive="onSwipeStart($event)"
+     @touchend.passive="onSwipeEnd($event)">
 
     <div class="w-full max-w-2xl">
 
         {{-- ═══ Progress Bar ═══ --}}
         <div class="flex items-center justify-center gap-2 mb-8">
             @for($i = 1; $i <= 4; $i++)
-                @php $dotClickable = $i < $step; @endphp
+                @php $dotClickable = $i <= $maxStep && $i !== $step; @endphp
                 <button type="button"
                         @if($dotClickable) wire:click="goToStep({{ $i }})" @else disabled @endif
                         title="{{ __('Step') }} {{ $i }}"
                         class="relative h-6 flex items-center group {{ $dotClickable ? 'cursor-pointer' : 'cursor-default' }}">
                     <span class="block h-2 rounded-full transition-all duration-500
-                        {{ $i === $step ? 'w-10 bg-cm-green' : ($i < $step ? 'w-6 bg-cm-green/40 group-hover:bg-cm-green/70 group-hover:w-8' : 'w-2 bg-slate-300') }}"></span>
+                        {{ $i === $step ? 'w-10 bg-cm-green' : ($i <= $maxStep ? 'w-6 bg-cm-green/40 group-hover:bg-cm-green/70 group-hover:w-8' : 'w-2 bg-slate-300') }}"></span>
                 </button>
             @endfor
         </div>
@@ -29,13 +31,13 @@
                 ];
             @endphp
             @foreach($labels as $num => $text)
-                @php $clickable = $num < $step; @endphp
+                @php $clickable = $num <= $maxStep && $num !== $step; @endphp
                 <button type="button"
                         @if($clickable) wire:click="goToStep({{ $num }})" @else disabled @endif
                         class="text-[11px] font-medium transition-all duration-300 px-1
-                            {{ $step >= $num ? 'text-cm-green' : 'text-slate-400' }}
+                            {{ $num <= $maxStep ? 'text-cm-green' : 'text-slate-400' }}
                             {{ $clickable ? 'cursor-pointer hover:underline hover:text-cm-green/80' : 'cursor-default' }}"
-                        @if($clickable) title="{{ __('Go back') }}" @endif
+                        @if($clickable) title="{{ __('Jump to step') }}" @endif
                         x-text="$store.lang.t('{{ $text['en'] }}', '{{ $text['fr'] }}')">
                 </button>
             @endforeach
@@ -200,8 +202,8 @@
                     <div class="text-4xl mb-3">🏠</div>
                     <h2 class="text-2xl font-bold mb-1" x-text="$store.lang.t('Your Communities', 'Vos Communautés')"></h2>
                     <p class="text-white/70 text-sm" x-text="$store.lang.t(
-                        'Choose which rooms to join — just like WhatsApp groups, you decide.',
-                        'Choisissez les salles à rejoindre — comme les groupes WhatsApp, c\'est vous qui décidez.'
+                        'You\'ve been added to your national and regional rooms automatically — discover others below.',
+                        'Vous avez été automatiquement ajouté à vos salons national et régional — découvrez les autres ci-dessous.'
                     )"></p>
                 </div>
             </div>
@@ -245,7 +247,7 @@
                                 <h3 class="font-bold text-slate-900">{{ $room->name }}</h3>
                                 @if($isDefault)
                                 <span class="text-[10px] font-bold uppercase tracking-wide text-cm-green bg-cm-green/10 rounded-full px-2 py-0.5"
-                                      x-text="$store.lang.t('Required', 'Requis')"></span>
+                                      x-text="$store.lang.t('Auto-joined', 'Ajouté')"></span>
                                 @endif
                             </div>
                             <p class="text-xs text-slate-500 mt-0.5">{{ $room->description }}</p>
@@ -267,7 +269,7 @@
                         <div class="shrink-0">
                             <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-300
                                  {{ in_array($room->id, $selectedRoomIds) ? 'border-cm-green bg-cm-green' : 'border-slate-300 group-hover:border-slate-400' }}"
-                                 @if($isDefault) title="{{ auth()->user()->language_pref?->value === 'fr' ? 'Salon par défaut — obligatoire' : 'Default room — required' }}" @endif>
+                                 @if($isDefault) title="{{ auth()->user()->language_pref?->value === 'fr' ? 'Salon par défaut — déjà ajouté' : 'Default room — already joined' }}" @endif>
                                 @if($isDefault)
                                 <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                 @elseif(in_array($room->id, $selectedRoomIds))
@@ -292,8 +294,8 @@
                 <div class="flex items-start gap-2 bg-blue-50 rounded-xl p-3 border border-blue-100">
                     <span class="text-base shrink-0">💡</span>
                     <p class="text-[11px] text-blue-700 leading-relaxed" x-text="$store.lang.t(
-                        'Tap a room card to select it. You\'ll be able to discover more rooms later in the GoConnect sidebar.',
-                        'Appuyez sur une carte pour la sélectionner. Vous pourrez découvrir plus de salles dans la barre latérale du Yard.'
+                        'Your national and regional rooms are joined for you. Tap any other card to opt in — you can always discover more in the GoConnect sidebar.',
+                        'Vos salons national et régional sont déjà rejoints. Appuyez sur une autre carte pour la rejoindre — vous pourrez en découvrir plus dans la barre latérale GoConnect.'
                     )"></p>
                 </div>
                 @endif
@@ -304,10 +306,11 @@
                 <button wire:click="joinSelectedRooms"
                         @if(empty($selectedRoomIds)) disabled @endif
                         class="rounded-xl bg-cm-green px-6 py-2.5 text-sm font-bold text-white hover:bg-cm-green/90 transition-all duration-200 flex items-center gap-2 shadow-lg shadow-cm-green/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
-                    @if(count($selectedRoomIds) > 0)
-                        <span x-text="$store.lang.t('Join {{ count($selectedRoomIds) }} Room{{ count($selectedRoomIds) > 1 ? 's' : '' }}', 'Rejoindre {{ count($selectedRoomIds) }} Salle{{ count($selectedRoomIds) > 1 ? 's' : '' }}')"></span>
+                    @php $extraRooms = count($selectedRoomIds) - count($defaultRoomIds); @endphp
+                    @if($extraRooms > 0)
+                        <span x-text="$store.lang.t('Continue — Join {{ $extraRooms }} more Room{{ $extraRooms > 1 ? 's' : '' }}', 'Continuer — Rejoindre {{ $extraRooms }} salle{{ $extraRooms > 1 ? 's' : '' }} de plus')"></span>
                     @else
-                        <span x-text="$store.lang.t('Select rooms to join', 'Sélectionnez des salles')"></span>
+                        <span x-text="$store.lang.t('Continue', 'Continuer')"></span>
                     @endif
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                 </button>
@@ -520,6 +523,44 @@
     <script>
         function onboardingFlow() {
             return {
+                // Swipe tracking — lets the visitor slide left/right anywhere
+                // on the screen to move between unlocked onboarding steps.
+                _swipeStartX: 0,
+                _swipeStartY: 0,
+                _swipeStartT: 0,
+                _swipeBlocked: false,
+                onSwipeStart(e) {
+                    const t = e.changedTouches && e.changedTouches[0];
+                    if (!t) return;
+                    // Don't hijack swipes that start inside scrollable areas
+                    // like the chat transcript or a textarea/input.
+                    this._swipeBlocked = !!(e.target && e.target.closest(
+                        '#chat-container, textarea, input, select, [data-no-swipe]'
+                    ));
+                    this._swipeStartX = t.clientX;
+                    this._swipeStartY = t.clientY;
+                    this._swipeStartT = Date.now();
+                },
+                onSwipeEnd(e) {
+                    if (this._swipeBlocked) return;
+                    const t = e.changedTouches && e.changedTouches[0];
+                    if (!t) return;
+                    const dx = t.clientX - this._swipeStartX;
+                    const dy = t.clientY - this._swipeStartY;
+                    const dt = Date.now() - this._swipeStartT;
+                    // Require a clearly horizontal flick: > 60px X, mostly
+                    // horizontal, and completed in under ~800ms.
+                    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.3 || dt > 800) return;
+                    const cur = this.$wire.get('step');
+                    const max = this.$wire.get('maxStep') || cur;
+                    if (dx < 0) {
+                        // Swipe left → forward (only to already-unlocked steps).
+                        if (cur < max) this.$wire.call('goToStep', cur + 1);
+                    } else {
+                        // Swipe right → backward.
+                        if (cur > 1) this.$wire.call('goToStep', cur - 1);
+                    }
+                },
                 typewriterInit() {
                     this.$nextTick(() => this.scrollChat());
                 },

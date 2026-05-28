@@ -81,7 +81,7 @@ class RoomList extends Component
                      ->where('m.user_id', $user->id)
                      ->whereNull('m.auto_archived_at'); // hide rooms auto-archived by location switch
             })
-            ->select('yard_rooms.*', 'm.last_read_at as member_last_read_at', 'm.is_favorited as is_favorited', 'm.archived_at as member_archived_at')
+            ->select('yard_rooms.*', 'm.last_read_at as member_last_read_at', 'm.joined_at as member_joined_at', 'm.is_favorited as is_favorited', 'm.archived_at as member_archived_at')
             ->selectRaw('(SELECT COUNT(*) FROM yard_room_members WHERE room_id = yard_rooms.id) as members_count')
             ->selectRaw('(SELECT COALESCE(u.username, u.name) FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_name', [$user->id])
             ->selectRaw('(SELECT u.avatar FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_avatar', [$user->id])
@@ -120,44 +120,45 @@ class RoomList extends Component
         if (!empty($roomIds)) {
             $unreadCounts = collect();
             $mentionCounts = collect();
-            $cases = $rooms->filter(fn ($r) => $r->member_last_read_at)
-                ->map(fn ($r) => ['id' => $r->id, 'last_read' => $r->member_last_read_at]);
 
-            if ($cases->isNotEmpty()) {
-                $unreadCounts = DB::table('yard_messages')
+            // WhatsApp-style cut-off: unread = messages newer than the LATER
+            // of the viewer's last_read_at and their joined_at. This way a
+            // freshly-joined member never sees a badge counting messages
+            // that pre-dated their join.
+            $cutoffSql = "GREATEST(
+                COALESCE((SELECT joined_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1), '1970-01-01 00:00:00'),
+                COALESCE((SELECT last_read_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1), '1970-01-01 00:00:00')
+            )";
+
+            $unreadCounts = DB::table('yard_messages')
+                ->select('room_id', DB::raw('COUNT(*) as cnt'))
+                ->whereIn('room_id', $roomIds)
+                ->where('user_id', '!=', $user->id)
+                ->where('is_deleted', false)
+                ->whereRaw("created_at > $cutoffSql", [$user->id, $user->id])
+                ->groupBy('room_id')
+                ->pluck('cnt', 'room_id');
+
+            // Count unread messages where this user is mentioned (WhatsApp-style "@" badge).
+            // Uses MySQL JSON_CONTAINS on the mentioned_user_ids JSON column.
+            try {
+                $mentionCounts = DB::table('yard_messages')
                     ->select('room_id', DB::raw('COUNT(*) as cnt'))
-                    ->whereIn('room_id', $cases->pluck('id'))
+                    ->whereIn('room_id', $roomIds)
                     ->where('user_id', '!=', $user->id)
                     ->where('is_deleted', false)
-                    ->whereRaw('created_at > (SELECT last_read_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1)', [$user->id])
+                    ->whereNotNull('mentioned_user_ids')
+                    ->whereRaw('JSON_CONTAINS(mentioned_user_ids, ?)', [(string) $user->id])
+                    ->whereRaw("created_at > $cutoffSql", [$user->id, $user->id])
                     ->groupBy('room_id')
                     ->pluck('cnt', 'room_id');
-
-                // Count unread messages where this user is mentioned (WhatsApp-style "@" badge).
-                // Uses MySQL JSON_CONTAINS on the mentioned_user_ids JSON column.
-                try {
-                    $mentionCounts = DB::table('yard_messages')
-                        ->select('room_id', DB::raw('COUNT(*) as cnt'))
-                        ->whereIn('room_id', $cases->pluck('id'))
-                        ->where('user_id', '!=', $user->id)
-                        ->where('is_deleted', false)
-                        ->whereNotNull('mentioned_user_ids')
-                        ->whereRaw('JSON_CONTAINS(mentioned_user_ids, ?)', [(string) $user->id])
-                        ->whereRaw('created_at > (SELECT last_read_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1)', [$user->id])
-                        ->groupBy('room_id')
-                        ->pluck('cnt', 'room_id');
-                } catch (\Throwable $e) {
-                    // Driver without JSON_CONTAINS — gracefully degrade.
-                    \Log::warning('[RoomList] mention count query failed: ' . $e->getMessage());
-                }
+            } catch (\Throwable $e) {
+                // Driver without JSON_CONTAINS — gracefully degrade.
+                \Log::warning('[RoomList] mention count query failed: ' . $e->getMessage());
             }
 
             foreach ($rooms as $room) {
-                if (!$room->member_last_read_at) {
-                    $room->unread_count = $room->messages_count ?? 0;
-                } else {
-                    $room->unread_count = (int) ($unreadCounts->get($room->id) ?? $unreadCounts->get((string) $room->id) ?? 0);
-                }
+                $room->unread_count = (int) ($unreadCounts->get($room->id) ?? $unreadCounts->get((string) $room->id) ?? 0);
                 $room->unread_mention_count = (int) ($mentionCounts->get($room->id) ?? $mentionCounts->get((string) $room->id) ?? 0);
             }
 
@@ -227,8 +228,10 @@ class RoomList extends Component
             ->where('yard_rooms.room_type', '!=', RoomType::DirectMessage->value)
             ->count();
 
-        // Unread count = rooms with at least one message newer than last_read_at
-        // (or rooms never read that have any messages from someone else).
+        // Unread count = rooms with at least one message newer than the
+        // viewer's effective cut-off (later of last_read_at and joined_at).
+        // This keeps freshly-joined rooms from being flagged unread just
+        // because they contain pre-existing history.
         $unread = (clone $base)
             ->where(function ($q) use ($user) {
                 $q->whereExists(function ($sub) use ($user) {
@@ -237,10 +240,12 @@ class RoomList extends Component
                         ->whereColumn('yard_messages.room_id', 'yard_room_members.room_id')
                         ->where('yard_messages.user_id', '!=', $user->id)
                         ->where('yard_messages.is_deleted', false)
-                        ->where(function ($w) {
-                            $w->whereNull('yard_room_members.last_read_at')
-                              ->orWhereColumn('yard_messages.created_at', '>', 'yard_room_members.last_read_at');
-                        });
+                        ->whereRaw(
+                            "yard_messages.created_at > GREATEST(
+                                COALESCE(yard_room_members.joined_at, '1970-01-01 00:00:00'),
+                                COALESCE(yard_room_members.last_read_at, '1970-01-01 00:00:00')
+                            )"
+                        );
                 });
             })
             ->count();

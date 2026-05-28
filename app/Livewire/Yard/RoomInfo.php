@@ -469,29 +469,17 @@ class RoomInfo extends Component
 
         // WhatsApp-style: replace the admin-only "requested to join" pill with
         // a public "X joined" system message visible to everyone in the room.
+        // The announcement itself is now posted automatically by the
+        // YardRoomMember model event; here we only need to clear the
+        // previous "join_request" pill so it doesn't linger.
         try {
-            $joiner = \App\Models\User::find($joinRequest->user_id);
             \App\Models\YardMessage::where('room_id', $room->id)
                 ->where('message_type', \App\Enums\MessageType::System->value)
                 ->whereJsonContains('media_metadata->kind', 'join_request')
                 ->whereJsonContains('media_metadata->request_id', $joinRequest->id)
                 ->delete();
-            $sysMsg = \App\Models\YardMessage::create([
-                'uuid' => (string) \Illuminate\Support\Str::uuid(),
-                'room_id' => $room->id,
-                'user_id' => $joinRequest->user_id,
-                'message_type' => \App\Enums\MessageType::System,
-                'content' => sprintf('%s joined', $joiner?->username ?? $joiner?->name ?? 'A new member'),
-                'media_metadata' => ['kind' => 'member_joined', 'user_id' => $joinRequest->user_id],
-            ]);
-            $room->update([
-                'last_message_at'      => now(),
-                'last_message_preview' => $sysMsg->content,
-                'last_message_user_id' => $joinRequest->user_id,
-            ]);
-            broadcast(new \App\Events\MessageSent($sysMsg));
         } catch (\Throwable $e) {
-            \Log::warning('Join-approved system message failed: ' . $e->getMessage());
+            \Log::warning('Join-request pill cleanup failed: ' . $e->getMessage());
         }
 
         try {

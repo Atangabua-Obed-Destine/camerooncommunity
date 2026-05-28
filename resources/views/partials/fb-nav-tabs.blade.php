@@ -46,8 +46,9 @@
    class="{{ $tabBase }} group transition-colors {{ $isHome ? $activeWrapper : 'hover:bg-white/5' }}"
    :title="$store.lang.t('The Yard', 'Le Yard')"
    aria-label="The Yard">
-    <svg class="{{ $iconSize }} {{ $isHome ? $iconActive : $iconInactive }} transition-colors" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M12 2.69 3 11h2v9h5v-6h4v6h5v-9h2L12 2.69z"/>
+    <svg class="{{ $iconSize }} {{ $isHome ? $iconActive : $iconInactive }} transition-colors" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        {{-- Facebook-style rounded home: soft pitched roof + rounded body, no door. --}}
+        <path d="M11.03 2.59a1.5 1.5 0 0 1 1.94 0l8.5 7.25a1.5 1.5 0 0 1 .53 1.14V20a2 2 0 0 1-2 2h-4a1 1 0 0 1-1-1v-6a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2v-9.02c0-.44.19-.86.53-1.14l8.5-7.25z"/>
     </svg>
     @if($isHome && !$isMobile)<span class="{{ $activeBar }}"></span>@endif
 </a>
