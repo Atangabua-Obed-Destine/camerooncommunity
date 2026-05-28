@@ -550,7 +550,7 @@
                             </div>
                         @else
                             {{-- ── Continue with Google ─────────────────────────── --}}
-                            <a href="{{ route('auth.google') }}"
+                            <button type="button" wire:click="redirectToGoogle"
                                class="mt-6 inline-flex items-center justify-center gap-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-400 hover:shadow-md">
                                 <svg class="w-5 h-5" viewBox="0 0 48 48" aria-hidden="true">
                                     <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
@@ -559,7 +559,7 @@
                                     <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
                                 </svg>
                                 <span x-text="$store.lang.t('Continue with Google', 'Continuer avec Google')">Continue with Google</span>
-                            </a>
+                            </button>
 
                             {{-- Divider --}}
                             <div class="my-5 flex items-center gap-3">

@@ -64,6 +64,24 @@ class RegisterWizard extends Component
 
     public function mount(): void
     {
+        // Restore an in-progress location that the visitor completed before
+        // bouncing out to Google (the redirectToGoogle() method stashes it).
+        // This avoids forcing the user to re-do the GPS step on their return.
+        $pending = session('register_pending_location');
+        if (is_array($pending) && !empty($pending['current_country'])) {
+            $this->current_country = (string) $pending['current_country'];
+            $this->current_region  = (string) ($pending['current_region'] ?? '');
+            $this->current_lat     = isset($pending['current_lat']) ? (float) $pending['current_lat'] : null;
+            $this->current_lng     = isset($pending['current_lng']) ? (float) $pending['current_lng'] : null;
+            $this->gps_detected    = (bool) ($pending['gps_detected'] ?? false);
+            // Consume the stash so a later visit doesn't restore stale data.
+            session()->forget('register_pending_location');
+            // Jump straight to the account step — they already finished location.
+            if ($this->gps_detected) {
+                $this->step = max($this->step, 2);
+            }
+        }
+
         $google = session('google_signup');
         if (is_array($google) && !empty($google['google_id']) && !empty($google['email'])) {
             $this->isGoogle      = true;
@@ -140,6 +158,27 @@ class RegisterWizard extends Component
     public function previousStep(): void
     {
         $this->step = max($this->step - 1, 1);
+    }
+
+    /**
+     * Stash the already-detected location in the session and bounce the visitor
+     * to the Google OAuth flow. On return, mount() restores the location and
+     * skips them straight to step 2 so they never re-do the GPS step.
+     */
+    public function redirectToGoogle()
+    {
+        if ($this->gps_detected && $this->current_country) {
+            session([
+                'register_pending_location' => [
+                    'current_country' => $this->current_country,
+                    'current_region'  => $this->current_region,
+                    'current_lat'     => $this->current_lat,
+                    'current_lng'     => $this->current_lng,
+                    'gps_detected'    => true,
+                ],
+            ]);
+        }
+        return $this->redirect(route('auth.google'), navigate: false);
     }
 
     public function setLocation(float $lat, float $lng, string $country, string $region = '', string $city = ''): void
