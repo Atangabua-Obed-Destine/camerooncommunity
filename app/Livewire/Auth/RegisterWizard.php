@@ -54,6 +54,29 @@ class RegisterWizard extends Component
     // Step 4 — Terms
     public bool $terms = false;
 
+    // ── Google Sign-up integration ───────────────────────────────────
+    // Populated from session('google_signup') in mount() when the user
+    // arrives via the Google OAuth callback. When set, the password step
+    // is skipped and the resulting User row stores google_id instead.
+    public bool $isGoogle = false;
+    public string $googleId = '';
+    public string $googleAvatar = '';
+
+    public function mount(): void
+    {
+        $google = session('google_signup');
+        if (is_array($google) && !empty($google['google_id']) && !empty($google['email'])) {
+            $this->isGoogle      = true;
+            $this->googleId      = (string) $google['google_id'];
+            $this->email         = (string) $google['email'];
+            $this->username      = trim((string) ($google['name'] ?? ''));
+            $this->googleAvatar  = (string) ($google['avatar'] ?? '');
+            $this->language_pref = in_array(($google['locale'] ?? 'en'), ['en', 'fr'], true)
+                ? $google['locale']
+                : 'en';
+        }
+    }
+
     protected function rules(): array
     {
         return match ($this->step) {
@@ -64,7 +87,7 @@ class RegisterWizard extends Component
             2 => [
                 'username' => 'required|string|min:2|max:50|regex:/^[a-zA-Z0-9 _-]+$/',
                 'email' => 'required|email|max:255|unique:users,email',
-                'password' => 'required|string|min:8|confirmed|regex:/[A-Z]/|regex:/[0-9]/',
+                'password' => $this->isGoogle ? 'nullable' : 'required|string|min:8|confirmed|regex:/[A-Z]/|regex:/[0-9]/',
                 'phone' => 'nullable|string|max:20',
             ],
             3 => [
@@ -287,7 +310,7 @@ class RegisterWizard extends Component
             'current_country' => 'required|string|max:100',
             'username' => 'required|string|min:2|max:50|regex:/^[a-zA-Z0-9 _-]+$/',
             'email' => 'required|email|max:255|unique:users,email',
-            'password' => 'required|string|min:8|confirmed|regex:/[A-Z]/|regex:/[0-9]/',
+            'password' => $this->isGoogle ? 'nullable' : 'required|string|min:8|confirmed|regex:/[A-Z]/|regex:/[0-9]/',
             'country_of_origin' => 'required|string|max:100',
             'language_pref' => 'required|in:en,fr',
         ]);
@@ -342,7 +365,9 @@ class RegisterWizard extends Component
             'name' => trim($this->username),
             'username' => $finalUsername,
             'email' => $this->email,
-            'password' => Hash::make($this->password),
+            'password' => $this->isGoogle ? null : Hash::make($this->password),
+            'google_id' => $this->isGoogle ? ($this->googleId ?: null) : null,
+            'avatar' => $this->isGoogle && $this->googleAvatar ? $this->googleAvatar : null,
             'phone' => $this->phone ?: null,
             'country_of_origin' => $this->country_of_origin,
             'home_region' => $this->home_region ?: null,
@@ -371,9 +396,17 @@ class RegisterWizard extends Component
 
         // If admin has disabled email verification, auto-mark the user as verified
         // so the `verified` middleware on protected routes does not block them.
+        // Google sign-ups always count as verified because Google has already
+        // confirmed the email address on our behalf.
         $requireVerification = (string) PlatformSetting::getValue('require_email_verification', '0') === '1';
-        if (! $requireVerification) {
+        if ($this->isGoogle || ! $requireVerification) {
             $user->forceFill(['email_verified_at' => now()])->save();
+        }
+
+        // Clear the Google sign-up stash so a refresh of /register doesn't
+        // re-prefill another visitor's session with stale data.
+        if ($this->isGoogle) {
+            session()->forget('google_signup');
         }
 
         Auth::login($user);
@@ -395,7 +428,7 @@ class RegisterWizard extends Component
         }
 
         try {
-            if ($requireVerification) {
+            if ($requireVerification && ! $this->isGoogle) {
                 event(new Registered($user));
             }
         } catch (\Throwable $e) {

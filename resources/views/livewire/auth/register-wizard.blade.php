@@ -15,6 +15,7 @@
         accuracyMeters: null,    {{-- radius reported by the browser --}}
         accuracySource: '',      {{-- 'gps' | 'wifi' | 'ip' --}}
         poorAccuracy: false,     {{-- accuracy worse than threshold --}}
+        gpsDenied: false,        {{-- user blocked the browser permission prompt --}}
         _detectInFlight: false,  {{-- re-entry guard --}}
 
         {{-- ── GPS / IP detection ── --}}
@@ -30,6 +31,7 @@
             this.poorAccuracy = false;
             this.accuracyMeters = null;
             this.accuracySource = '';
+            this.gpsDenied = false;
             try {
                 if (this.locationMode === 'ip') {
                     console.log('[Register] IP mode — skipping GPS');
@@ -104,9 +106,14 @@
                 } catch (e) {
                     console.warn('[Register] GPS failed (' + (e?.message || e) + ') — falling back to IP');
                     {{-- code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT.
-                         Only the secure-context warning is shown for code 1 if it really was
-                         the silent insecure-context rejection (handled above). For everything
-                         else, IP fallback + the existing poor-accuracy banner is sufficient. --}}
+                         Track explicit user denial so we can lock the manual selectors and
+                         force the user to unblock location in their browser settings. --}}
+                    if (e?.code === 1) {
+                        this.gpsDenied = true;
+                        {{-- Do NOT fall back to IP — we want the user to unblock GPS, not proceed
+                             with an inaccurate IP-derived location. --}}
+                        return;
+                    }
                     this.accuracySource = 'ip';
                     await this.detectByIP();
                     return;
@@ -378,7 +385,26 @@
                             </div>
 
                             {{-- Imprecise-location warning (insecure origin, poor GPS fix, or IP fallback) --}}
-                            <div x-show="!detecting && (insecureContext || poorAccuracy || (detected && accuracySource === 'ip'))" x-transition x-cloak
+                            <div x-show="!detecting && gpsDenied" x-transition x-cloak
+                                 class="flex items-start gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3">
+                                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-cm-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                                    </svg>
+                                </div>
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-red-800"
+                                       x-text="$store.lang.t('Location access blocked', 'Accès à la position bloqué')"></p>
+                                    <p class="mt-0.5 text-xs text-red-700 leading-relaxed"
+                                       x-text="$store.lang.t(
+                                            'You blocked location access in your browser. To continue, please allow location for this site (tap the lock icon in the address bar → Site settings → Location → Allow), then refresh the page. Manual selection is disabled to keep your community accurate.',
+                                            'Vous avez bloqué l\'accès à la position dans votre navigateur. Pour continuer, autorisez la localisation pour ce site (touchez l\'icône cadenas dans la barre d\'adresse → Paramètres du site → Localisation → Autoriser), puis rafraîchissez la page. La sélection manuelle est désactivée pour préserver la précision de votre communauté.'
+                                       )"></p>
+                                </div>
+                            </div>
+
+                            {{-- Imprecise-location warning (insecure origin, poor GPS fix, or IP fallback) --}}
+                            <div x-show="!detecting && !gpsDenied && (insecureContext || poorAccuracy || (detected && accuracySource === 'ip'))" x-transition x-cloak
                                  class="flex items-start gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
                                 <div class="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center">
                                     <svg class="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -435,7 +461,7 @@
                                 <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Current Country', 'Pays Actuel')"></label>
                                 <select wire:model.live="current_country" class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green bg-white disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed"
-                                        :disabled="detecting || (detected && !insecureContext && !poorAccuracy && accuracySource !== 'ip')">
+                                        :disabled="detecting || gpsDenied || (detected && !insecureContext && !poorAccuracy && accuracySource !== 'ip')">
                                     <option value="" x-text="$store.lang.t('Select country...', 'Sélectionnez un pays...')"></option>
                                     @if($current_country && !in_array($current_country, $countries))
                                         <option value="{{ $current_country }}" selected>{{ $current_country }}</option>
@@ -454,7 +480,7 @@
                                 <input wire:model="current_region" type="text"
                                        class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed"
                                        placeholder="England, Bavaria, California..."
-                                       :readonly="detecting || (detected && !insecureContext && !poorAccuracy && accuracySource !== 'ip')">
+                                       :readonly="detecting || gpsDenied || (detected && !insecureContext && !poorAccuracy && accuracySource !== 'ip')">
                                 @error('current_region') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 
@@ -511,6 +537,39 @@
                         <p class="mt-1 text-sm font-bold text-slate-700"
                            x-text="$store.lang.t('This takes under a minute — we promise.', 'Ça prend moins d\'une minute — promis.')"></p>
 
+                        @if($isGoogle)
+                            <div class="mt-6 flex items-center gap-3 rounded-xl border border-cm-green/20 bg-cm-green/5 px-4 py-3">
+                                @if($googleAvatar)
+                                    <img src="{{ $googleAvatar }}" alt="" class="h-10 w-10 rounded-full object-cover ring-2 ring-white shadow-sm">
+                                @endif
+                                <div class="min-w-0 flex-1">
+                                    <p class="text-xs font-bold uppercase tracking-wider text-cm-green"
+                                       x-text="$store.lang.t('Signed in with Google', 'Connecté avec Google')"></p>
+                                    <p class="truncate text-sm font-bold text-slate-800">{{ $email }}</p>
+                                </div>
+                            </div>
+                        @else
+                            {{-- ── Continue with Google ─────────────────────────── --}}
+                            <a href="{{ route('auth.google') }}"
+                               class="mt-6 inline-flex items-center justify-center gap-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 shadow-sm transition-all hover:bg-slate-50 hover:border-slate-400 hover:shadow-md">
+                                <svg class="w-5 h-5" viewBox="0 0 48 48" aria-hidden="true">
+                                    <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+                                    <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+                                    <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+                                    <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+                                </svg>
+                                <span x-text="$store.lang.t('Continue with Google', 'Continuer avec Google')">Continue with Google</span>
+                            </a>
+
+                            {{-- Divider --}}
+                            <div class="my-5 flex items-center gap-3">
+                                <div class="h-px flex-1 bg-slate-200"></div>
+                                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400"
+                                      x-text="$store.lang.t('or fill in your details', 'ou remplissez vos infos')">or</span>
+                                <div class="h-px flex-1 bg-slate-200"></div>
+                            </div>
+                        @endif
+
                         <div class="mt-6 space-y-4">
                             {{-- Username --}}
                             <div>
@@ -533,8 +592,8 @@
                                 <label class="block text-sm font-bold text-slate-900 mb-1"
                                        x-text="$store.lang.t('Email Address', 'Adresse Email')"></label>
                                 <input wire:model.live.debounce.600ms="email" type="email"
-                                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green"
-                                       placeholder="you@example.com">
+                                       class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition-colors focus:border-cm-green focus:ring-1 focus:ring-cm-green read-only:bg-slate-100 read-only:text-slate-500 read-only:cursor-not-allowed"
+                                       placeholder="you@example.com" @if($isGoogle) readonly @endif>
                                 <div wire:loading wire:target="email" class="mt-1 text-xs text-slate-400"
                                      x-text="$store.lang.t('Checking availability...', 'Vérification de la disponibilité...')"></div>
                                 @error('email')
@@ -552,6 +611,7 @@
                             </div>
 
                             {{-- Password --}}
+                            @if(!$isGoogle)
                             <div x-data="{
                                 show: false,
                                 pwd: @js($password),
@@ -589,8 +649,8 @@
                                     <ul class="space-y-1">
                                         <template x-for="req in [
                                             { ok: reqLength, en: 'At least 8 characters',      fr: 'Au moins 8 caractères' },
-                                            { ok: reqUpper,  en: '1 uppercase letter (A-Z)', fr: '1 lettre majuscule (A-Z)' },
-                                            { ok: reqLower,  en: '1 lowercase letter (a-z)', fr: '1 lettre minuscule (a-z)' }
+                                            { ok: reqUpper,  en: 'Uppercase letter (A-Z)', fr: 'Lettre majuscule (A-Z)' },
+                                            { ok: reqLower,  en: 'Lowercase letter (a-z)', fr: 'Lettre minuscule (a-z)' }
                                         ]" :key="req.en">
                                             <li class="flex items-center gap-2 transition-colors duration-200"
                                                 :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
@@ -602,8 +662,8 @@
                                     </ul>
                                     <ul class="space-y-1">
                                         <template x-for="req in [
-                                            { ok: reqNumber, en: '1 number (0-9)',     fr: '1 chiffre (0-9)' },
-                                            { ok: reqSymbol, en: '1 symbol (!@#$...)', fr: '1 symbole (!@#$...)' }
+                                            { ok: reqNumber, en: 'Number (0-9)',     fr: 'Chiffre (0-9)' },
+                                            { ok: reqSymbol, en: 'Symbol (!@#$...)', fr: 'Symbole (!@#$...)' }
                                         ]" :key="req.en">
                                             <li class="flex items-center gap-2 transition-colors duration-200"
                                                 :class="req.ok ? 'text-cm-green' : 'text-slate-400'">
@@ -650,6 +710,7 @@
                                     </p>
                                 </template>
                             </div>
+                            @endif
                         </div>
 
                         <div class="mt-6 flex gap-3">
