@@ -21,13 +21,14 @@ class MarketplaceListing extends Model
     use BelongsToTenant, HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'uuid', 'slug', 'user_id', 'category_id',
+        'uuid', 'slug', 'user_id', 'buyer_id', 'category_id',
         'title', 'description', 'language',
         'price_type', 'price', 'currency', 'price_min', 'price_max',
         'condition', 'quantity',
         'fulfillment', 'country', 'region', 'city', 'neighborhood', 'latitude', 'longitude',
         'visibility', 'target_regions', 'target_countries', 'tags',
-        'status', 'published_at', 'expires_at', 'renewed_at', 'sold_at',
+        'status', 'published_at', 'expires_at', 'renewed_at', 'sold_at', 'sold_price', 'sold_currency',
+        'bumped_at', 'bump_count',
         'views_count', 'favorites_count', 'messages_count', 'shares_count',
         'rank_score', 'rank_updated_at',
         'is_featured', 'is_verified_seller', 'is_flagged', 'reports_count', 'moderation_meta',
@@ -56,6 +57,7 @@ class MarketplaceListing extends Model
             'expires_at' => 'datetime',
             'renewed_at' => 'datetime',
             'sold_at' => 'datetime',
+            'bumped_at' => 'datetime',
             'rank_updated_at' => 'datetime',
             'is_featured' => 'boolean',
             'is_verified_seller' => 'boolean',
@@ -119,6 +121,16 @@ class MarketplaceListing extends Model
         return $this->hasMany(MarketplaceOffer::class, 'listing_id');
     }
 
+    public function buyer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'buyer_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(MarketplaceReview::class, 'listing_id');
+    }
+
     // ─── Scopes ───
     public function scopeActive(Builder $q): Builder
     {
@@ -130,7 +142,9 @@ class MarketplaceListing extends Model
 
     public function scopeForFeed(Builder $q): Builder
     {
-        return $q->active()->where('visibility', ListingVisibility::Public->value);
+        return $q->active()
+            ->where('visibility', ListingVisibility::Public->value)
+            ->where(function ($q) { $q->where('is_flagged', false)->orWhereNull('is_flagged'); });
     }
 
     public function scopeInCategory(Builder $q, int|MarketplaceCategory $cat): Builder

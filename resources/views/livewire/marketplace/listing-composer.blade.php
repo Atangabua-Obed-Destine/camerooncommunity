@@ -1,5 +1,5 @@
 @php $lang = app()->getLocale(); $progress = (int) (($step / 5) * 100); @endphp
-<div class="min-h-[calc(100vh-96px)] bg-slate-100">
+<div class="min-h-[calc(100vh-96px)] bg-slate-100" wire:poll.15s="autosaveDraft">
     <div class="max-w-3xl mx-auto px-3 sm:px-4 lg:px-6 py-5 lg:py-6">
 
         {{-- ─── Header ─── --}}
@@ -13,6 +13,16 @@
                 <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
                     <span x-data x-text="$store.lang.t('Sell on GoMarket','Vendre sur GoMarket')"></span>
                 </h1>
+                @if ($lastAutosavedAt)
+                    <p class="text-[11px] text-emerald-600 font-semibold mt-0.5 flex items-center gap-1"
+                       x-data="{ ts: @js($lastAutosavedAt) }"
+                       x-init="$watch('$wire.lastAutosavedAt', v => ts = v)">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                        <span x-data x-text="$store.lang.t('Draft saved','Brouillon enregistré')"></span>
+                        ·
+                        <span x-text="new Date(ts).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})"></span>
+                    </p>
+                @endif
                 <p class="mt-1 text-sm text-slate-600">
                     <span x-data x-text="$store.lang.t('Reach buyers across Cameroon and the diaspora.','Atteignez des acheteurs au Cameroun et dans la diaspora.')"></span>
                 </p>
@@ -209,6 +219,59 @@
                                    class="mt-1.5 w-full rounded-xl bg-slate-100 border-0 px-3.5 py-2.5 text-[15px] text-slate-900 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
                         </label>
                     </div>
+
+                    {{-- Category-specific attributes (Phase 4) --}}
+                    @php($_attrSchema = \App\Support\CategoryAttributeSchema::forCategory($categoryId))
+                    @if (! empty($_attrSchema))
+                        <div class="mt-2 p-4 rounded-2xl bg-cm-green/5 ring-1 ring-cm-green/20">
+                            <div class="flex items-center gap-2 mb-3">
+                                <svg class="w-4 h-4 text-cm-green" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+                                <div class="text-sm font-bold text-slate-900">
+                                    <span x-data x-text="$store.lang.t('Category details','Détails de la catégorie')"></span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                @foreach ($_attrSchema as $f)
+                                    <label class="block">
+                                        <span class="text-[12px] font-semibold text-slate-700 flex items-center gap-1">
+                                            @if (! empty($f['icon'])) <span>{{ $f['icon'] }}</span> @endif
+                                            <span>{{ $lang === 'fr' ? $f['labelFr'] : $f['label'] }}</span>
+                                            @if (! empty($f['required'])) <span class="text-cm-red">*</span> @endif
+                                        </span>
+                                        @if ($f['type'] === 'select')
+                                            <select wire:model="attrs.{{ $f['key'] }}"
+                                                    class="mt-1 w-full rounded-xl bg-white border-0 ring-1 ring-slate-200 px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-cm-green focus:outline-none">
+                                                <option value="">{{ $lang === 'fr' ? '— Choisir —' : '— Select —' }}</option>
+                                                @foreach ($f['options'] as $opt)
+                                                    <option value="{{ $opt['value'] }}">{{ $lang === 'fr' ? ($opt['labelFr'] ?? $opt['label']) : $opt['label'] }}</option>
+                                                @endforeach
+                                            </select>
+                                        @elseif ($f['type'] === 'toggle')
+                                            <div class="mt-1 inline-flex items-center gap-2">
+                                                <input type="checkbox" wire:model="attrs.{{ $f['key'] }}"
+                                                       class="w-5 h-5 rounded text-cm-green focus:ring-cm-green">
+                                                <span class="text-sm text-slate-700">{{ $lang === 'fr' ? 'Oui' : 'Yes' }}</span>
+                                            </div>
+                                        @elseif ($f['type'] === 'number')
+                                            <div class="mt-1 relative">
+                                                <input type="number" min="0" wire:model.blur="attrs.{{ $f['key'] }}"
+                                                       placeholder="{{ $f['help'] ?? '' }}"
+                                                       class="w-full rounded-xl bg-white border-0 ring-1 ring-slate-200 px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-cm-green focus:outline-none {{ ! empty($f['suffix']) ? 'pr-12' : '' }}">
+                                                @if (! empty($f['suffix']))
+                                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-500">{{ $f['suffix'] }}</span>
+                                                @endif
+                                            </div>
+                                        @else
+                                            <input type="text" wire:model.blur="attrs.{{ $f['key'] }}" maxlength="160"
+                                                   placeholder="{{ $f['help'] ?? '' }}"
+                                                   class="mt-1 w-full rounded-xl bg-white border-0 ring-1 ring-slate-200 px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-cm-green focus:outline-none">
+                                        @endif
+                                        @error('attrs.'.$f['key']) <p class="text-[11px] text-cm-red mt-0.5">{{ $message }}</p> @enderror
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
                 </div>
             @endif
 

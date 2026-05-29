@@ -2,6 +2,28 @@
 @php
     $mpLang = app()->getLocale();
     $activeRoute = \Illuminate\Support\Facades\Route::currentRouteName();
+
+    // Lightweight badge: count of "new since last seen" across this user's saved searches.
+    // Kept inline (one cached query per request) so the sidebar partial works on any page.
+    $savedSearchNewCount = 0;
+    if (auth()->check()) {
+        $savedSearchNewCount = \Illuminate\Support\Facades\Cache::remember(
+            'mp:ss-new:' . auth()->id(),
+            now()->addMinutes(2),
+            function () {
+                $rows = \App\Models\MarketplaceSavedSearch::where('user_id', auth()->id())->get();
+                $total = 0;
+                foreach ($rows as $r) {
+                    $filters = is_array($r->filters) ? $r->filters : [];
+                    $since = $r->last_notified_at ?? $r->created_at;
+                    $total += \App\Support\MarketplaceQueryBuilder::build($filters)
+                        ->where('published_at', '>', $since)
+                        ->count();
+                }
+                return $total;
+            }
+        );
+    }
 @endphp
 
 <div class="space-y-3">
@@ -54,6 +76,31 @@
             <span x-data x-text="$store.lang.t('My Offers','Mes Offres')"></span>
         </a>
 
+        @php
+            $pendingOrders = 0;
+            if (auth()->check()) {
+                $pendingOrders = \Illuminate\Support\Facades\Cache::remember(
+                    'mp:orders-pending:'.auth()->id(),
+                    120,
+                    fn () => \App\Models\MarketplaceOrder::query()
+                        ->where('seller_id', auth()->id())
+                        ->where('status', \App\Enums\OrderStatus::AwaitingPayment->value)
+                        ->count()
+                );
+            }
+        @endphp
+        <a href="{{ route('marketplace.orders') }}" wire:navigate
+           class="flex items-center gap-3 px-3 py-2 rounded-xl text-[15px] font-medium transition
+           {{ $activeRoute === 'marketplace.orders' ? 'bg-cm-green/10 text-cm-green' : 'text-slate-800 hover:bg-slate-100' }}">
+            <span class="w-9 h-9 grid place-items-center rounded-full {{ $activeRoute === 'marketplace.orders' ? 'bg-cm-green text-white' : 'bg-slate-200 text-slate-700' }}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </span>
+            <span class="flex-1" x-data x-text="$store.lang.t('Orders','Commandes')"></span>
+            @if ($pendingOrders > 0)
+                <span class="text-[10px] font-bold bg-cm-red text-white rounded-full px-1.5 py-0.5">{{ $pendingOrders }}</span>
+            @endif
+        </a>
+
         <a href="{{ route('marketplace.mine') }}" wire:navigate
            class="flex items-center gap-3 px-3 py-2 rounded-xl text-[15px] font-medium transition
            {{ $activeRoute === 'marketplace.mine' ? 'bg-cm-green/10 text-cm-green' : 'text-slate-800 hover:bg-slate-100' }}">
@@ -61,6 +108,18 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l-1 12H6L5 9z"/></svg>
             </span>
             <span x-data x-text="$store.lang.t('My Listings','Mes Annonces')"></span>
+        </a>
+
+        <a href="{{ route('marketplace.saved') }}" wire:navigate
+           class="flex items-center gap-3 px-3 py-2 rounded-xl text-[15px] font-medium transition
+           {{ $activeRoute === 'marketplace.saved' ? 'bg-cm-green/10 text-cm-green' : 'text-slate-800 hover:bg-slate-100' }}">
+            <span class="w-9 h-9 grid place-items-center rounded-full {{ $activeRoute === 'marketplace.saved' ? 'bg-cm-green text-white' : 'bg-slate-200 text-slate-700' }}">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2H7a2 2 0 01-2-2V5z"/><path stroke-linecap="round" stroke-linejoin="round" d="M14 3v5h5"/></svg>
+            </span>
+            <span class="flex-1" x-data x-text="$store.lang.t('Saved searches','Recherches enregistrées')"></span>
+            @if ($savedSearchNewCount > 0)
+                <span class="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-cm-red text-white text-[11px] font-bold">{{ $savedSearchNewCount > 99 ? '99+' : $savedSearchNewCount }}</span>
+            @endif
         </a>
     </nav>
 
@@ -125,6 +184,54 @@
                        class="w-full rounded-lg bg-slate-100 border-0 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
             </div>
         </div>
+
+        {{-- Category-specific quick filters (Phase 4) --}}
+        @php
+            $_filterableAttrs = collect(\App\Support\CategoryAttributeSchema::forCategory($this->activeCategory?->slug))
+                ->where('filter', true)
+                ->values()
+                ->all();
+        @endphp
+        @if (! empty($_filterableAttrs))
+            <div class="px-1 pt-1 border-t border-slate-100">
+                <div class="text-[11px] uppercase tracking-wide font-bold text-cm-green mb-2 mt-2 flex items-center gap-1">
+                    <span>{{ $this->activeCategory->icon }}</span>
+                    <span>{{ $this->activeCategory->localizedName() }}</span>
+                </div>
+                <div class="space-y-2">
+                    @foreach ($_filterableAttrs as $f)
+                        <div>
+                            <div class="text-[12px] font-semibold text-slate-700 mb-1 flex items-center gap-1">
+                                @if (! empty($f['icon'])) <span>{{ $f['icon'] }}</span> @endif
+                                <span>{{ $mpLang === 'fr' ? $f['labelFr'] : $f['label'] }}</span>
+                            </div>
+                            @if ($f['type'] === 'select')
+                                <select wire:model.live="attrs.{{ $f['key'] }}"
+                                        class="w-full rounded-lg bg-slate-100 border-0 px-3 py-2 text-sm text-slate-900 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none">
+                                    <option value="">{{ $mpLang === 'fr' ? 'Tous' : 'Any' }}</option>
+                                    @foreach ($f['options'] as $opt)
+                                        <option value="{{ $opt['value'] }}">{{ $mpLang === 'fr' ? ($opt['labelFr'] ?? $opt['label']) : $opt['label'] }}</option>
+                                    @endforeach
+                                </select>
+                            @elseif ($f['type'] === 'toggle')
+                                <label class="inline-flex items-center gap-2 text-sm text-slate-800">
+                                    <input type="checkbox" wire:model.live="attrs.{{ $f['key'] }}" class="w-4 h-4 rounded text-cm-green focus:ring-cm-green">
+                                    <span>{{ $mpLang === 'fr' ? 'Oui' : 'Yes' }}</span>
+                                </label>
+                            @elseif ($f['type'] === 'number')
+                                <input type="number" min="0" wire:model.live.debounce.700ms="attrs.{{ $f['key'] }}"
+                                       placeholder="{{ $f['help'] ?? '' }}"
+                                       class="w-full rounded-lg bg-slate-100 border-0 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none">
+                            @else
+                                <input type="text" wire:model.live.debounce.600ms="attrs.{{ $f['key'] }}"
+                                       placeholder="{{ $f['help'] ?? '' }}"
+                                       class="w-full rounded-lg bg-slate-100 border-0 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none">
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 
     <div class="h-px bg-slate-200"></div>
@@ -145,5 +252,31 @@
                 </a>
             @endforeach
         </div>
-    </div>
+    {{-- ─── Recently viewed ─── --}}
+    @php($_recent = \App\Support\RecentlyViewed::listings(null, 6))
+    @if ($_recent->isNotEmpty())
+        <div class="h-px bg-slate-200"></div>
+        <div>
+            <h3 class="text-[15px] font-bold text-slate-900 px-1 mb-2 flex items-center gap-1.5">
+                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span x-data x-text="$store.lang.t('Recently viewed','Vu récemment')"></span>
+            </h3>
+            <div class="space-y-1">
+                @foreach ($_recent as $r)
+                    <a href="{{ route('marketplace.show', ['slug' => $r->slug]) }}" wire:navigate
+                       class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-100 transition">
+                        @if ($r->coverUrl())
+                            <img src="{{ $r->coverUrl() }}" alt="" loading="lazy" class="w-10 h-10 rounded-lg object-cover ring-1 ring-slate-200 shrink-0">
+                        @else
+                            <div class="w-10 h-10 rounded-lg bg-slate-200 grid place-items-center text-lg shrink-0">📦</div>
+                        @endif
+                        <div class="min-w-0 flex-1">
+                            <div class="text-[13px] font-medium text-slate-900 truncate">{{ $r->title }}</div>
+                            <div class="text-[11px] text-cm-green font-bold">{{ $r->formattedPrice() }}</div>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        </div>
+    @endif
 </div>

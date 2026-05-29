@@ -202,8 +202,13 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
         Route::get('/my-listings',              \App\Livewire\Marketplace\MyListings::class)->name('mine');
         Route::get('/favorites',                \App\Livewire\Marketplace\Favorites::class)->name('favorites');
         Route::get('/offers',                   \App\Livewire\Marketplace\MyOffers::class)->name('offers');
+        Route::get('/saved-searches',           \App\Livewire\Marketplace\SavedSearches::class)->name('saved');
+        Route::get('/orders',                   \App\Livewire\Marketplace\Orders::class)->name('orders');
+        Route::get('/insights/{listing}',       \App\Livewire\Marketplace\ListingInsights::class)->name('insights');
         Route::get('/c/{slug}',                 \App\Livewire\Marketplace\FeedBrowse::class)->name('category');
         Route::get('/listing/{slug}',           \App\Livewire\Marketplace\ListingDetail::class)->name('show');
+        Route::get('/listing/{slug}/review',    \App\Livewire\Marketplace\LeaveReview::class)->name('review');
+        Route::get('/listing/{slug}/checkout',  \App\Livewire\Marketplace\Checkout::class)->name('checkout');
         Route::get('/listing/{listing}/edit',   \App\Livewire\Marketplace\ListingComposer::class)
             ->whereNumber('listing')->name('edit');
     });

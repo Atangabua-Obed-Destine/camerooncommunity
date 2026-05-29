@@ -11,7 +11,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
 class MyOffers extends Component
 {
     use WithPagination;

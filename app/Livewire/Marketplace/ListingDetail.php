@@ -14,7 +14,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
 class ListingDetail extends Component
 {
     public MarketplaceListing $listing;
@@ -29,6 +29,11 @@ class ListingDetail extends Component
     public ?int $counteringOfferId = null;
     public string $counterAmount = '';
 
+    // Report modal state
+    public bool $showReportModal = false;
+    public string $reportReason = 'scam';
+    public string $reportDetails = '';
+
     public function mount(string $slug): void
     {
         $this->listing = MarketplaceListing::where('slug', $slug)
@@ -41,6 +46,7 @@ class ListingDetail extends Component
         }
 
         $this->recordView();
+        \App\Support\RecentlyViewed::track($this->listing->slug);
     }
 
     protected function recordView(): void
@@ -161,6 +167,38 @@ class ListingDetail extends Component
             ->get();
     }
 
+    // ─── Reviews ──────────────────────────────────────────────────
+
+    #[Computed]
+    public function reviews()
+    {
+        return \App\Models\MarketplaceReview::where('listing_id', $this->listing->id)
+            ->with('reviewer:id,name,username,avatar')
+            ->latest()
+            ->limit(10)
+            ->get();
+    }
+
+    /** Buyer can leave a review when listing is sold to them and they haven't yet. */
+    #[Computed]
+    public function canLeaveReview(): bool
+    {
+        if (! Auth::check()) { return false; }
+        if (Auth::id() === (int) $this->listing->user_id) { return false; }
+        $isSold = ($this->listing->status?->value ?? $this->listing->status) === 'sold';
+        if (! $isSold) { return false; }
+        return (int) $this->listing->buyer_id === Auth::id();
+    }
+
+    #[Computed]
+    public function myReview(): ?\App\Models\MarketplaceReview
+    {
+        if (! Auth::check()) { return null; }
+        return \App\Models\MarketplaceReview::where('listing_id', $this->listing->id)
+            ->where('reviewer_id', Auth::id())
+            ->first();
+    }
+
     public function openOfferModal(): void
     {
         if (! Auth::check()) {
@@ -182,6 +220,16 @@ class ListingDetail extends Component
         if ($this->listing->isOwnedBy(Auth::id())) {
             return;
         }
+
+        // Rate-limit: 10 offers per user per hour to deter spam.
+        $rlKey = 'mp:offer:' . Auth::id();
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rlKey, 10)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($rlKey);
+            $this->dispatch('toast', type: 'error',
+                message: __('Too many offers. Try again in :n minutes.', ['n' => (int) ceil($seconds / 60)]));
+            return;
+        }
+        \Illuminate\Support\Facades\RateLimiter::hit($rlKey, 3600);
 
         // Withdraw any existing pending offer from this buyer.
         MarketplaceOffer::where('listing_id', $this->listing->id)
@@ -309,6 +357,150 @@ class ListingDetail extends Component
             type: 'success',
             message: $this->listing->is_featured ? __('Listing featured ⭐') : __('Featured removed')
         );
+    }
+
+    // ─── Report listing ───────────────────────────────────────────
+
+    /** True when the current user has already reported this listing. */
+    #[Computed]
+    public function hasReported(): bool
+    {
+        if (! Auth::check()) {
+            return false;
+        }
+        return \App\Models\Report::query()
+            ->where('reportable_type', MarketplaceListing::class)
+            ->where('reportable_id', $this->listing->id)
+            ->where('reporter_id', Auth::id())
+            ->exists();
+    }
+
+    public function openReportModal(): void
+    {
+        if (! Auth::check()) {
+            $this->redirectRoute('login');
+            return;
+        }
+        $this->reportReason = 'scam';
+        $this->reportDetails = '';
+        $this->showReportModal = true;
+    }
+
+    public function closeReportModal(): void
+    {
+        $this->showReportModal = false;
+    }
+
+    public function submitReport(): void
+    {
+        if (! Auth::check()) {
+            $this->redirectRoute('login');
+            return;
+        }
+
+        // Block owner reporting themselves.
+        if ($this->listing->isOwnedBy(Auth::id())) {
+            $this->showReportModal = false;
+            return;
+        }
+
+        // Rate-limit: 5 reports per user per hour.
+        $rlKey = 'mp:report:' . Auth::id();
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rlKey, 5)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($rlKey);
+            $this->dispatch('toast', type: 'error',
+                message: __('Too many reports. Try again in :n minutes.', ['n' => (int) ceil($seconds / 60)]));
+            return;
+        }
+
+        $this->validate([
+            'reportReason'  => 'required|in:' . collect(\App\Enums\ReportReason::cases())->pluck('value')->implode(','),
+            'reportDetails' => 'nullable|string|max:1000',
+        ]);
+
+        // One report per user per listing.
+        $exists = \App\Models\Report::query()
+            ->where('reportable_type', MarketplaceListing::class)
+            ->where('reportable_id', $this->listing->id)
+            ->where('reporter_id', Auth::id())
+            ->exists();
+
+        if ($exists) {
+            $this->showReportModal = false;
+            $this->dispatch('toast', type: 'info', message: __('You already reported this listing.'));
+            return;
+        }
+
+        \App\Models\Report::create([
+            'uuid'            => (string) \Illuminate\Support\Str::uuid(),
+            'reporter_id'     => Auth::id(),
+            'reportable_type' => MarketplaceListing::class,
+            'reportable_id'   => $this->listing->id,
+            'reason'          => $this->reportReason,
+            'details'         => $this->reportDetails ?: null,
+            'status'          => \App\Enums\ReportStatus::Pending,
+        ]);
+
+        \Illuminate\Support\Facades\RateLimiter::hit($rlKey, 3600);
+
+        // Auto-flag listing after 3 distinct reports.
+        $count = \App\Models\Report::query()
+            ->where('reportable_type', MarketplaceListing::class)
+            ->where('reportable_id', $this->listing->id)
+            ->count();
+        if ($count >= 3 && \Illuminate\Support\Facades\Schema::hasColumn('marketplace_listings', 'is_flagged')) {
+            DB::table('marketplace_listings')->where('id', $this->listing->id)->update(['is_flagged' => true]);
+        }
+
+        $this->showReportModal = false;
+        unset($this->hasReported);
+        $this->dispatch('toast', type: 'success',
+            message: __('Thanks — our team will review this listing.'));
+    }
+
+    // ─── Block seller ─────────────────────────────────────────────
+
+    public function blockSeller(): void
+    {
+        if (! Auth::check()) {
+            $this->redirectRoute('login');
+            return;
+        }
+        $sellerId = (int) $this->listing->user_id;
+        if ($sellerId === Auth::id()) {
+            return;
+        }
+
+        $a = min(Auth::id(), $sellerId);
+        $b = max(Auth::id(), $sellerId);
+
+        \App\Models\UserConnection::updateOrCreate(
+            ['user_a_id' => $a, 'user_b_id' => $b],
+            [
+                'status'        => \App\Models\UserConnection::STATUS_BLOCKED,
+                'requested_by'  => Auth::id(),
+                'responded_at'  => now(),
+            ],
+        );
+
+        $this->dispatch('toast', type: 'success', message: __('Seller blocked. Their listings will be hidden.'));
+        $this->redirectRoute('marketplace.feed');
+    }
+
+    // ─── Trust badges (cached on the model side) ─────────────────
+
+    #[Computed]
+    public function sellerBadges(): array
+    {
+        return \App\Support\TrustBadges::forSeller($this->listing->seller);
+    }
+
+    #[Computed]
+    public function sellerIsNew(): bool
+    {
+        return $this->listing->seller
+            ? \App\Support\TrustBadges::isNewSeller($this->listing->seller)
+            : false;
     }
 
     public function render()

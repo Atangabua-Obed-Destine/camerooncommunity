@@ -39,6 +39,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'current_lat',
         'current_lng',
         'location_updated_at',
+        'momo_number',
+        'momo_provider',
         'active_country',
         'active_region',
         'language_pref',
@@ -121,6 +123,18 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pointsLog(): HasMany
     {
         return $this->hasMany(CommunityPointsLog::class);
+    }
+
+    /** Reviews received as a seller (Marketplace). */
+    public function sellerReviews(): HasMany
+    {
+        return $this->hasMany(MarketplaceReview::class, 'seller_id');
+    }
+
+    /** Reviews this user has written about other sellers. */
+    public function writtenReviews(): HasMany
+    {
+        return $this->hasMany(MarketplaceReview::class, 'reviewer_id');
     }
 
     /*

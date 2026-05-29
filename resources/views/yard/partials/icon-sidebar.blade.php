@@ -31,6 +31,14 @@
             <span class="yard-icon-sidebar__label">Kamer AI</span>
         </button>
 
+        {{-- GoMarket — live module (marketplace) --}}
+        <a href="{{ route('marketplace.index') }}"
+           class="yard-icon-sidebar__item {{ $active === 'marketplace' ? 'yard-icon-sidebar__item--active' : '' }}"
+           @mouseenter="tooltip = $store.lang.t('GoMarket', 'GoMarket')" @mouseleave="tooltip = ''">
+            <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('GoMarket', 'GoMarket')"></span>
+        </a>
+
         {{-- ── Coming Soon Divider ── --}}
         <div class="yard-icon-sidebar__divider">
             <span class="yard-icon-sidebar__divider-label" x-text="$store.lang.t('Coming Soon', 'Bientôt')"></span>
@@ -41,14 +49,6 @@
              @mouseenter="tooltip = $store.lang.t('Solidarity — Coming Soon', 'Solidarité — Bientôt')" @mouseleave="tooltip = ''">
             <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
             <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Solidarity', 'Solidarité')"></span>
-            <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
-        </div>
-
-        {{-- GoMarket --}}
-        <div class="yard-icon-sidebar__item yard-icon-sidebar__item--soon"
-             @mouseenter="tooltip = $store.lang.t('GoMarket — Coming Soon', 'GoMarket — Bientôt')" @mouseleave="tooltip = ''">
-            <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
-            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('GoMarket', 'GoMarket')"></span>
             <span class="yard-icon-sidebar__badge-soon" x-text="$store.lang.t('Soon', 'Bientôt')"></span>
         </div>
 

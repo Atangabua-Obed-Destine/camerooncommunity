@@ -17,7 +17,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-#[Layout('components.layouts.app')]
+#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
 class ListingComposer extends Component
 {
     use WithFileUploads;
@@ -56,12 +56,15 @@ class ListingComposer extends Component
     public array $tags = [];
     public string $tagInput = '';
 
+    /** Category-specific attributes (Phase 4). Keyed by schema 'key' (e.g. 'make','year','bedrooms'). */
+    public array $attrs = [];
+
     protected function rulesForStep(int $step): array
     {
         return match ($step) {
             1 => ['categoryId' => 'required|integer|exists:marketplace_categories,id'],
             2 => ['photos.*' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:8192'],
-            3 => [
+            3 => array_merge([
                 'title' => 'required|string|min:' . (int) PlatformSetting::getValue('marketplace_min_title_length', 6) . '|max:180',
                 'description' => 'required|string|min:' . (int) PlatformSetting::getValue('marketplace_min_description_length', 20) . '|max:5000',
                 'priceType' => 'required|in:fixed,negotiable,free,contact',
@@ -69,7 +72,9 @@ class ListingComposer extends Component
                 'currency' => 'required|string|size:3',
                 'condition' => 'required|in:new,like_new,good,fair,for_parts',
                 'quantity' => 'required|integer|min:1|max:9999',
-            ],
+            ], \App\Support\CategoryAttributeSchema::validationRules(
+                \App\Support\CategoryAttributeSchema::forCategory($this->categoryId)
+            )),
             4 => [
                 'fulfillment' => 'required|in:pickup,local_delivery,diaspora_shippable,digital',
                 'country' => 'required|string|size:2',
@@ -114,6 +119,7 @@ class ListingComposer extends Component
             $this->neighborhood = $l->neighborhood ?? '';
             $this->visibility = $l->visibility?->value ?? 'public';
             $this->tags = $l->tags ?? [];
+            $this->attrs = is_array($l->attributes) ? $l->attributes : [];
             $this->existingMedia = $l->media->map(fn ($m) => [
                 'id' => $m->id,
                 'url' => $m->thumbnailUrl(),
@@ -140,19 +146,22 @@ class ListingComposer extends Component
         $i = 0;
         foreach ($this->photos as $photo) {
             if ($i >= $remaining) { break; }
-            $path = $photo->store('marketplace/' . $this->listing->id, 'public');
-            $size = $photo->getSize();
-            [$w, $h] = @getimagesize(Storage::disk('public')->path($path)) ?: [null, null];
+            $rawPath = $photo->store('marketplace/' . $this->listing->id, 'public');
+
+            // Optimize + generate thumbnail; gracefully falls back to the original on failure.
+            $opt = \App\Support\MarketplaceImageProcessor::process($rawPath);
+            $size = Storage::disk('public')->size($opt['path']);
 
             $media = MarketplaceListingMedia::create([
                 'listing_id' => $this->listing->id,
                 'type' => 'image',
-                'path' => $path,
+                'path' => $opt['path'],
+                'thumbnail_path' => $opt['thumb'],
                 'original_name' => $photo->getClientOriginalName(),
                 'size_bytes' => $size,
-                'width' => $w,
-                'height' => $h,
-                'mime_type' => $photo->getMimeType(),
+                'width' => $opt['w'] ?: null,
+                'height' => $opt['h'] ?: null,
+                'mime_type' => 'image/jpeg',
                 'position' => $current + $i,
                 'is_cover' => ($current + $i) === 0,
             ]);
@@ -172,6 +181,9 @@ class ListingComposer extends Component
         if (! $media) { return; }
         if (! $this->listing || $media->listing_id !== $this->listing->id) { return; }
         Storage::disk('public')->delete($media->path);
+        if ($media->thumbnail_path && $media->thumbnail_path !== $media->path) {
+            Storage::disk('public')->delete($media->thumbnail_path);
+        }
         $media->delete();
         $this->uploadedMedia = array_values(array_filter($this->uploadedMedia, fn ($m) => $m['id'] !== $mediaId));
         $this->existingMedia = array_values(array_filter($this->existingMedia, fn ($m) => $m['id'] !== $mediaId));
@@ -224,6 +236,53 @@ class ListingComposer extends Component
         }
     }
 
+    /** Public autosave timestamp shown in the UI (ISO string). */
+    public ?string $lastAutosavedAt = null;
+
+    /**
+     * Silently persist current state to the draft listing. Called by wire:poll.
+     * Only saves when the user has meaningful content to avoid creating empty drafts.
+     */
+    public function autosaveDraft(): void
+    {
+        // Don't autosave once the listing has been published.
+        if ($this->listing && $this->listing->status?->value !== 'draft') {
+            return;
+        }
+        // Don't create a draft until there's something worth saving.
+        $hasContent = mb_strlen(trim((string) $this->title)) >= 3
+            || mb_strlen(trim((string) $this->description)) >= 10
+            || ! empty($this->photos)
+            || ($this->listing && $this->listing->media()->exists());
+
+        if (! $hasContent) {
+            return;
+        }
+
+        $this->ensureDraftListing();
+
+        $this->listing->forceFill(array_filter([
+            'category_id' => $this->categoryId,
+            'title'       => trim((string) $this->title) ?: $this->listing->title,
+            'description' => trim((string) $this->description) ?: $this->listing->description,
+            'price_type'  => $this->priceType,
+            'price'       => $this->priceType === 'free' ? 0 : ($this->price !== null && $this->price !== '' ? (float) $this->price : null),
+            'currency'    => $this->currency,
+            'condition'   => $this->condition,
+            'quantity'    => $this->quantity,
+            'fulfillment' => $this->fulfillment,
+            'country'     => $this->country,
+            'region'      => $this->region,
+            'city'        => $this->city,
+            'neighborhood'=> $this->neighborhood,
+            'visibility'  => $this->visibility,
+            'tags'        => array_values($this->tags ?? []),
+            'attributes'  => \App\Support\CategoryAttributeSchema::sanitize($this->attrs ?? [], $this->categoryId),
+        ], fn ($v) => $v !== null && $v !== ''))->save();
+
+        $this->lastAutosavedAt = now()->toIso8601String();
+    }
+
     public function addTag(): void
     {
         $t = trim($this->tagInput);
@@ -267,6 +326,7 @@ class ListingComposer extends Component
             'neighborhood' => $this->neighborhood,
             'visibility' => $this->visibility,
             'tags' => array_values($this->tags),
+            'attributes' => \App\Support\CategoryAttributeSchema::sanitize($this->attrs, $this->categoryId),
             'status' => $status->value,
             'published_at' => $status === ListingStatus::Active ? now() : null,
             'expires_at' => $status === ListingStatus::Active ? now()->addDays($expiresDays) : null,

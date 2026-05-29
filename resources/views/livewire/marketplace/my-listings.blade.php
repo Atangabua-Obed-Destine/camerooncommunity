@@ -25,6 +25,46 @@
             </a>
         </div>
 
+        {{-- MoMo banner --}}
+        @php
+            $u = auth()->user();
+            $providerLabel = match ($u?->momo_provider) {
+                'mtn' => 'MTN MoMo',
+                'orange' => 'Orange Money',
+                'express' => 'Express Union',
+                default => null,
+            };
+        @endphp
+        @if (! $u?->momo_number)
+            <div class="bg-amber-50 ring-1 ring-amber-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
+                <div class="text-2xl">📱</div>
+                <div class="flex-1 min-w-0">
+                    <div class="font-bold text-amber-900 text-sm">
+                        {{ $lang === 'fr' ? 'Activez Mobile Money pour recevoir des paiements' : 'Enable Mobile Money to receive payments' }}
+                    </div>
+                    <div class="text-[12px] text-amber-800 mt-0.5">
+                        {{ $lang === 'fr' ? "Sans numéro MoMo, les acheteurs ne peuvent pas cliquer sur \"Acheter maintenant\"." : 'Without a MoMo number, buyers can\'t use the "Buy now" button on your listings.' }}
+                    </div>
+                </div>
+                <button wire:click="openMomoSettings" type="button"
+                        class="text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-full px-3 py-1.5 shrink-0">
+                    {{ $lang === 'fr' ? 'Configurer' : 'Set up' }}
+                </button>
+            </div>
+        @else
+            <div class="bg-emerald-50 ring-1 ring-emerald-200 rounded-2xl p-3 mb-4 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 text-[13px] text-emerald-900 min-w-0">
+                    <span class="text-lg">📱</span>
+                    <span class="font-semibold truncate">{{ $providerLabel }}</span>
+                    <span class="font-mono tracking-wider truncate">{{ $u->momo_number }}</span>
+                </div>
+                <button wire:click="openMomoSettings" type="button"
+                        class="text-xs font-semibold text-emerald-800 hover:underline shrink-0">
+                    {{ $lang === 'fr' ? 'Modifier' : 'Edit' }}
+                </button>
+            </div>
+        @endif
+
         {{-- Filter pills --}}
         <div class="flex gap-2 overflow-x-auto mb-4 pb-1 -mx-1 px-1 scrollbar-hide">
             @foreach (['all'=>'All|Tous','active'=>'Active|Actives','paused'=>'Paused|En pause','sold'=>'Sold|Vendues','expired'=>'Expired|Expirées','draft'=>'Drafts|Brouillons'] as $key => $pair)
@@ -106,10 +146,17 @@
                                     ✏️ {{ $lang === 'fr' ? 'Modifier' : 'Edit' }}
                                 </a>
                                 @if ($listing->status?->value === 'active')
+                                    @php $canBump = ! $listing->bumped_at || $listing->bumped_at->lt(now()->subHours(24)); @endphp
+                                    <button wire:click="bump({{ $listing->id }})"
+                                            @disabled(! $canBump)
+                                            title="{{ $canBump ? ($lang === 'fr' ? 'Remonter en tête de liste' : 'Push to top of feed') : ($lang === 'fr' ? 'Disponible dans ' . $listing->bumped_at->copy()->addHours(24)->diffForHumans() : 'Available ' . $listing->bumped_at->copy()->addHours(24)->diffForHumans()) }}"
+                                            class="text-xs font-bold px-3 py-1.5 rounded-full {{ $canBump ? 'bg-cm-yellow text-slate-900 hover:bg-cm-yellow/90 ring-1 ring-cm-yellow' : 'bg-slate-100 text-slate-400 ring-1 ring-slate-200 cursor-not-allowed' }} transition">
+                                        🚀 {{ $lang === 'fr' ? 'Booster' : 'Bump' }}
+                                    </button>
                                     <button wire:click="pause({{ $listing->id }})" class="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 ring-1 ring-amber-200 transition">
                                         ⏸ {{ $lang === 'fr' ? 'Pause' : 'Pause' }}
                                     </button>
-                                    <button wire:click="markSold({{ $listing->id }})" class="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 ring-1 ring-blue-200 transition">
+                                    <button wire:click="openMarkSold({{ $listing->id }})" class="text-xs font-bold px-3 py-1.5 rounded-full bg-blue-50 hover:bg-blue-100 text-blue-700 ring-1 ring-blue-200 transition">
                                         💰 {{ $lang === 'fr' ? 'Vendu' : 'Sold' }}
                                     </button>
                                 @elseif ($listing->status?->value === 'paused')
@@ -117,6 +164,10 @@
                                         ▶ {{ $lang === 'fr' ? 'Réactiver' : 'Reactivate' }}
                                     </button>
                                 @endif
+                                <a href="{{ route('marketplace.insights', ['listing' => $listing->id]) }}" wire:navigate
+                                   class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 transition">
+                                    📊 {{ $lang === 'fr' ? 'Stats' : 'Stats' }}
+                                </a>
                                 <button wire:click="remove({{ $listing->id }})"
                                         wire:confirm="{{ $lang === 'fr' ? 'Supprimer cette annonce ?' : 'Remove this listing?' }}"
                                         title="{{ $lang === 'fr' ? 'Supprimer' : 'Delete' }}"
@@ -131,4 +182,194 @@
             <div class="mt-6">{{ $this->listings->onEachSide(1)->links() }}</div>
         @endif
     </div>
+
+    {{-- ─── Mark as Sold modal ─── --}}
+    @if ($sellListingId)
+        @php($_sellListing = collect($this->listings->items())->firstWhere('id', $sellListingId))
+        <div class="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4"
+             wire:click.self="cancelMarkSold">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden">
+                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+                    <h3 class="text-lg font-extrabold text-slate-900">
+                        💰 <span x-data x-text="$store.lang.t('Mark as sold','Marquer comme vendu')"></span>
+                    </h3>
+                    <button wire:click="cancelMarkSold" class="w-9 h-9 grid place-items-center rounded-full hover:bg-slate-100 text-slate-500 text-xl">✕</button>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    @if ($_sellListing)
+                        <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 ring-1 ring-slate-200">
+                            @if ($_sellListing->coverUrl())
+                                <img src="{{ $_sellListing->coverUrl() }}" alt="" class="w-14 h-14 rounded-lg object-cover">
+                            @else
+                                <div class="w-14 h-14 rounded-lg bg-slate-200 grid place-items-center text-2xl">📦</div>
+                            @endif
+                            <div class="min-w-0">
+                                <div class="font-bold text-slate-900 truncate">{{ $_sellListing->title }}</div>
+                                <div class="text-xs text-slate-600">{{ $_sellListing->formattedPrice() }}</div>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Buyer picker --}}
+                    <div>
+                        <label class="block text-[12px] font-semibold text-slate-700 mb-1">
+                            <span x-data x-text="$store.lang.t('Buyer','Acheteur')"></span>
+                        </label>
+
+                        @if ($sellBuyerId)
+                            @php($_picked = \App\Models\User::find($sellBuyerId))
+                            @if ($_picked)
+                                <div class="flex items-center gap-2 p-2 rounded-xl bg-cm-green/10 ring-1 ring-cm-green/30">
+                                    <div class="w-8 h-8 rounded-full overflow-hidden bg-slate-200 grid place-items-center text-xs font-bold text-slate-700">
+                                        @if ($_picked->avatar)
+                                            <img src="{{ asset('storage/' . $_picked->avatar) }}" alt="" class="w-full h-full object-cover">
+                                        @else
+                                            {{ mb_strtoupper(mb_substr($_picked->name ?: $_picked->username, 0, 1)) }}
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm font-semibold text-slate-900 truncate">{{ $_picked->name ?: $_picked->username }}</div>
+                                        <div class="text-[11px] text-slate-500 truncate">&#64;{{ $_picked->username }}</div>
+                                    </div>
+                                    <button wire:click="clearBuyer" class="text-xs text-cm-red hover:underline font-medium">
+                                        <span x-data x-text="$store.lang.t('Change','Modifier')"></span>
+                                    </button>
+                                </div>
+                            @endif
+                        @else
+                            <input type="text" wire:model.live.debounce.300ms="sellBuyerSearch"
+                                   placeholder="{{ app()->getLocale() === 'fr' ? 'Rechercher par nom ou @pseudo…' : 'Search by name or @username…' }}"
+                                   class="w-full rounded-lg ring-1 ring-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-cm-green focus:outline-none">
+
+                            <div class="mt-2 space-y-1 max-h-48 overflow-y-auto">
+                                @forelse ($this->buyerCandidates as $cand)
+                                    <button type="button" wire:click="pickBuyer({{ $cand->id }})"
+                                            class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 text-left">
+                                        <div class="w-7 h-7 rounded-full overflow-hidden bg-slate-200 grid place-items-center text-[11px] font-bold text-slate-700">
+                                            @if ($cand->avatar)
+                                                <img src="{{ asset('storage/' . $cand->avatar) }}" alt="" class="w-full h-full object-cover">
+                                            @else
+                                                {{ mb_strtoupper(mb_substr($cand->name ?: $cand->username, 0, 1)) }}
+                                            @endif
+                                        </div>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="text-sm font-medium text-slate-900 truncate">{{ $cand->name ?: $cand->username }}</div>
+                                            <div class="text-[11px] text-slate-500 truncate">&#64;{{ $cand->username }}</div>
+                                        </div>
+                                    </button>
+                                @empty
+                                    <div class="text-[12px] text-slate-500 italic px-2 py-2">
+                                        @if (trim($sellBuyerSearch) === '')
+                                            <span x-data x-text="$store.lang.t('No prior offers — search above to attribute a buyer (optional).','Aucune offre précédente — recherchez ci-dessus pour attribuer un acheteur (optionnel).')"></span>
+                                        @else
+                                            <span x-data x-text="$store.lang.t('No match found.','Aucun résultat.')"></span>
+                                        @endif
+                                    </div>
+                                @endforelse
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- Final price --}}
+                    <div class="grid grid-cols-3 gap-2">
+                        <div class="col-span-2">
+                            <label class="block text-[12px] font-semibold text-slate-700 mb-1">
+                                <span x-data x-text="$store.lang.t('Final price','Prix final')"></span>
+                            </label>
+                            <input type="number" min="0" step="1" wire:model="sellPrice"
+                                   class="w-full rounded-lg ring-1 ring-slate-300 px-3 py-2 text-sm focus:ring-2 focus:ring-cm-green focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[12px] font-semibold text-slate-700 mb-1">
+                                <span x-data x-text="$store.lang.t('Currency','Devise')"></span>
+                            </label>
+                            <select wire:model="sellCurrency"
+                                    class="w-full rounded-lg ring-1 ring-slate-300 px-2 py-2 text-sm focus:ring-2 focus:ring-cm-green focus:outline-none">
+                                <option value="XAF">XAF</option>
+                                <option value="EUR">EUR</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="text-[11px] text-slate-500">
+                        <span x-data x-text="$store.lang.t('Attributing a buyer lets them rate this transaction.','Attribuer un acheteur lui permet de noter cette transaction.')"></span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 px-5 py-4 bg-slate-50 border-t border-slate-200">
+                    <button wire:click="cancelMarkSold"
+                            class="text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 ring-1 ring-slate-300 rounded-full px-4 py-2">
+                        <span x-data x-text="$store.lang.t('Cancel','Annuler')"></span>
+                    </button>
+                    <button wire:click="saveSold"
+                            class="text-sm font-semibold text-white bg-cm-green hover:bg-cm-green/90 rounded-full px-5 py-2 shadow">
+                        <span x-data x-text="$store.lang.t('Confirm sale','Confirmer la vente')"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- ─── MoMo Settings Modal ─── --}}
+    @if ($showMomoModal)
+        <div class="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4"
+             wire:click.self="closeMomoSettings"
+             x-data x-trap.noscroll>
+            <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-slate-200 max-w-md w-full overflow-hidden"
+                 x-transition:enter="transition duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
+                <div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-cm-green to-cm-green/80 text-white">
+                    <h3 class="text-lg font-extrabold">
+                        📱 {{ $lang === 'fr' ? 'Mobile Money' : 'Mobile Money' }}
+                    </h3>
+                    <p class="text-xs opacity-90 mt-0.5">
+                        {{ $lang === 'fr' ? 'Recevez les paiements directement sur votre numéro.' : 'Receive payments directly on your number.' }}
+                    </p>
+                </div>
+
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                            {{ $lang === 'fr' ? 'Opérateur' : 'Provider' }} <span class="text-cm-red">*</span>
+                        </label>
+                        <div class="grid grid-cols-3 gap-2">
+                            @foreach (['mtn' => 'MTN MoMo', 'orange' => 'Orange Money', 'express' => 'Express Union'] as $val => $label)
+                                <button type="button" wire:click="$set('momoProvider','{{ $val }}')"
+                                        class="text-xs font-bold rounded-xl py-2.5 ring-2 transition
+                                        {{ $momoProvider === $val ? 'bg-cm-yellow/20 ring-cm-yellow text-slate-900' : 'bg-white ring-slate-200 text-slate-700 hover:ring-cm-yellow/50' }}">
+                                    {{ $label }}
+                                </button>
+                            @endforeach
+                        </div>
+                        @error('momoProvider') <p class="text-xs text-cm-red mt-1">{{ $message }}</p> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-[13px] font-semibold text-slate-700 mb-1.5">
+                            {{ $lang === 'fr' ? 'Numéro' : 'Number' }} <span class="text-cm-red">*</span>
+                        </label>
+                        <input type="tel" wire:model="momoNumber" placeholder="6XX XX XX XX" maxlength="20"
+                               class="w-full rounded-xl ring-1 ring-slate-300 px-3 py-2.5 text-sm font-mono tracking-wider focus:ring-2 focus:ring-cm-green focus:outline-none">
+                        @error('momoNumber') <p class="text-xs text-cm-red mt-1">{{ $message }}</p> @enderror
+                        <p class="text-[11px] text-slate-500 mt-1">
+                            {{ $lang === 'fr' ? 'Visible uniquement par vos acheteurs en cours de paiement.' : 'Only visible to buyers during checkout.' }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-2 px-5 py-4 bg-slate-50 border-t border-slate-200">
+                    <button wire:click="closeMomoSettings" type="button"
+                            class="text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 ring-1 ring-slate-300 rounded-full px-4 py-2">
+                        {{ $lang === 'fr' ? 'Annuler' : 'Cancel' }}
+                    </button>
+                    <button wire:click="saveMomo" type="button"
+                            class="text-sm font-bold text-white bg-cm-green hover:bg-cm-green/90 rounded-full px-5 py-2 shadow">
+                        {{ $lang === 'fr' ? 'Enregistrer' : 'Save' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>
