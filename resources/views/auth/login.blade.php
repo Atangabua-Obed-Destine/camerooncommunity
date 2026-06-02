@@ -162,6 +162,11 @@
                             <div class="mt-4 rounded-xl bg-cm-green/10 border border-cm-green/20 px-4 py-3 text-sm text-cm-green">
                                 {{ session('status') }}
                             </div>
+                        @elseif(request()->boolean('expired'))
+                            <div class="mt-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 flex items-start gap-2">
+                                <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M12 2a10 10 0 100 20 10 10 0 000-20z"/></svg>
+                                <span x-data x-text="$store.lang.t('Your session has expired. Please sign in again.', 'Votre session a expiré. Veuillez vous reconnecter.')"></span>
+                            </div>
                         @endif
 
                         {{-- ── Continue with Google ─────────────────────────── --}}

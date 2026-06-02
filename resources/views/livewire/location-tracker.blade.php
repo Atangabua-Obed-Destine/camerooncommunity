@@ -10,7 +10,8 @@
     x-data
     id="location-toast-root"
     data-switch-url="{{ route('location.switch') }}"
-    class="fixed top-4 right-4 z-[9999] pointer-events-none"
+    {{-- bottom-right on mobile (keeps toolbar clickable); top-right on >=sm --}}
+    class="fixed bottom-4 right-4 sm:bottom-auto sm:top-4 z-[9999] pointer-events-none max-w-[calc(100vw-2rem)] sm:max-w-none"
     x-cloak
 >
     {{-- ═══════════════════════════════════════════════════════════
@@ -400,6 +401,25 @@
             }, 100);
         };
 
+        const DISMISS_KEY = 'cc_location_dismissed';
+        const dismissedFor = (country, region) => {
+            try {
+                const raw = sessionStorage.getItem(DISMISS_KEY);
+                if (!raw) return false;
+                const list = JSON.parse(raw);
+                return Array.isArray(list) && list.includes(`${country}|${region || ''}`);
+            } catch { return false; }
+        };
+        const markDismissed = (country, region) => {
+            try {
+                const raw = sessionStorage.getItem(DISMISS_KEY);
+                const list = raw ? JSON.parse(raw) : [];
+                const key = `${country}|${region || ''}`;
+                if (!list.includes(key)) list.push(key);
+                sessionStorage.setItem(DISMISS_KEY, JSON.stringify(list));
+            } catch {}
+        };
+
         window.addEventListener('location-switch-prompt', (e) => {
             console.log('[LocationTracker] location-switch-prompt event received:', e.detail);
             if (typeof Alpine === 'undefined') {
@@ -408,6 +428,10 @@
             }
             
             const d = e.detail?.[0] ?? e.detail ?? {};
+            if (dismissedFor(d.detectedCountry, d.detectedRegion)) {
+                console.log('[LocationTracker] prompt already dismissed this session, skipping');
+                return;
+            }
             const store = Alpine.store('locationToast');
             
             if (store) {
@@ -472,6 +496,7 @@
             
             const store = Alpine.store('locationToast');
             if (store) {
+                markDismissed(store.prompt?.country, store.prompt?.region);
                 store.showToast = false;
             }
         });

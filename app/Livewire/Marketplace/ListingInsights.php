@@ -26,9 +26,11 @@ class ListingInsights extends Component
     #[Url(except: 30)]
     public int $days = 30; // 7 | 30 | 90
 
-    public function mount(int $listing): void
+    public function mount(MarketplaceListing|int $listing): void
     {
-        $l = MarketplaceListing::findOrFail($listing);
+        $l = $listing instanceof MarketplaceListing
+            ? $listing
+            : MarketplaceListing::findOrFail($listing);
         if ((int) $l->user_id !== (int) Auth::id()) {
             abort(403);
         }

@@ -186,8 +186,11 @@
         </nav>
     </div>{{-- /Fixed Header Wrapper --}}
 
-    {{-- Main Content --}}
-    <main class="pt-[96px] lg:pt-[92px]">
+    {{-- Main Content. Top padding must clear the fixed header which is:
+         ~96px on xs (no location strip + main row + nav-tabs),
+         ~132px on sm→lg-1 (location strip 28px + main row + nav-tabs row),
+         ~92px on lg+ (single row, nav-tabs inline). --}}
+    <main class="pt-[104px] sm:pt-[140px] lg:pt-[92px]">
         {{ $slot }}
     </main>
 
@@ -215,9 +218,10 @@
     <script>
         document.addEventListener('livewire:init', () => {
             Livewire.hook('request', ({ fail }) => {
-                fail(({ status }) => {
+                fail(({ status, preventDefault }) => {
                     if (status === 419) {
-                        window.location.reload();
+                        preventDefault?.();
+                        window.location.assign('{{ route('login', ['expired' => 1]) }}');
                     }
                 });
             });

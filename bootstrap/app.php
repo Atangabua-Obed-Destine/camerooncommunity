@@ -32,5 +32,20 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Replace the default 419 "Page Expired" screen with a friendly
+        // redirect to the login page so the user knows what happened.
+        $exceptions->render(function (\Illuminate\Session\TokenMismatchException $e, \Illuminate\Http\Request $request) {
+            $message = __('Your session has expired. Please sign in again.');
+
+            if ($request->expectsJson() || $request->hasHeader('X-Livewire')) {
+                return response()->json([
+                    'message'  => $message,
+                    'redirect' => route('login', ['expired' => 1]),
+                ], 419);
+            }
+
+            return redirect()
+                ->guest(route('login', ['expired' => 1]))
+                ->with('status', $message);
+        });
     })->create();

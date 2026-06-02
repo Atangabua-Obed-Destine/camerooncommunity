@@ -2,10 +2,33 @@
     <div class="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-5 py-4 lg:py-5">
         <div class="grid lg:grid-cols-[300px_1fr] gap-5">
 
-            {{-- ─── Sidebar (re-uses marketplace partial) ─── --}}
-            <aside class="hidden lg:block lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-128px)] lg:overflow-y-auto">
-                <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-3">
-                    @include('livewire.marketplace.partials.sidebar')
+            {{-- ─── Sidebar (nav-only; filter sidebar is FeedBrowse-only) ─── --}}
+            <aside class="hidden lg:block lg:sticky lg:top-4 lg:self-start">
+                <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-4 space-y-2">
+                    <a href="{{ route('marketplace.index') }}" wire:navigate
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        <span x-data x-text="$store.lang.t('Back to GoMarket','Retour à GoMarket')"></span>
+                    </a>
+                    <a href="{{ route('marketplace.mine') }}" wire:navigate
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">
+                        <span>📦</span>
+                        <span x-data x-text="$store.lang.t('My listings','Mes annonces')"></span>
+                    </a>
+                    <a href="{{ route('marketplace.offers') }}" wire:navigate
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">
+                        <span>💬</span>
+                        <span x-data x-text="$store.lang.t('My offers','Mes offres')"></span>
+                    </a>
+                    <a href="{{ route('marketplace.favorites') }}" wire:navigate
+                       class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">
+                        <span>⭐</span>
+                        <span x-data x-text="$store.lang.t('Favorites','Favoris')"></span>
+                    </a>
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-cm-green bg-cm-green/10">
+                        <span>🔔</span>
+                        <span x-data x-text="$store.lang.t('Saved searches','Recherches enregistrées')"></span>
+                    </div>
                 </div>
             </aside>
 

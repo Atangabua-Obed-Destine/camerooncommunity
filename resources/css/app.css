@@ -492,6 +492,16 @@
     }
 }
 
+/* Tablet (sm→lg-1): the location strip (hidden sm:flex h-7 = 28px) adds height
+   so the fixed header is taller (~132px). Without this override the yard-container
+   slides under the header and intercepts clicks on toolbars (Filters/Sort/etc). */
+@media (min-width: 640px) and (max-width: 1023px) {
+    .yard-container,
+    .yard-container.yard-container--fullscreen {
+        top: 132px;
+    }
+}
+
 /* Panel base */
 .yard-panel {
     display: flex;

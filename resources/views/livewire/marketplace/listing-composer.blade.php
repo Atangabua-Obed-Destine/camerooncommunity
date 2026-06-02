@@ -221,7 +221,9 @@
                     </div>
 
                     {{-- Category-specific attributes (Phase 4) --}}
-                    @php($_attrSchema = \App\Support\CategoryAttributeSchema::forCategory($categoryId))
+                    @php
+                        $_attrSchema = \App\Support\CategoryAttributeSchema::forCategory($categoryId);
+                    @endphp
                     @if (! empty($_attrSchema))
                         <div class="mt-2 p-4 rounded-2xl bg-cm-green/5 ring-1 ring-cm-green/20">
                             <div class="flex items-center gap-2 mb-3">
@@ -254,7 +256,7 @@
                                             </div>
                                         @elseif ($f['type'] === 'number')
                                             <div class="mt-1 relative">
-                                                <input type="number" min="0" wire:model.blur="attrs.{{ $f['key'] }}"
+                                                <input type="number" min="0" wire:model="attrs.{{ $f['key'] }}"
                                                        placeholder="{{ $f['help'] ?? '' }}"
                                                        class="w-full rounded-xl bg-white border-0 ring-1 ring-slate-200 px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-cm-green focus:outline-none {{ ! empty($f['suffix']) ? 'pr-12' : '' }}">
                                                 @if (! empty($f['suffix']))
@@ -262,7 +264,7 @@
                                                 @endif
                                             </div>
                                         @else
-                                            <input type="text" wire:model.blur="attrs.{{ $f['key'] }}" maxlength="160"
+                                            <input type="text" wire:model="attrs.{{ $f['key'] }}" maxlength="160"
                                                    placeholder="{{ $f['help'] ?? '' }}"
                                                    class="mt-1 w-full rounded-xl bg-white border-0 ring-1 ring-slate-200 px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-cm-green focus:outline-none">
                                         @endif
@@ -370,10 +372,13 @@
                             <span x-data x-text="$store.lang.t('Live preview','Aperçu en direct')"></span>
                         </div>
                         <div class="grid grid-cols-[120px_1fr] gap-3 bg-white rounded-xl p-3 ring-1 ring-slate-200">
-                            @php $previewMedia = array_merge($existingMedia, $uploadedMedia); $cover = collect($previewMedia)->firstWhere('is_cover', true) ?? ($previewMedia[0] ?? null); @endphp
+                            @php
+                                $previewMedia = array_merge((array) ($existingMedia ?? []), (array) ($uploadedMedia ?? []));
+                                $cover = collect($previewMedia)->firstWhere('is_cover', true) ?? ($previewMedia[0] ?? null);
+                            @endphp
                             <div class="aspect-square rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden">
-                                @if ($cover)
-                                    <img src="{{ $cover['url'] }}" class="w-full h-full object-cover" alt="">
+                                @if (!empty($cover))
+                                    <img src="{{ $cover['url'] ?? '' }}" class="w-full h-full object-cover" alt="">
                                 @else
                                     <div class="w-full h-full flex items-center justify-center text-3xl text-slate-400">📦</div>
                                 @endif

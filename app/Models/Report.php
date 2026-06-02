@@ -14,16 +14,14 @@ class Report extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'uuid',
         'reporter_id',
         'reportable_type',
         'reportable_id',
         'reason',
-        'details',
+        'description',
         'status',
-        'handled_by',
-        'handled_at',
-        'admin_note',
+        'reviewed_by',
+        'review_note',
     ];
 
     protected function casts(): array
@@ -31,7 +29,6 @@ class Report extends Model
         return [
             'reason' => ReportReason::class,
             'status' => ReportStatus::class,
-            'handled_at' => 'datetime',
         ];
     }
 
@@ -42,7 +39,7 @@ class Report extends Model
 
     public function handler(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'handled_by');
+        return $this->belongsTo(User::class, 'reviewed_by');
     }
 
     public function reportable(): MorphTo

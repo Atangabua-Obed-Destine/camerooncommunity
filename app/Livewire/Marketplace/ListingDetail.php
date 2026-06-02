@@ -432,12 +432,11 @@ class ListingDetail extends Component
         }
 
         \App\Models\Report::create([
-            'uuid'            => (string) \Illuminate\Support\Str::uuid(),
             'reporter_id'     => Auth::id(),
             'reportable_type' => MarketplaceListing::class,
             'reportable_id'   => $this->listing->id,
             'reason'          => $this->reportReason,
-            'details'         => $this->reportDetails ?: null,
+            'description'     => $this->reportDetails ?: null,
             'status'          => \App\Enums\ReportStatus::Pending,
         ]);
 

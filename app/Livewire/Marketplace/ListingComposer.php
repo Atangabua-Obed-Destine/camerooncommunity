@@ -87,7 +87,7 @@ class ListingComposer extends Component
         };
     }
 
-    public function mount(?int $listing = null): void
+    public function mount(MarketplaceListing|int|null $listing = null): void
     {
         $this->currency = (string) PlatformSetting::getValue('marketplace_default_currency', 'XAF');
 
@@ -99,7 +99,9 @@ class ListingComposer extends Component
         }
 
         if ($listing) {
-            $l = MarketplaceListing::with('media')->findOrFail($listing);
+            $l = $listing instanceof MarketplaceListing
+                ? $listing->load('media')
+                : MarketplaceListing::with('media')->findOrFail($listing);
             if (! $l->isOwnedBy(Auth::id())) {
                 abort(403);
             }
