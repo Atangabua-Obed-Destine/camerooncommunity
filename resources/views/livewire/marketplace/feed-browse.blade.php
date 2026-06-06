@@ -71,7 +71,16 @@
                         </h1>
                         <p class="text-sm text-slate-600 mt-0.5">
                             {{ $this->listings->total() }}
-                            <span x-data x-text="$store.lang.t('listings in your area','annonces dans votre région')"></span>
+                            @if ($locLabel !== '')
+                                <span x-data x-text="$store.lang.t('listings','annonces')"></span>
+                                <span class="text-slate-400">·</span>
+                                <span class="inline-flex items-center gap-0.5 font-medium text-slate-700">
+                                    <svg class="w-3.5 h-3.5 text-cm-red" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
+                                    {{ $locLabel }}@if ($radius) · {{ $radius }} km @endif
+                                </span>
+                            @else
+                                <span x-data x-text="$store.lang.t('listings in your area','annonces dans votre région')"></span>
+                            @endif
                         </p>
                     </div>
                     <div class="flex items-center gap-3">
@@ -167,12 +176,12 @@
                 @endif
 
                 {{-- Skeleton loading --}}
-                <div wire:loading.flex wire:target="query,sort,condition,fulfillment,priceMin,priceMax,region"
-                     class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-3">
-                    @for ($i = 0; $i < 8; $i++)
-                        <div class="animate-pulse bg-white rounded-2xl ring-1 ring-slate-200 overflow-hidden">
-                            <div class="aspect-square bg-slate-200"></div>
-                            <div class="p-3 space-y-2">
+                <div wire:loading.flex wire:target="query,sort,condition,fulfillment,priceMin,priceMax,region,radius,locLabel,setLocation"
+                     class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-3 gap-y-4 mb-3">
+                    @for ($i = 0; $i < 12; $i++)
+                        <div class="animate-pulse">
+                            <div class="aspect-square rounded-lg bg-slate-200"></div>
+                            <div class="pt-1.5 px-0.5 space-y-1.5">
                                 <div class="h-3.5 w-1/2 bg-slate-200 rounded"></div>
                                 <div class="h-3 w-3/4 bg-slate-200 rounded"></div>
                                 <div class="h-2.5 w-1/3 bg-slate-200 rounded"></div>
@@ -181,7 +190,7 @@
                     @endfor
                 </div>
 
-                <div wire:loading.remove wire:target="query,sort,condition,fulfillment,priceMin,priceMax,region">
+                <div wire:loading.remove wire:target="query,sort,condition,fulfillment,priceMin,priceMax,region,radius,locLabel,setLocation">
                     @if ($view === 'map')
                         @include('livewire.marketplace.partials.map-view', ['points' => $this->mapPoints, 'center' => \App\Support\CameroonGeo::center()])
                     @elseif ($this->listings->isEmpty())
@@ -196,7 +205,7 @@
                             </a>
                         </div>
                     @else
-                        <div class="mp-grid grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        <div class="mp-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-3 gap-y-4">
                             @foreach ($this->listings as $listing)
                                 <x-marketplace.listing-card :listing="$listing" />
                             @endforeach

@@ -83,6 +83,36 @@ class MarketplaceQueryBuilder
         return self::applySort($q, $filters['sort'] ?? 'newest');
     }
 
+    /**
+     * Restrict a feed query to listings near a point, at region granularity.
+     *
+     * Listings don't store precise coordinates (privacy — see App\Support\CameroonGeo),
+     * so "within X km" is approximated by keeping only listings whose region's
+     * centroid falls inside the radius. A null radius (or missing point) is a
+     * no-op = nationwide. Listings whose region text matches no known region are
+     * excluded once a radius is active, which mirrors FB hiding out-of-range items.
+     */
+    public static function applyRadius(Builder $q, ?float $lat, ?float $lng, ?int $radiusKm): Builder
+    {
+        if ($lat === null || $lng === null || $radiusKm === null || $radiusKm <= 0) {
+            return $q;
+        }
+
+        $keys = \App\Support\CameroonGeo::regionsWithin($lat, $lng, (float) $radiusKm);
+        $aliases = \App\Support\CameroonGeo::aliasesFor($keys);
+
+        if ($aliases === []) {
+            // Point resolves to nothing in range → no matches.
+            return $q->whereRaw('1 = 0');
+        }
+
+        return $q->where(function ($w) use ($aliases) {
+            foreach ($aliases as $a) {
+                $w->orWhere('region', 'like', '%' . $a . '%');
+            }
+        });
+    }
+
     /** Apply one of the supported sort strategies to a builder. */
     public static function applySort(Builder $q, string $sort): Builder
     {
