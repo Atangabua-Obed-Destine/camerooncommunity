@@ -3,6 +3,7 @@
 namespace App\Livewire\Marketplace;
 
 use App\Enums\OfferStatus;
+use App\Livewire\Concerns\InteractsWithFollows;
 use App\Models\MarketplaceFavorite;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceListingView;
@@ -16,6 +17,8 @@ use Livewire\Component;
 #[Layout('components.layouts.rails', ['active' => 'marketplace'])]
 class ListingDetail extends Component
 {
+    use InteractsWithFollows;
+
     public MarketplaceListing $listing;
     public int $activeMediaIndex = 0;
 

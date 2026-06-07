@@ -150,11 +150,12 @@
                                     {{ $lang === 'fr' ? 'Acheter maintenant' : 'Buy now' }} · {{ number_format((float)$listing->price,0) }} {{ $listing->currency }}
                                 </a>
                             @endif
-                            <a href="{{ route('yard') }}?dm={{ $seller?->id }}&listing={{ $listing->uuid }}"
-                               class="inline-flex items-center justify-center gap-2 bg-cm-green text-white font-bold py-2.5 rounded-full hover:bg-cm-green/90 shadow-md text-sm transition">
+                            <button type="button"
+                                    @click="$dispatch('open-gomarket-chat', { sellerId: {{ $seller?->id }}, listingId: {{ $listing->id }} })"
+                                    class="col-span-2 inline-flex items-center justify-center gap-2 bg-cm-green text-white font-bold py-2.5 rounded-full hover:bg-cm-green/90 shadow-md text-sm transition">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
                                 {{ $lang === 'fr' ? 'Message' : 'Message' }}
-                            </a>
+                            </button>
                             <button type="button" wire:click="toggleFavorite"
                                     @class([
                                         'inline-flex items-center justify-center gap-2 font-bold py-2.5 rounded-full text-sm transition',
@@ -163,6 +164,12 @@
                                     ])>
                                 <svg class="w-4 h-4" fill="{{ $this->isFavorited() ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z"/></svg>
                                 {{ $lang === 'fr' ? $saveLabelFr : $saveLabelEn }}
+                            </button>
+                            <button type="button"
+                                    @click="navigator.share ? navigator.share({ title: @js($listing->title), url: window.location.href }).catch(()=>{}) : (navigator.clipboard.writeText(window.location.href), $dispatch('toast', { type: 'success', message: @js($lang === 'fr' ? 'Lien copié' : 'Link copied') }))"
+                                    class="inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 rounded-full text-sm ring-2 ring-transparent hover:ring-slate-300 transition">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
+                                {{ $lang === 'fr' ? 'Partager' : 'Share' }}
                             </button>
 
                             @if ($canOffer)
@@ -210,8 +217,9 @@
                 @if ($seller)
                     <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-4">
                         <div class="text-[11px] font-bold uppercase tracking-wide text-slate-500 mb-2.5">{{ $lang === 'fr' ? 'Vendeur' : 'Seller' }}</div>
-                        <a href="{{ route('user.profile', ['username' => $seller->username]) }}" class="flex items-center gap-3 group">
-                            <div class="relative w-12 h-12 rounded-full bg-cm-green/15 flex items-center justify-center text-cm-green font-bold uppercase overflow-hidden shrink-0">
+                        <div class="flex items-center gap-3">
+                            <a href="{{ $seller->username ? route('marketplace.seller', ['username' => $seller->username]) : '#' }}" wire:navigate
+                               class="relative w-12 h-12 rounded-full bg-cm-green/15 flex items-center justify-center text-cm-green font-bold uppercase overflow-hidden shrink-0">
                                 @if ($seller->avatar)
                                     <img src="{{ asset('storage/' . $seller->avatar) }}" alt="" class="w-full h-full object-cover">
                                 @else
@@ -220,14 +228,16 @@
                                 @if ($listing->is_verified_seller)
                                     <span class="absolute -bottom-0.5 -right-0.5 bg-blue-500 text-white text-[10px] rounded-full w-4 h-4 grid place-items-center ring-2 ring-white" title="Verified seller">✓</span>
                                 @endif
-                            </div>
+                            </a>
                             <div class="min-w-0 flex-1">
-                                <div class="font-bold text-slate-900 group-hover:text-cm-green truncate">
-                                    {{ $seller->name }}
-                                    @if ($listing->is_verified_seller)
-                                        <span class="text-blue-500 text-xs ml-0.5" title="Verified">✓</span>
-                                    @endif
-                                </div>
+                                <x-marketplace.seller-popover :seller="$seller" :listing="$listing">
+                                    <span class="font-bold text-slate-900 group-hover/seller:text-cm-green truncate">
+                                        {{ $seller->name }}
+                                        @if ($listing->is_verified_seller)
+                                            <span class="text-blue-500 text-xs ml-0.5" title="Verified">✓</span>
+                                        @endif
+                                    </span>
+                                </x-marketplace.seller-popover>
                                 <div class="text-xs text-slate-500 truncate">&commat;{{ $seller->username }}</div>
                                 @if (($seller->seller_rating_count ?? 0) > 0)
                                     <div class="flex items-center gap-1 mt-0.5">
@@ -246,7 +256,24 @@
                                     {{ $lang === 'fr' ? 'Membre depuis' : 'Joined' }} {{ $seller->created_at?->translatedFormat('M Y') }}
                                 </div>
                             </div>
-                        </a>
+                        </div>
+
+                        @unless ($isOwner)
+                            <div class="mt-3 grid grid-cols-2 gap-2">
+                                <button type="button" wire:click="toggleFollow({{ $seller->id }})"
+                                        @class([
+                                            'text-xs font-bold rounded-full py-2 transition',
+                                            'bg-cm-green text-white hover:bg-cm-green/90' => ! $this->isFollowing($seller->id),
+                                            'bg-slate-100 text-slate-700 ring-1 ring-slate-300 hover:bg-slate-200' => $this->isFollowing($seller->id),
+                                        ])>
+                                    {{ $this->isFollowing($seller->id) ? ($lang === 'fr' ? '✓ Abonné' : '✓ Following') : ($lang === 'fr' ? '+ Suivre' : '+ Follow') }}
+                                </button>
+                                <a href="{{ $seller->username ? route('marketplace.seller', ['username' => $seller->username]) : '#' }}" wire:navigate
+                                   class="text-xs font-bold rounded-full py-2 bg-slate-100 text-slate-800 hover:bg-slate-200 grid place-items-center transition">
+                                    {{ $lang === 'fr' ? 'Voir la boutique' : 'View shop' }}
+                                </a>
+                            </div>
+                        @endunless
                         {{-- Trust badges (Phase 7) --}}
                         @php $badges = $this->sellerBadges; @endphp
                         @if (! empty($badges))
@@ -559,10 +586,11 @@
                         🏷️ <span class="ml-1">{{ $lang === 'fr' ? 'Offre' : 'Offer' }}</span>
                     </button>
                 @endif
-                <a href="{{ route('yard') }}?dm={{ $seller?->id }}&listing={{ $listing->uuid }}"
-                   class="flex-[1.4] h-11 rounded-full bg-cm-green text-white font-extrabold text-sm grid place-items-center shadow-md">
+                <button type="button"
+                        @click="$dispatch('open-gomarket-chat', { sellerId: {{ $seller?->id }}, listingId: {{ $listing->id }} })"
+                        class="flex-[1.4] h-11 rounded-full bg-cm-green text-white font-extrabold text-sm grid place-items-center shadow-md">
                     💬 <span class="ml-1">{{ $lang === 'fr' ? 'Message' : 'Message' }}</span>
-                </a>
+                </button>
             </div>
             @if (in_array($listing->price_type->value, ['fixed','negotiable']) && (float) $listing->price > 0 && $seller?->momo_number)
                 <a href="{{ route('marketplace.checkout', ['slug' => $listing->slug]) }}" wire:navigate
