@@ -15,6 +15,9 @@ class NotificationService
         $user->notifications()->create([
             'id' => \Illuminate\Support\Str::uuid()->toString(),
             'tenant_id' => $user->tenant_id,
+            // The notifications table carries an explicit user_id (NOT NULL) in
+            // addition to the polymorphic notifiable_* columns.
+            'user_id' => $user->id,
             'type' => $type,
             'data' => array_merge($data, [
                 'title' => $title,
