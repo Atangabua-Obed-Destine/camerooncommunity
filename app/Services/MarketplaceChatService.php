@@ -47,6 +47,57 @@ class MarketplaceChatService
         return ['room' => $room];
     }
 
+    /**
+     * Post a text message into a marketplace conversation (shared by the
+     * floating dock and the inbox). Broadcasts + updates room meta.
+     */
+    public function postMessage(YardRoom $room, User $sender, string $text): ?YardMessage
+    {
+        $text = trim($text);
+        if ($text === '') {
+            return null;
+        }
+        $isMember = YardRoomMember::where('room_id', $room->id)
+            ->where('user_id', $sender->id)->exists();
+        if (! $isMember) {
+            return null;
+        }
+
+        $message = YardMessage::create([
+            'tenant_id'    => $sender->tenant_id,
+            'uuid'         => Str::uuid()->toString(),
+            'room_id'      => $room->id,
+            'user_id'      => $sender->id,
+            'message_type' => MessageType::Text,
+            'content'      => mb_substr($text, 0, 4000),
+        ]);
+
+        $room->forceFill([
+            'last_message_at'      => now(),
+            'last_message_preview' => Str::limit($text, 100),
+            'last_message_user_id' => $sender->id,
+            'messages_count'       => ($room->messages_count ?? 0) + 1,
+        ])->save();
+
+        try {
+            broadcast(new MessageSent($message))->toOthers();
+        } catch (\Throwable $e) {
+            Log::warning('Marketplace postMessage broadcast failed: ' . $e->getMessage());
+        }
+
+        return $message;
+    }
+
+    /** The listing a marketplace conversation is about (latest seeded card). */
+    public function listingForRoom(YardRoom $room): ?MarketplaceListing
+    {
+        $card = YardMessage::where('room_id', $room->id)
+            ->where('shareable_type', MarketplaceListing::class)
+            ->latest('id')->first();
+
+        return $card ? MarketplaceListing::with('media')->find($card->shareable_id) : null;
+    }
+
     protected function findOrCreateRoom(User $buyer, User $seller): YardRoom
     {
         $existing = YardRoom::where('room_type', RoomType::DirectMessage)

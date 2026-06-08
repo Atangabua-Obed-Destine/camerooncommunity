@@ -58,13 +58,14 @@
             <span x-data x-text="$store.lang.t('Browse all','Tout parcourir')"></span>
         </a>
 
-        {{-- Inbox / Messages (marketplace chats live in GoConnect) --}}
-        <a href="{{ route('yard') }}" wire:navigate
-           class="flex items-center gap-3 px-3 py-2 rounded-xl text-[15px] font-medium transition text-slate-800 hover:bg-slate-100">
-            <span class="w-9 h-9 grid place-items-center rounded-full bg-slate-200 text-slate-700">
+        {{-- Inbox — marketplace-scoped conversations (Buying / Selling) --}}
+        <a href="{{ route('marketplace.inbox') }}" wire:navigate
+           class="flex items-center gap-3 px-3 py-2 rounded-xl text-[15px] font-medium transition
+           {{ $activeRoute === 'marketplace.inbox' ? 'bg-cm-green/10 text-cm-green' : 'text-slate-800 hover:bg-slate-100' }}">
+            <span class="w-9 h-9 grid place-items-center rounded-full {{ $activeRoute === 'marketplace.inbox' ? 'bg-cm-green text-white' : 'bg-slate-200 text-slate-700' }}">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
             </span>
-            <span x-data x-text="$store.lang.t('Messages','Messages')"></span>
+            <span x-data x-text="$store.lang.t('Inbox','Boîte de réception')"></span>
         </a>
 
         <a href="{{ route('marketplace.favorites') }}" wire:navigate

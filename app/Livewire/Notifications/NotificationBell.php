@@ -77,7 +77,9 @@ class NotificationBell extends Component
                 'body'      => $room->last_message_preview ?: trans_choice('{1} :n new message|[2,*] :n new messages', $count, ['n' => $count]),
                 'time'      => $room->last_message_at ?: $m->updated_at,
                 'unread'    => $count,
-                'link'      => route('yard') . '?open=' . $room->id,
+                'link'      => $room->origin === 'marketplace'
+                                ? route('marketplace.inbox') . '?c=' . $room->id
+                                : route('yard') . '?open=' . $room->id,
                 'icon'      => 'chat',
                 'palette'   => \App\Support\AvatarPalette::colorClass('user:' . ($partner?->id ?? 0)),
                 'initial'   => mb_strtoupper(mb_substr($name, 0, 1)),

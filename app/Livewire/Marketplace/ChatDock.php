@@ -163,39 +163,8 @@ class ChatDock extends Component
             return;
         }
 
-        $text = trim($this->newMessage);
-        if ($text === '') {
-            return;
-        }
-
-        $isMember = YardRoomMember::where('room_id', $room->id)
-            ->where('user_id', $buyer->id)->exists();
-        if (! $isMember) {
-            return;
-        }
-
         // No connection gate — marketplace conversations are open (FB-style).
-        $message = YardMessage::create([
-            'tenant_id'    => $buyer->tenant_id,
-            'uuid'         => Str::uuid()->toString(),
-            'room_id'      => $room->id,
-            'user_id'      => $buyer->id,
-            'message_type' => MessageType::Text,
-            'content'      => mb_substr($text, 0, 4000),
-        ]);
-
-        $room->forceFill([
-            'last_message_at'      => now(),
-            'last_message_preview' => Str::limit($text, 100),
-            'last_message_user_id' => $buyer->id,
-            'messages_count'       => ($room->messages_count ?? 0) + 1,
-        ])->save();
-
-        try {
-            broadcast(new MessageSent($message))->toOthers();
-        } catch (\Throwable $e) {
-            \Log::warning('GoMarket dock broadcast failed: ' . $e->getMessage());
-        }
+        app(MarketplaceChatService::class)->postMessage($room, $buyer, $this->newMessage);
 
         $this->newMessage = '';
         unset($this->messages);
