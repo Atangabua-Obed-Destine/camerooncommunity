@@ -203,6 +203,9 @@ class Inbox extends Component
         YardRoomMember::where('room_id', $roomId)
             ->where('user_id', auth()->id())
             ->update(['last_read_at' => now()]);
+
+        // Keep the sidebar Inbox badge fresh.
+        \Illuminate\Support\Facades\Cache::forget('mp:inbox-unread:' . auth()->id());
     }
 
     public function mount(): void

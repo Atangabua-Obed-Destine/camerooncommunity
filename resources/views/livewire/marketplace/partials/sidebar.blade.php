@@ -24,6 +24,30 @@
             }
         );
     }
+
+    // Unread marketplace inbox count (origin='marketplace' DM rooms).
+    $mpInboxUnread = 0;
+    if (auth()->check()) {
+        $mpInboxUnread = \Illuminate\Support\Facades\Cache::remember(
+            'mp:inbox-unread:' . auth()->id(),
+            60,
+            function () {
+                $me = auth()->id();
+                $members = \App\Models\YardRoomMember::where('user_id', $me)
+                    ->whereHas('room', fn ($q) => $q->where('origin', 'marketplace'))
+                    ->get(['room_id', 'last_read_at']);
+                $total = 0;
+                foreach ($members as $m) {
+                    $total += \App\Models\YardMessage::where('room_id', $m->room_id)
+                        ->where('user_id', '!=', $me)
+                        ->where('is_deleted', false)
+                        ->when($m->last_read_at, fn ($q, $lr) => $q->where('created_at', '>', $lr))
+                        ->count();
+                }
+                return $total;
+            }
+        );
+    }
 @endphp
 
 <div class="space-y-3">
@@ -65,7 +89,10 @@
             <span class="w-9 h-9 grid place-items-center rounded-full {{ $activeRoute === 'marketplace.inbox' ? 'bg-cm-green text-white' : 'bg-slate-200 text-slate-700' }}">
                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
             </span>
-            <span x-data x-text="$store.lang.t('Inbox','Boîte de réception')"></span>
+            <span class="flex-1" x-data x-text="$store.lang.t('Inbox','Boîte de réception')"></span>
+            @if ($mpInboxUnread > 0)
+                <span class="ml-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-cm-red text-white text-[11px] font-bold">{{ $mpInboxUnread > 99 ? '99+' : $mpInboxUnread }}</span>
+            @endif
         </a>
 
         <a href="{{ route('marketplace.favorites') }}" wire:navigate
