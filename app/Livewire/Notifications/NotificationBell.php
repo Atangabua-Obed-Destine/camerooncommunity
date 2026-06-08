@@ -77,7 +77,9 @@ class NotificationBell extends Component
                 'body'      => $room->last_message_preview ?: trans_choice('{1} :n new message|[2,*] :n new messages', $count, ['n' => $count]),
                 'time'      => $room->last_message_at ?: $m->updated_at,
                 'unread'    => $count,
-                'link'      => route('yard') . '?open=' . $room->id,
+                'link'      => $room->origin === 'marketplace'
+                                ? route('marketplace.inbox') . '?c=' . $room->id
+                                : route('yard') . '?open=' . $room->id,
                 'icon'      => 'chat',
                 'palette'   => \App\Support\AvatarPalette::colorClass('user:' . ($partner?->id ?? 0)),
                 'initial'   => mb_strtoupper(mb_substr($name, 0, 1)),
@@ -227,6 +229,43 @@ class NotificationBell extends Component
         });
     }
 
+    /** ─────────────────────────────────────────────────────────────────
+     * Source #5 — Stored DB notifications (e.g. marketplace order events
+     * emitted via NotificationService). The bell otherwise builds itself from
+     * live signals; this surfaces persisted notifications too.
+     * ───────────────────────────────────────────────────────────────── */
+    #[Computed]
+    public function storedNotifications(): Collection
+    {
+        $userId = auth()->id();
+        if (! $userId) return collect();
+
+        return DB::table('notifications')
+            ->where('user_id', $userId)
+            ->whereNull('read_at')
+            ->orderByDesc('created_at')
+            ->limit(20)
+            ->get()
+            ->map(function ($r) {
+                $data = json_decode($r->data, true) ?: [];
+                $title = $data['title'] ?? __('Notification');
+                return [
+                    'kind'    => 'stored',
+                    'id'      => 'note:' . $r->id,
+                    'room_id' => null,
+                    'user_id' => null,
+                    'title'   => $title,
+                    'body'    => $data['body'] ?? '',
+                    'time'    => $r->created_at,
+                    'unread'  => 1,
+                    'link'    => $data['url'] ?? route('yard'),
+                    'icon'    => 'tag',
+                    'palette' => 'bg-gradient-to-br from-emerald-400 to-emerald-600',
+                    'initial' => mb_strtoupper(mb_substr($title, 0, 1)),
+                ];
+            });
+    }
+
     /** Unified, time-sorted notification feed. */
     #[Computed]
     public function feed(): Collection
@@ -235,7 +274,8 @@ class NotificationBell extends Component
             ->merge($this->dmUnreads)
             ->merge($this->mentions)
             ->merge($this->joinRequests)
-            ->merge($this->connectionRequests);
+            ->merge($this->connectionRequests)
+            ->merge($this->storedNotifications);
 
         $filtered = match ($this->tab) {
             'mentions'    => $all->where('kind', 'mention'),
@@ -254,7 +294,7 @@ class NotificationBell extends Component
     public function counts(): array
     {
         return [
-            'all'         => $this->dmUnreads->sum('unread') + $this->mentions->count() + $this->joinRequests->count() + $this->connectionRequests->count(),
+            'all'         => $this->dmUnreads->sum('unread') + $this->mentions->count() + $this->joinRequests->count() + $this->connectionRequests->count() + $this->storedNotifications->count(),
             'mentions'    => $this->mentions->count(),
             'groups'      => $this->joinRequests->count(),
             'connections' => $this->connectionRequests->count(),
@@ -281,9 +321,15 @@ class NotificationBell extends Component
 
         YardRoomMember::where('user_id', $userId)->update(['last_read_at' => now()]);
 
+        // Also clear stored DB notifications (e.g. marketplace order events).
+        DB::table('notifications')
+            ->where('user_id', $userId)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
         $this->bust();
         $this->dispatch('refreshRoomList');
-        $this->dispatch('toast', type: 'success', message: __('All chats marked as read'));
+        $this->dispatch('toast', type: 'success', message: __('All notifications marked as read'));
     }
 
     /** Refresh hooks fired by existing client dispatchers. */
@@ -294,7 +340,7 @@ class NotificationBell extends Component
     #[On('bell-refresh')]
     public function bust(): void
     {
-        unset($this->dmUnreads, $this->mentions, $this->joinRequests, $this->connectionRequests, $this->feed, $this->counts, $this->total);
+        unset($this->dmUnreads, $this->mentions, $this->joinRequests, $this->connectionRequests, $this->storedNotifications, $this->feed, $this->counts, $this->total);
     }
 
     public function render()

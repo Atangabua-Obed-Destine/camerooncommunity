@@ -211,6 +211,12 @@
         @include('partials.discover-modal')
     @endauth
 
+    {{-- GoMarket floating chat dock (Facebook-Marketplace style) — opens via
+         $dispatch('open-gomarket-chat', {sellerId, listingId}). --}}
+    @auth
+        @livewire('marketplace.chat-dock')
+    @endauth
+
     {{-- Real-time connection request / accept notifier (toast + chime + confetti) --}}
     <x-connection-notifier />
 

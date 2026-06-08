@@ -2,8 +2,8 @@
 
 namespace App\Livewire\Marketplace;
 
-use App\Enums\ListingStatus;
 use App\Enums\OfferStatus;
+use App\Livewire\Concerns\InteractsWithFollows;
 use App\Models\MarketplaceFavorite;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceListingView;
@@ -17,6 +17,8 @@ use Livewire\Component;
 #[Layout('components.layouts.rails', ['active' => 'marketplace'])]
 class ListingDetail extends Component
 {
+    use InteractsWithFollows;
+
     public MarketplaceListing $listing;
     public int $activeMediaIndex = 0;
 
@@ -40,8 +42,10 @@ class ListingDetail extends Component
             ->with(['seller', 'category', 'media'])
             ->firstOrFail();
 
-        // Only publicly viewable listings (or owner can preview their own draft).
-        if ($this->listing->status !== ListingStatus::Active && ! $this->listing->isOwnedBy(Auth::id())) {
+        // Active + Sold listings are viewable by anyone (sold ones render a
+        // "Sold" state and let the buyer leave a review — FB-style, no 404).
+        // Draft/pending/paused/expired/removed remain owner-only previews.
+        if (! $this->listing->status->isViewable() && ! $this->listing->isOwnedBy(Auth::id())) {
             abort(404);
         }
 

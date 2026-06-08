@@ -205,6 +205,8 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
         Route::get('/saved-searches',           \App\Livewire\Marketplace\SavedSearches::class)->name('saved');
         Route::get('/orders',                   \App\Livewire\Marketplace\Orders::class)->name('orders');
         Route::get('/insights/{listing}',       \App\Livewire\Marketplace\ListingInsights::class)->name('insights');
+        Route::get('/seller/{username}',        \App\Livewire\Marketplace\SellerProfile::class)->name('seller');
+        Route::get('/inbox',                    \App\Livewire\Marketplace\Inbox::class)->name('inbox');
         Route::get('/c/{slug}',                 \App\Livewire\Marketplace\FeedBrowse::class)->name('category');
         Route::get('/listing/{slug}',           \App\Livewire\Marketplace\ListingDetail::class)->name('show');
         Route::get('/listing/{slug}/review',    \App\Livewire\Marketplace\LeaveReview::class)->name('review');

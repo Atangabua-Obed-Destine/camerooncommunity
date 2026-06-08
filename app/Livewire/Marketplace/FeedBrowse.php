@@ -58,16 +58,72 @@ class FeedBrowse extends Component
 
     public bool $filtersOpen = false;
 
+    /** FB-style location + radius. Region-granular (listings store no precise coords). */
+    #[Url(as: 'loc', except: '')]
+    public string $locLabel = '';
+
+    public ?float $locLat = null;
+
+    public ?float $locLng = null;
+
+    /** Radius in km. null / 0 = all of Cameroon. */
+    #[Url(except: '')]
+    public ?int $radius = null;
+
     public function mount(?string $slug = null): void
     {
         if ($slug) {
             $this->categorySlug = $slug;
         }
+
+        // Default the location pin to the viewer's own location so the feed
+        // opens centred on them — just like Facebook Marketplace.
+        if ($this->locLat === null && ($u = auth()->user())) {
+            if ($u->current_lat !== null && $u->current_lng !== null) {
+                $this->locLat = (float) $u->current_lat;
+                $this->locLng = (float) $u->current_lng;
+            } elseif ($u->current_region) {
+                $c = \App\Support\CameroonGeo::centroidForRegion((string) $u->current_region);
+                if ($c) { $this->locLat = $c['lat']; $this->locLng = $c['lng']; }
+            }
+            if ($this->locLabel === '') {
+                $this->locLabel = $u->current_city ?: ($u->current_region ?: '');
+            }
+        }
+    }
+
+    /** Radius choices offered in the location picker (km). */
+    public function radiusOptions(): array
+    {
+        return [10, 25, 50, 100, 250, 500];
+    }
+
+    /** Resolve a typed city/region to a region centroid and pin the feed there. */
+    public function setLocation(string $label): void
+    {
+        $label = trim($label);
+        $this->locLabel = mb_substr($label, 0, 80);
+        $c = $label !== '' ? \App\Support\CameroonGeo::centroidForRegion($label) : null;
+        if ($c) {
+            $this->locLat = $c['lat'];
+            $this->locLng = $c['lng'];
+        } else {
+            // Unknown place → drop the pin so radius becomes nationwide.
+            $this->locLat = null;
+            $this->locLng = null;
+        }
+        $this->resetPage();
+    }
+
+    public function clearLocation(): void
+    {
+        $this->reset(['locLabel', 'locLat', 'locLng', 'radius']);
+        $this->resetPage();
     }
 
     public function updating($name): void
     {
-        if (in_array($name, ['query', 'categorySlug', 'region', 'country', 'condition', 'fulfillment', 'priceMin', 'priceMax', 'sort'])
+        if (in_array($name, ['query', 'categorySlug', 'region', 'country', 'condition', 'fulfillment', 'priceMin', 'priceMax', 'sort', 'radius', 'locLabel'])
             || str_starts_with($name, 'attrs.')) {
             $this->resetPage();
         }
@@ -93,7 +149,22 @@ class FeedBrowse extends Component
         $q = MarketplaceQueryBuilder::build($this->currentFilters())
             ->with(['user', 'category', 'media' => fn ($m) => $m->limit(1)]);
 
-        return $q->paginate(24);
+        MarketplaceQueryBuilder::applyRadius($q, $this->locLat, $this->locLng, $this->radius);
+
+        $page = $q->paginate(24);
+
+        // Annotate each card with an approximate distance from the viewer's pin
+        // (region-centroid based — see App\Support\CameroonGeo). FB shows this.
+        if ($this->locLat !== null && $this->locLng !== null) {
+            foreach ($page as $listing) {
+                $c = \App\Support\CameroonGeo::centroidForRegion((string) $listing->region);
+                $listing->distance_km = $c
+                    ? \App\Support\CameroonGeo::haversineKm($this->locLat, $this->locLng, $c['lat'], $c['lng'])
+                    : null;
+            }
+        }
+
+        return $page;
     }
 
     /**
@@ -106,10 +177,11 @@ class FeedBrowse extends Component
     {
         $centroids = config('cameroon.region_centroids', \App\Support\CameroonGeo::centroids());
 
-        $rows = MarketplaceQueryBuilder::build($this->currentFilters())
+        $rowsQuery = MarketplaceQueryBuilder::build($this->currentFilters())
             ->with(['media' => fn ($m) => $m->limit(1)])
-            ->limit(120)
-            ->get(['id', 'slug', 'title', 'price', 'price_type', 'currency', 'region']);
+            ->limit(120);
+        MarketplaceQueryBuilder::applyRadius($rowsQuery, $this->locLat, $this->locLng, $this->radius);
+        $rows = $rowsQuery->get(['id', 'slug', 'title', 'price', 'price_type', 'currency', 'region']);
 
         $out = [];
         foreach ($rows as $r) {

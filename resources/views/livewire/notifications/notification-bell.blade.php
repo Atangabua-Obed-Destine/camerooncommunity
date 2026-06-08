@@ -63,7 +63,7 @@
                     type="button"
                     wire:click="markAllChatsRead"
                     class="text-xs font-semibold text-cm-green hover:text-cm-green/80"
-                    x-text="$store.lang.t('Mark chats read', 'Tout marquer lu')"
+                    x-text="$store.lang.t('Mark all read', 'Tout marquer lu')"
                 ></button>
             @endif
         </div>
@@ -107,6 +107,9 @@
                                     @break
                                 @case('link')
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 14a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.5 1.5"/><path d="M14 10a5 5 0 00-7.07 0l-3 3a5 5 0 007.07 7.07l1.5-1.5"/></svg>
+                                    @break
+                                @case('tag')
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-5h15L21 9M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M3 9h18M9 13h6"/></svg>
                                     @break
                             @endswitch
                         </span>
@@ -259,6 +262,7 @@
     .nb-avatar__icon--at          { color: #f59e0b; background: #fef3c7; }
     .nb-avatar__icon--user-plus   { color: #10b981; background: #d1fae5; }
     .nb-avatar__icon--link        { color: #3b82f6; background: #dbeafe; }
+    .nb-avatar__icon--tag         { color: #047857; background: #d1fae5; }
 
     .nb-body { flex: 1; min-width: 0; }
     .nb-row1 {

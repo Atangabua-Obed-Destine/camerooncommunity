@@ -38,17 +38,13 @@ class CameroonGeo
     }
 
     /**
-     * Map a free-text region string to a canonical key. Returns '' if no match.
-     * Handles French + English names, common cities, and obvious misspellings.
+     * Region → free-text aliases (region names EN/FR + major cities + common
+     * misspellings). Single source of truth for both fuzzy matching and the
+     * radius filter (which LIKE-matches listing.region against these aliases).
      */
-    public static function matchRegion(string $raw): string
+    public static function aliases(): array
     {
-        $s = mb_strtolower(trim($raw));
-        if ($s === '') { return ''; }
-        // strip accents the simple way
-        $s = strtr($s, ['é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','à'=>'a','â'=>'a','ô'=>'o','î'=>'i','ï'=>'i','ç'=>'c','ù'=>'u','û'=>'u']);
-
-        $map = [
+        return [
             'adamaoua'  => ['adamaoua', 'adamawa', 'ngaoundere', 'ngaoundéré', 'meiganga'],
             'centre'    => ['centre', 'center', 'yaounde', 'yaoundé', 'mbalmayo', 'obala', 'mfou', 'bafia'],
             'east'      => ['east', 'est', 'bertoua', 'batouri', 'abong-mbang', 'abong mbang', 'yokadouma'],
@@ -60,12 +56,77 @@ class CameroonGeo
             'southwest' => ['southwest', 'south-west', 'south west', 'sud-ouest', 'sudouest', 'sud ouest', 'buea', 'limbe', 'kumba', 'tiko', 'mamfe'],
             'west'      => ['west', 'ouest', 'bafoussam', 'dschang', 'foumban', 'bangangte', 'bangangté', 'bafang', 'mbouda'],
         ];
+    }
 
-        foreach ($map as $key => $aliases) {
+    /**
+     * Map a free-text region string to a canonical key. Returns '' if no match.
+     * Handles French + English names, common cities, and obvious misspellings.
+     */
+    public static function matchRegion(string $raw): string
+    {
+        $s = mb_strtolower(trim($raw));
+        if ($s === '') { return ''; }
+        // strip accents the simple way
+        $s = strtr($s, ['é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','à'=>'a','â'=>'a','ô'=>'o','î'=>'i','ï'=>'i','ç'=>'c','ù'=>'u','û'=>'u']);
+
+        foreach (self::aliases() as $key => $aliases) {
             foreach ($aliases as $a) {
                 if (str_contains($s, $a)) { return $key; }
             }
         }
         return '';
+    }
+
+    /** Resolve a free-text region/city string to its region centroid, or null. */
+    public static function centroidForRegion(string $raw): ?array
+    {
+        $key = self::matchRegion($raw);
+        return $key === '' ? null : (self::centroids()[$key] ?? null);
+    }
+
+    /** Great-circle distance between two lat/lng points, in kilometres. */
+    public static function haversineKm(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earth = 6371.0;
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+        $a = sin($dLat / 2) ** 2
+            + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLng / 2) ** 2;
+        return $earth * 2 * atan2(sqrt($a), sqrt(1 - $a));
+    }
+
+    /**
+     * Canonical region keys whose centroid lies within $radiusKm of the given
+     * point. Used by the marketplace radius filter.
+     *
+     * @return string[]
+     */
+    public static function regionsWithin(float $lat, float $lng, float $radiusKm): array
+    {
+        $keys = [];
+        foreach (self::centroids() as $key => $c) {
+            if (self::haversineKm($lat, $lng, $c['lat'], $c['lng']) <= $radiusKm) {
+                $keys[] = $key;
+            }
+        }
+        return $keys;
+    }
+
+    /**
+     * Flatten the free-text aliases for a set of canonical region keys.
+     *
+     * @param  string[]  $keys
+     * @return string[]
+     */
+    public static function aliasesFor(array $keys): array
+    {
+        $all = self::aliases();
+        $out = [];
+        foreach ($keys as $k) {
+            foreach ($all[$k] ?? [] as $a) {
+                $out[] = $a;
+            }
+        }
+        return array_values(array_unique($out));
     }
 }

@@ -18,8 +18,11 @@
     $isMobile  = ($mode ?? 'desktop') === 'mobile';
     $yardMode  = $yardMode ?? false;
     $isHome        = request()->routeIs('home');
-    $isYard        = $yardMode || request()->routeIs('yard*');
     $isMarketplace = request()->routeIs('marketplace.*');
+    // Highlight GoConnect only on actual yard routes. `$yardMode` indicates the
+    // page uses the rails/yard chrome (e.g. Marketplace) — not that it IS the
+    // Yard — so don't let it force this tab active.
+    $isYard        = request()->routeIs('yard*') && ! $isMarketplace;
 
     // Shared geometry — desktop tabs are wider with hover backgrounds;
     // mobile tabs fill row width but share a tighter padding so 6 tabs fit

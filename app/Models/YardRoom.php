@@ -21,6 +21,7 @@ class YardRoom extends Model
         'city',
         'region',
         'room_type',
+        'origin',
         'description',
         'avatar',
         'is_active',

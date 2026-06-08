@@ -294,6 +294,8 @@ class ChatRoom extends Component
     {
         if (!isset($this->room) || !$this->room->exists) return null;
         if ($this->room->room_type !== RoomType::DirectMessage) return null;
+        // Marketplace chats never show the "connect first" banner.
+        if ($this->room->origin === 'marketplace') return null;
 
         $partnerId = (int) YardRoomMember::where('room_id', $this->room->id)
             ->where('user_id', '!=', auth()->id())
@@ -468,7 +470,9 @@ class ChatRoom extends Component
         }
 
         // DM connection gate: must be mutually connected to send a 1:1 DM.
-        if ($this->room->room_type === RoomType::DirectMessage) {
+        // Marketplace-originated chats are exempt — buyers can message sellers
+        // about a listing without a connection (Facebook Marketplace behaviour).
+        if ($this->room->room_type === RoomType::DirectMessage && $this->room->origin !== 'marketplace') {
             $partner = $this->room->members()
                 ->where('user_id', '!=', $user->id)
                 ->value('user_id');

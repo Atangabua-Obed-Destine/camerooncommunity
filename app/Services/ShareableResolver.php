@@ -102,18 +102,21 @@ class ShareableResolver
 
     protected function previewMarketplace($m): array
     {
+        $location = trim(($m->city ? $m->city . ', ' : '') . ($m->region ?? $m->country ?? '')) ?: null;
+
         return [
-            'kind'     => 'marketplace',
-            'id'       => $m->id,
-            'title'    => $m->title ?? 'Listing',
-            'subtitle' => $m->location ?? null,
-            'image'    => $m->images[0] ?? ($m->primary_image ?? null),
-            'meta'     => [
+            'kind'        => 'marketplace',
+            'id'          => $m->id,
+            'title'       => $m->title ?? 'Listing',
+            'subtitle'    => $location,
+            'image'       => method_exists($m, 'coverUrl') ? $m->coverUrl() : null,
+            'price_label' => method_exists($m, 'formattedPrice') ? $m->formattedPrice() : null,
+            'meta'        => [
                 'price'    => $m->price ?? null,
                 'currency' => $m->currency ?? 'XAF',
             ],
-            'url'      => '#',
-            'cta'      => __('View'),
+            'url'         => $m->slug ? route('marketplace.show', ['slug' => $m->slug], false) : '#',
+            'cta'         => __('View'),
         ];
     }
 

@@ -41,7 +41,7 @@
                 </a>
             </div>
         @else
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-3 gap-y-4">
                 @foreach ($this->favorites as $fav)
                     @if ($fav->listing)
                         <div class="relative group">

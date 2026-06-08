@@ -54,4 +54,15 @@ enum ListingStatus: string
     {
         return $this === self::Active;
     }
+
+    /**
+     * Can a non-owner open this listing's detail page? Active listings and
+     * Sold ones (so buyers can revisit / review, and shared links resolve to a
+     * "Sold" state instead of a 404 — like Facebook Marketplace). Draft,
+     * PendingReview, Paused, Expired and Removed stay owner-only.
+     */
+    public function isViewable(): bool
+    {
+        return in_array($this, [self::Active, self::Sold], true);
+    }
 }
