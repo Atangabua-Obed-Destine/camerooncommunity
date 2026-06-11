@@ -1,5 +1,31 @@
 {{-- Marketplace feed — FB-inspired, light theme always --}}
-<div class="min-h-[calc(100vh-96px)] bg-slate-100" x-data="{ filtersOpen: false }">
+<div class="min-h-[calc(100vh-96px)] bg-slate-100"
+     x-data="{
+        filtersOpen: false,
+        modalOpen: @js((bool) $modalSlug),
+        init() {
+            // Sync the in-grid item modal with browser history so Back / the ✕
+            // button behave exactly like Facebook Marketplace.
+            window.addEventListener('popstate', (e) => {
+                const slug = e.state && e.state.mpItem;
+                if (slug) { this.modalOpen = true; this.$wire.openListing(slug); }
+                else { this.modalOpen = false; this.$wire.closeListing(); }
+            });
+        },
+        openItem(slug, url) {
+            this.modalOpen = true;
+            history.pushState({ mpItem: slug }, '', url);
+            this.$wire.openListing(slug);
+        },
+        closeItem() {
+            if (!this.modalOpen) return;
+            // Step back in history; the popstate handler finishes the close.
+            if (history.state && history.state.mpItem) { history.back(); }
+            else { this.modalOpen = false; this.$wire.closeListing(); }
+        }
+     }"
+     x-on:mp-open-listing.window="openItem($event.detail.slug, $event.detail.url)"
+     x-on:mp-close-listing.window="closeItem()">
 
     {{-- ─── Mobile sticky bar with title + filters trigger ─── --}}
     <div class="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
@@ -207,7 +233,7 @@
                     @else
                         <div class="mp-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-3 gap-y-4">
                             @foreach ($this->listings as $listing)
-                                <x-marketplace.listing-card :listing="$listing" />
+                                <x-marketplace.listing-card :listing="$listing" :as-modal="true" />
                             @endforeach
                         </div>
                         <div class="mt-6">
@@ -218,4 +244,9 @@
             </main>
         </div>
     </div>
+
+    {{-- ═══ FB-style in-grid item modal (loads over the dimmed grid) ═══ --}}
+    @if ($modalSlug)
+        <livewire:marketplace.listing-detail :slug="$modalSlug" :as-modal="true" :key="'mp-listing-'.$modalSlug" />
+    @endif
 </div>

@@ -58,6 +58,9 @@ class FeedBrowse extends Component
 
     public bool $filtersOpen = false;
 
+    /** Slug of the listing currently open in the FB-style in-grid modal (null = closed). */
+    public ?string $modalSlug = null;
+
     /** FB-style location + radius. Region-granular (listings store no precise coords). */
     #[Url(as: 'loc', except: '')]
     public string $locLabel = '';
@@ -90,6 +93,18 @@ class FeedBrowse extends Component
                 $this->locLabel = $u->current_city ?: ($u->current_region ?: '');
             }
         }
+    }
+
+    /** Open a listing in the in-grid modal (FB-style); history/URL handled client-side. */
+    public function openListing(string $slug): void
+    {
+        $this->modalSlug = $slug;
+    }
+
+    /** Close the in-grid modal. */
+    public function closeListing(): void
+    {
+        $this->modalSlug = null;
     }
 
     /** Radius choices offered in the location picker (km). */

@@ -22,6 +22,9 @@ class ListingDetail extends Component
     public MarketplaceListing $listing;
     public int $activeMediaIndex = 0;
 
+    /** True when rendered as an in-grid modal (nested in FeedBrowse), false as a full page. */
+    public bool $asModal = false;
+
     // Offer modal state
     public bool $showOfferModal = false;
     public string $offerAmount = '';
@@ -36,8 +39,12 @@ class ListingDetail extends Component
     public string $reportReason = 'scam';
     public string $reportDetails = '';
 
-    public function mount(string $slug): void
+    // Inline "Send seller a message" composer (FB-style panel)
+    public string $inquiryMessage = '';
+
+    public function mount(string $slug, bool $asModal = false): void
     {
+        $this->asModal = $asModal;
         $this->listing = MarketplaceListing::where('slug', $slug)
             ->with(['seller', 'category', 'media'])
             ->firstOrFail();
@@ -51,6 +58,19 @@ class ListingDetail extends Component
 
         $this->recordView();
         \App\Support\RecentlyViewed::track($this->listing->slug);
+
+        $this->inquiryMessage = $this->defaultInquiry();
+    }
+
+    /** FB-style prefilled first message, greeting the seller by first name. */
+    protected function defaultInquiry(): string
+    {
+        $first = trim((string) \Illuminate\Support\Str::of($this->listing->seller?->name ?? '')->before(' '));
+        $first = $first !== '' ? ' ' . $first : '';
+
+        return app()->getLocale() === 'fr'
+            ? trim("Bonjour{$first}, cet article est-il toujours disponible ?")
+            : trim("Hi{$first}, is this still available?");
     }
 
     protected function recordView(): void
@@ -264,6 +284,61 @@ class ListingDetail extends Component
             ->firstOrFail();
         $offer->update(['status' => OfferStatus::Withdrawn->value, 'responded_at' => now()]);
         unset($this->myOffer);
+    }
+
+    /**
+     * Send the inline "Send seller a message" inquiry (FB-style panel composer).
+     * Uses the same no-connection MarketplaceChatService as the floating dock,
+     * then pops the dock open on the conversation.
+     */
+    public function sendInquiry(): void
+    {
+        $buyer = Auth::user();
+        if (! $buyer) {
+            $this->redirectRoute('login');
+            return;
+        }
+        if ($this->listing->isOwnedBy($buyer->id)) {
+            return;
+        }
+        $seller = $this->listing->seller;
+        if (! $seller) {
+            return;
+        }
+
+        $text = trim($this->inquiryMessage);
+        if ($text === '') {
+            return;
+        }
+
+        // Rate-limit: 20 inquiries per user per hour to deter spam.
+        $rlKey = 'mp:inquiry:' . $buyer->id;
+        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rlKey, 20)) {
+            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($rlKey);
+            $this->dispatch('toast', type: 'error',
+                message: __('Too many messages. Try again in :n minutes.', ['n' => (int) ceil($seconds / 60)]));
+            return;
+        }
+
+        $svc = app(\App\Services\MarketplaceChatService::class);
+        $result = $svc->openConversation($buyer, $seller, $this->listing);
+
+        if (isset($result['error'])) {
+            $msg = $result['error'] === 'blocked'
+                ? __('You can no longer message this user.')
+                : __('Could not open the conversation.');
+            $this->dispatch('toast', type: 'error', message: $msg);
+            return;
+        }
+
+        $svc->postMessage($result['room'], $buyer, $text);
+        \Illuminate\Support\Facades\RateLimiter::hit($rlKey, 3600);
+
+        // Open the floating dock on this conversation so the buyer can keep chatting.
+        $this->dispatch('open-gomarket-chat', sellerId: $seller->id, listingId: $this->listing->id);
+        $this->dispatch('toast', type: 'success', message: __('Message sent ✓'));
+
+        $this->inquiryMessage = $this->defaultInquiry();
     }
 
     public function acceptOffer(int $offerId): void

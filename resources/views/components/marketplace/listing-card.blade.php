@@ -1,6 +1,10 @@
 @props([
     'listing',
     'compact' => false,
+    // When true, clicking opens the FB-style in-grid modal (via FeedBrowse host)
+    // instead of navigating to the full page. Falls back to normal navigation
+    // for new-tab / modifier clicks and when JS is unavailable.
+    'asModal' => false,
 ])
 @php
     /** @var \App\Models\MarketplaceListing $listing */
@@ -15,7 +19,11 @@
 {{-- Facebook-style card: rounded image sitting on the page background, text
      directly beneath — no card surface, border, lift or zoom. --}}
 <a href="{{ route('marketplace.show', ['slug' => $listing->slug]) }}"
-   wire:navigate
+   @if ($asModal)
+       x-on:click="if (!$event.metaKey && !$event.ctrlKey && !$event.shiftKey && !$event.altKey) { $event.preventDefault(); $dispatch('mp-open-listing', { slug: @js($listing->slug), url: @js(route('marketplace.show', ['slug' => $listing->slug])) }); }"
+   @else
+       wire:navigate
+   @endif
    class="mp-card group block">
 
     {{-- Image --}}
