@@ -39,8 +39,10 @@
     @endif
 
     <div class="fixed z-[60] bg-white flex flex-col lg:flex-row overflow-hidden {{ $asModal ? 'inset-0 lg:inset-4 xl:inset-8 lg:rounded-2xl lg:shadow-2xl ring-1 ring-black/10' : 'inset-0' }}"
-         x-data
-         x-on:keydown.escape.window="{{ $closeAction }}">
+         x-data="{ lb: false, li: 0, limgs: @js($media->map(fn ($m) => $m->url())->values()) }"
+         x-on:keydown.escape.window="lb ? (lb = false) : ({{ $closeAction }})"
+         x-on:keydown.arrow-left.window="if (lb && limgs.length) li = (li - 1 + limgs.length) % limgs.length"
+         x-on:keydown.arrow-right.window="if (lb && limgs.length) li = (li + 1) % limgs.length">
 
     {{-- ═══ LEFT · image stage ═══ --}}
     <div class="relative bg-[#18191a] shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none">
@@ -55,7 +57,8 @@
         @if ($cover)
             <img src="{{ $cover->url() }}" alt="{{ $listing->title }}"
                  fetchpriority="high" decoding="async"
-                 class="max-w-full max-h-full w-auto h-auto object-contain">
+                 @click="li = ($wire.activeMediaIndex || 0); lb = true"
+                 class="max-w-full max-h-full w-auto h-auto object-contain cursor-zoom-in">
         @else
             <div class="flex flex-col items-center justify-center gap-2 text-slate-300">
                 <div class="text-7xl opacity-70">{{ $listing->category?->icon ?? '📦' }}</div>
@@ -616,6 +619,33 @@
 
         </div>
     </aside>
+
+    {{-- ═══ Photo lightbox (FB-style fullscreen viewer) — teleported to body so it
+         escapes the .yard-container stacking context and covers everything ═══ --}}
+    <template x-teleport="body">
+    <div x-show="lb" x-cloak @click.self="lb = false" x-transition.opacity
+         class="fixed inset-0 z-[90] bg-black flex items-center justify-center">
+        <button type="button" @click="lb = false" aria-label="{{ $lang === 'fr' ? 'Fermer' : 'Close' }}"
+                class="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center z-10">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+        <img :src="limgs[li]" class="max-w-[92vw] max-h-[88vh] w-auto h-auto object-contain select-none" alt="">
+        <template x-if="limgs.length > 1">
+            <div>
+                <button type="button" @click.stop="li = (li - 1 + limgs.length) % limgs.length"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                </button>
+                <button type="button" @click.stop="li = (li + 1) % limgs.length"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <span class="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm font-semibold text-white bg-white/10 px-3 py-1 rounded-full"
+                      x-text="(li + 1) + ' / ' + limgs.length"></span>
+            </div>
+        </template>
+    </div>
+    </template>
     </div>{{-- /panel --}}
 
     {{-- ═══ Report modal ═══ --}}

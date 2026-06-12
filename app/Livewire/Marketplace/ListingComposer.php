@@ -24,16 +24,18 @@ class ListingComposer extends Component
 
     public ?MarketplaceListing $listing = null;
 
-    public int $step = 1;
+    /** Number of rule groups validated on publish (kept for the publish loop). */
     public int $maxStep = 5;
 
-    // Step 1: category
+    // Category
     public ?int $categoryId = null;
 
-    // Step 2: photos
+    // Photos — single list ordered by position; the first item is the cover.
     public array $photos = [];
-    public array $uploadedMedia = []; // ids of MarketplaceListingMedia
-    public array $existingMedia = []; // when editing
+    public array $mediaItems = [];
+
+    /** FB listing-type chooser: null = show chooser; then 'item' | 'vehicle' | 'home'. */
+    public ?string $listingType = null;
 
     // Step 3: details
     public string $title = '';
@@ -59,6 +61,19 @@ class ListingComposer extends Component
     /** Category-specific attributes (Phase 4). Keyed by schema 'key' (e.g. 'make','year','bedrooms'). */
     public array $attrs = [];
 
+    /** Friendly field names for validation messages (FB-style clean copy). */
+    protected function validationAttributes(): array
+    {
+        return [
+            'categoryId' => __('category'),
+            'priceType'  => __('price type'),
+            'title'      => __('title'),
+            'price'      => __('price'),
+            'condition'  => __('condition'),
+            'photos'     => __('photos'),
+        ];
+    }
+
     protected function rulesForStep(int $step): array
     {
         return match ($step) {
@@ -66,7 +81,8 @@ class ListingComposer extends Component
             2 => ['photos.*' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:8192'],
             3 => array_merge([
                 'title' => 'required|string|min:' . (int) PlatformSetting::getValue('marketplace_min_title_length', 6) . '|max:180',
-                'description' => 'required|string|min:' . (int) PlatformSetting::getValue('marketplace_min_description_length', 20) . '|max:5000',
+                // Description is optional, just like Facebook Marketplace.
+                'description' => 'nullable|string|max:5000',
                 'priceType' => 'required|in:fixed,negotiable,free,contact',
                 'price' => 'nullable|numeric|min:0|max:1000000000|required_if:priceType,fixed,negotiable',
                 'currency' => 'required|string|size:3',
@@ -122,19 +138,57 @@ class ListingComposer extends Component
             $this->visibility = $l->visibility?->value ?? 'public';
             $this->tags = $l->tags ?? [];
             $this->attrs = is_array($l->attributes) ? $l->attributes : [];
-            $this->existingMedia = $l->media->map(fn ($m) => [
+            $this->listingType = 'item'; // editing skips the type chooser
+            $this->refreshMedia();
+        }
+    }
+
+    /** Choose what kind of listing this is (Facebook's first screen). */
+    public function chooseType(string $type): void
+    {
+        $this->listingType = in_array($type, ['item', 'vehicle', 'home'], true) ? $type : 'item';
+
+        // Preselect the matching category for vehicle / home so the right
+        // attribute fields appear, exactly like Facebook's dedicated flows.
+        $slug = ['vehicle' => 'vehicles', 'home' => 'real-estate'][$type] ?? null;
+        if ($slug && ! $this->categoryId) {
+            $cat = MarketplaceCategory::where('slug', $slug)->first();
+            if ($cat) {
+                $this->categoryId = $cat->id;
+            }
+        }
+    }
+
+    /** Return to the listing-type chooser (create flow only). */
+    public function backToTypes(): void
+    {
+        if (! ($this->listing && $this->listing->status?->value !== 'draft')) {
+            $this->listingType = null;
+        }
+    }
+
+    /** Reload the ordered media list from the database (first = cover). */
+    protected function refreshMedia(): void
+    {
+        if (! $this->listing) {
+            $this->mediaItems = [];
+            return;
+        }
+        $this->mediaItems = $this->listing->media()
+            ->orderBy('position')->orderBy('id')
+            ->get()
+            ->map(fn ($m) => [
                 'id' => $m->id,
                 'url' => $m->thumbnailUrl(),
-                'is_cover' => $m->is_cover,
+                'is_cover' => (bool) $m->is_cover,
             ])->all();
-        }
     }
 
     public function updatedPhotos(): void
     {
         $this->validate(['photos.*' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:8192']);
         $maxImages = (int) PlatformSetting::getValue('marketplace_max_images', 10);
-        $current = count($this->existingMedia) + count($this->uploadedMedia);
+        $current = count($this->mediaItems);
         $remaining = max(0, $maxImages - $current);
 
         if ($remaining === 0 || empty($this->photos)) {
@@ -167,14 +221,10 @@ class ListingComposer extends Component
                 'position' => $current + $i,
                 'is_cover' => ($current + $i) === 0,
             ]);
-            $this->uploadedMedia[] = [
-                'id' => $media->id,
-                'url' => $media->thumbnailUrl(),
-                'is_cover' => $media->is_cover,
-            ];
             $i++;
         }
         $this->photos = [];
+        $this->refreshMedia();
     }
 
     public function removeMedia(int $mediaId): void
@@ -187,17 +237,50 @@ class ListingComposer extends Component
             Storage::disk('public')->delete($media->thumbnail_path);
         }
         $media->delete();
-        $this->uploadedMedia = array_values(array_filter($this->uploadedMedia, fn ($m) => $m['id'] !== $mediaId));
-        $this->existingMedia = array_values(array_filter($this->existingMedia, fn ($m) => $m['id'] !== $mediaId));
+
+        // If the cover was removed, promote the new first photo (FB behaviour).
+        if (! MarketplaceListingMedia::where('listing_id', $this->listing->id)->where('is_cover', true)->exists()) {
+            $first = MarketplaceListingMedia::where('listing_id', $this->listing->id)
+                ->orderBy('position')->orderBy('id')->first();
+            $first?->update(['is_cover' => true]);
+        }
+        $this->refreshMedia();
     }
 
     public function makeCover(int $mediaId): void
     {
         if (! $this->listing) { return; }
         MarketplaceListingMedia::where('listing_id', $this->listing->id)->update(['is_cover' => false]);
-        MarketplaceListingMedia::where('id', $mediaId)->update(['is_cover' => true]);
-        foreach ($this->uploadedMedia as &$m) { $m['is_cover'] = $m['id'] === $mediaId; }
-        foreach ($this->existingMedia as &$m) { $m['is_cover'] = $m['id'] === $mediaId; }
+        MarketplaceListingMedia::where('id', $mediaId)
+            ->where('listing_id', $this->listing->id)
+            ->update(['is_cover' => true]);
+        $this->refreshMedia();
+    }
+
+    /**
+     * Persist a new photo order from drag-and-drop. The first photo becomes
+     * the cover — exactly like Facebook Marketplace.
+     *
+     * @param  array<int>  $ids  media ids in the new display order
+     */
+    public function reorderMedia(array $ids): void
+    {
+        if (! $this->listing) { return; }
+
+        $owned = MarketplaceListingMedia::where('listing_id', $this->listing->id)
+            ->pluck('id')->all();
+        $ordered = array_values(array_filter(
+            array_map('intval', $ids),
+            fn ($id) => in_array($id, $owned, true)
+        ));
+        if (empty($ordered)) { return; }
+
+        foreach ($ordered as $pos => $id) {
+            MarketplaceListingMedia::where('id', $id)
+                ->where('listing_id', $this->listing->id)
+                ->update(['position' => $pos, 'is_cover' => $pos === 0]);
+        }
+        $this->refreshMedia();
     }
 
     protected function ensureDraftListing(): void
@@ -221,21 +304,6 @@ class ListingComposer extends Component
             'visibility' => $this->visibility,
             'status' => ListingStatus::Draft->value,
         ]);
-    }
-
-    public function nextStep(): void
-    {
-        $this->validate($this->rulesForStep($this->step));
-        if ($this->step < $this->maxStep) {
-            $this->step++;
-        }
-    }
-
-    public function prevStep(): void
-    {
-        if ($this->step > 1) {
-            $this->step--;
-        }
     }
 
     /** Public autosave timestamp shown in the UI (ISO string). */
@@ -263,6 +331,8 @@ class ListingComposer extends Component
 
         $this->ensureDraftListing();
 
+        $geo = $this->region ? \App\Support\CameroonGeo::centroidForRegion($this->region) : null;
+
         $this->listing->forceFill(array_filter([
             'category_id' => $this->categoryId,
             'title'       => trim((string) $this->title) ?: $this->listing->title,
@@ -277,6 +347,8 @@ class ListingComposer extends Component
             'region'      => $this->region,
             'city'        => $this->city,
             'neighborhood'=> $this->neighborhood,
+            'latitude'    => $geo['lat'] ?? null,
+            'longitude'   => $geo['lng'] ?? null,
             'visibility'  => $this->visibility,
             'tags'        => array_values($this->tags ?? []),
             'attributes'  => \App\Support\CategoryAttributeSchema::sanitize($this->attrs ?? [], $this->categoryId),
@@ -301,9 +373,19 @@ class ListingComposer extends Component
 
     public function publish(): void
     {
-        // Validate every step's rules.
+        // Validate every rule group.
         for ($s = 1; $s <= $this->maxStep; $s++) {
             $this->validate($this->rulesForStep($s));
+        }
+
+        // Facebook requires at least one photo to publish.
+        $mediaCount = count($this->mediaItems);
+        if ($this->listing) {
+            $mediaCount = max($mediaCount, $this->listing->media()->count());
+        }
+        if ($mediaCount < 1) {
+            $this->addError('photos', __('Add at least one photo before publishing.'));
+            return;
         }
 
         $this->ensureDraftListing();
@@ -311,6 +393,9 @@ class ListingComposer extends Component
         $autoApprove = filter_var(PlatformSetting::getValue('marketplace_auto_approve', 'true'), FILTER_VALIDATE_BOOL);
         $status = $autoApprove ? ListingStatus::Active : ListingStatus::PendingReview;
         $expiresDays = (int) PlatformSetting::getValue('marketplace_listing_expiry_days', 30);
+
+        // Geocode the region to a centroid so the listing-detail map is accurate.
+        $geo = $this->region ? \App\Support\CameroonGeo::centroidForRegion($this->region) : null;
 
         $this->listing->fill([
             'category_id' => $this->categoryId,
@@ -326,6 +411,8 @@ class ListingComposer extends Component
             'region' => $this->region,
             'city' => $this->city,
             'neighborhood' => $this->neighborhood,
+            'latitude' => $geo['lat'] ?? $this->listing->latitude,
+            'longitude' => $geo['lng'] ?? $this->listing->longitude,
             'visibility' => $this->visibility,
             'tags' => array_values($this->tags),
             'attributes' => \App\Support\CategoryAttributeSchema::sanitize($this->attrs, $this->categoryId),
