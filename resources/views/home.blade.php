@@ -36,15 +36,10 @@
         </div>
 
         {{-- ═══════════════════════════════════════════════════
-             CAMEROON FLAG RIBBON — Top Right Corner (desktop/tablet)
+             CAMEROON FLAG — Top Right Corner (Mobile & Desktop)
              ═══════════════════════════════════════════════════ --}}
-        <div class="hidden md:block">
-            <x-cameroon-ribbon />
-        </div>
-
-        {{-- Mobile-only: Cameroon flag PNG (top right) + world-map mini-graphic to its left --}}
-        <div class="md:hidden absolute top-16 -right-8 z-[2] pointer-events-none">
-            <img src="{{ asset('images/cameroonflag.png') }}" alt="" class="w-40 sm:w-48 select-none">
+        <div class="absolute top-16 -right-8 md:top-24 md:-right-8 lg:top-20 lg:-right-4 xl:top-20 xl:right-10 z-[2] pointer-events-none transform lg:-rotate-2" style="filter: drop-shadow(0 20px 30px rgba(0,0,0,0.4));">
+            <img src="{{ asset('images/cameroonflag.png') }}" alt="Cameroon" class="w-40 sm:w-48 md:w-64 lg:w-80 xl:w-[420px] select-none opacity-95 animate-pulse-soft" style="animation-duration: 5s;">
         </div>
         {{-- Mini world-map graphic (mobile-only) — cities connected to Cameroon --}}
         <div class="md:hidden absolute top-16 left-2 z-[2] w-44 h-44 pointer-events-none">
