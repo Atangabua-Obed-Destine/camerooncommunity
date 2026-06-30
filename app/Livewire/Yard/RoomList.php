@@ -125,7 +125,8 @@ class RoomList extends Component
             // of the viewer's last_read_at and their joined_at. This way a
             // freshly-joined member never sees a badge counting messages
             // that pre-dated their join.
-            $cutoffSql = "GREATEST(
+            $greatest = DB::getDriverName() === 'sqlite' ? 'MAX' : 'GREATEST';
+            $cutoffSql = "$greatest(
                 COALESCE((SELECT joined_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1), '1970-01-01 00:00:00'),
                 COALESCE((SELECT last_read_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1), '1970-01-01 00:00:00')
             )";
@@ -241,7 +242,7 @@ class RoomList extends Component
                         ->where('yard_messages.user_id', '!=', $user->id)
                         ->where('yard_messages.is_deleted', false)
                         ->whereRaw(
-                            "yard_messages.created_at > GREATEST(
+                            "yard_messages.created_at > " . (DB::getDriverName() === 'sqlite' ? 'MAX' : 'GREATEST') . "(
                                 COALESCE(yard_room_members.joined_at, '1970-01-01 00:00:00'),
                                 COALESCE(yard_room_members.last_read_at, '1970-01-01 00:00:00')
                             )"

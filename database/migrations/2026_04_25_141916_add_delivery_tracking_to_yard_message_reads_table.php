@@ -17,7 +17,9 @@ return new class extends Migration
         });
 
         // Make read_at nullable (it used CURRENT_TIMESTAMP default before).
-        DB::statement('ALTER TABLE yard_message_reads MODIFY read_at TIMESTAMP NULL DEFAULT NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE yard_message_reads MODIFY read_at TIMESTAMP NULL DEFAULT NULL');
+        }
 
         // Backfill: every existing row already represents a "read" event,
         // so mark them as delivered too.
@@ -37,6 +39,8 @@ return new class extends Migration
             $table->dropColumn('delivered_at');
         });
 
-        DB::statement('ALTER TABLE yard_message_reads MODIFY read_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE yard_message_reads MODIFY read_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+        }
     }
 };

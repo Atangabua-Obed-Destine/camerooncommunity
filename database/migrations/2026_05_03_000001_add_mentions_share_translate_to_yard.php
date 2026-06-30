@@ -26,7 +26,9 @@ return new class extends Migration
         });
 
         // Extend the message_type enum to accept a generic share card.
-        DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log','poll','share_card') NOT NULL DEFAULT 'text'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log','poll','share_card') NOT NULL DEFAULT 'text'");
+        }
 
         Schema::table('yard_room_members', function (Blueprint $table) {
             // 'en' or 'fr' — when set, incoming messages are auto-translated
@@ -42,7 +44,9 @@ return new class extends Migration
             $table->dropColumn(['mentioned_user_ids', 'shareable_type', 'shareable_id']);
         });
 
-        DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log','poll') NOT NULL DEFAULT 'text'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log','poll') NOT NULL DEFAULT 'text'");
+        }
 
         Schema::table('yard_room_members', function (Blueprint $table) {
             $table->dropColumn('auto_translate_lang');

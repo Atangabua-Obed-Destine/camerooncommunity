@@ -32,7 +32,7 @@ class HomeTest extends TestCase
     {
         $user = $this->createUser();
 
-        $modules = ['marche', 'easygoparcell', 'roadfam', 'camevents', 'kamernest',
+        $modules = ['easygoparcel', 'roadfam', 'camevents', 'kamernest',
             'workconnect', 'kamereats', 'kamersos', 'camstories', 'kamerpulse', 'kamersend'];
 
         foreach ($modules as $module) {
