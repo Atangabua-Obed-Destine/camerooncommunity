@@ -10,7 +10,9 @@ return new class extends Migration
     public function up(): void
     {
         // Extend ENUM with 'poll'
-        DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log','poll') NOT NULL DEFAULT 'text'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log','poll') NOT NULL DEFAULT 'text'");
+        }
 
         Schema::create('yard_polls', function (Blueprint $table) {
             $table->id();
@@ -55,6 +57,8 @@ return new class extends Migration
         Schema::dropIfExists('yard_poll_votes');
         Schema::dropIfExists('yard_poll_options');
         Schema::dropIfExists('yard_polls');
-        DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log') NOT NULL DEFAULT 'text'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE yard_messages MODIFY COLUMN message_type ENUM('text','image','video','audio','file','system','solidarity_card','gif','sticker','call_log') NOT NULL DEFAULT 'text'");
+        }
     }
 };

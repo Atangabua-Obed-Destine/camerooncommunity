@@ -14,8 +14,9 @@ class EnumTest extends TestCase
     public function test_room_type_has_all_cases(): void
     {
         $cases = RoomType::cases();
-        $this->assertCount(4, $cases);
+        $this->assertCount(5, $cases);
         $this->assertSame('national', RoomType::National->value);
+        $this->assertSame('regional', RoomType::Regional->value);
         $this->assertSame('city', RoomType::City->value);
         $this->assertSame('private_group', RoomType::PrivateGroup->value);
         $this->assertSame('direct_message', RoomType::DirectMessage->value);
@@ -41,7 +42,7 @@ class EnumTest extends TestCase
         $this->assertSame('text', MessageType::Text->value);
         $this->assertSame('system', MessageType::System->value);
         $this->assertSame('solidarity_card', MessageType::SolidarityCard->value);
-        $this->assertCount(9, MessageType::cases());
+        $this->assertCount(12, MessageType::cases());
     }
 
     public function test_campaign_status_labels(): void

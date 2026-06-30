@@ -40,22 +40,22 @@ class LocationServiceTest extends TestCase
         ]);
     }
 
-    public function test_handle_user_location_creates_city_room(): void
+    public function test_handle_user_location_creates_regional_room(): void
     {
         $user = $this->createUser(['current_country' => null, 'current_city' => null]);
 
         $service = new LocationService();
         $result = $service->handleUserLocation($user, 'United Kingdom', 'Manchester');
 
-        $this->assertNotNull($result['city_room_id']);
+        $this->assertNotNull($result['regional_room_id']);
 
-        $cityRoom = YardRoom::find($result['city_room_id']);
-        $this->assertEquals(RoomType::City, $cityRoom->room_type);
-        $this->assertEquals('Manchester', $cityRoom->city);
+        $regionalRoom = YardRoom::find($result['regional_room_id']);
+        $this->assertEquals(RoomType::Regional, $regionalRoom->room_type);
+        $this->assertEquals('United Kingdom', $regionalRoom->country);
 
         // Room is created but user is NOT auto-joined
         $this->assertDatabaseMissing('yard_room_members', [
-            'room_id' => $cityRoom->id,
+            'room_id' => $regionalRoom->id,
             'user_id' => $user->id,
         ]);
     }
@@ -76,19 +76,19 @@ class LocationServiceTest extends TestCase
         ]);
     }
 
-    public function test_handle_user_location_reuses_existing_city_room(): void
+    public function test_handle_user_location_reuses_existing_regional_room(): void
     {
         $existingUser = $this->createUser();
-        $cityRoom = YardRoom::factory()->create([
+        $regionalRoom = YardRoom::factory()->create([
             'tenant_id' => $this->tenant->id,
-            'room_type' => RoomType::City,
+            'room_type' => RoomType::Regional,
             'country' => 'United Kingdom',
-            'city' => 'Birmingham',
+            'region' => 'West Midlands',
             'members_count' => 1,
         ]);
         YardRoomMember::create([
             'tenant_id' => $this->tenant->id,
-            'room_id' => $cityRoom->id,
+            'room_id' => $regionalRoom->id,
             'user_id' => $existingUser->id,
             'role' => 'member',
         ]);
@@ -97,7 +97,7 @@ class LocationServiceTest extends TestCase
         $service = new LocationService();
         $result = $service->handleUserLocation($newUser, 'United Kingdom', 'Birmingham');
 
-        $this->assertEquals($cityRoom->id, $result['city_room_id']);
+        $this->assertEquals($regionalRoom->id, $result['regional_room_id']);
     }
 
     public function test_country_change_detected(): void

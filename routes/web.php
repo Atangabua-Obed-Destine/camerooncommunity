@@ -217,7 +217,7 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
 
     // Coming Soon modules
     $comingSoonModules = [
-        'easygoparcell' => 'EasyGoParcel',
+        'easygoparcel' => 'EasyGoParcel',
         'roadfam' => 'RoadFam',
         'camevents' => 'CamEvents',
         'kamernest' => 'KamerNest',

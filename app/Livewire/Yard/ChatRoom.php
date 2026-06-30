@@ -152,12 +152,15 @@ class ChatRoom extends Component
         // Hide admin-only system messages (e.g. "X requested to join")
         // from non-admin viewers, mirroring WhatsApp's behavior.
         if ($this->room->created_by !== auth()->id()) {
-            $query->where(function ($q) {
+            $unquote = \Illuminate\Support\Facades\DB::getDriverName() === 'sqlite'
+                ? "JSON_EXTRACT(media_metadata, '$.visibility')"
+                : "JSON_UNQUOTE(JSON_EXTRACT(media_metadata, '$.visibility'))";
+            $query->where(function ($q) use ($unquote) {
                 $q->where('message_type', '!=', \App\Enums\MessageType::System->value)
                   ->orWhereNull('media_metadata')
-                  ->orWhere(function ($qq) {
+                  ->orWhere(function ($qq) use ($unquote) {
                       $qq->whereRaw("JSON_EXTRACT(media_metadata, '$.visibility') IS NULL")
-                         ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(media_metadata, '$.visibility')) <> 'admins'");
+                         ->orWhereRaw("$unquote <> 'admins'");
                   });
             });
         }

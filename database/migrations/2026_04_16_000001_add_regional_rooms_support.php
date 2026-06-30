@@ -15,7 +15,9 @@ return new class extends Migration
         });
 
         // 2. Expand room_type enum to include 'regional'
-        DB::statement("ALTER TABLE yard_rooms MODIFY COLUMN room_type ENUM('national','regional','city','private_group','direct_message') NOT NULL");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE yard_rooms MODIFY COLUMN room_type ENUM('national','regional','city','private_group','direct_message') NOT NULL");
+        }
 
         // 3. Add composite index for region-based queries
         Schema::table('yard_rooms', function (Blueprint $table) {
@@ -39,6 +41,8 @@ return new class extends Migration
             $table->dropColumn('region');
         });
 
-        DB::statement("ALTER TABLE yard_rooms MODIFY COLUMN room_type ENUM('national','city','private_group','direct_message') NOT NULL");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE yard_rooms MODIFY COLUMN room_type ENUM('national','city','private_group','direct_message') NOT NULL");
+        }
     }
 };

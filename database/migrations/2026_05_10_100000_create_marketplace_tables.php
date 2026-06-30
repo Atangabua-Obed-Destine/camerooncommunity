@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -122,8 +123,11 @@ return new class extends Migration
             $table->index(['tenant_id', 'rank_score']);
             $table->index(['user_id', 'status']);
             $table->index(['expires_at']);
-            $table->fullText(['title', 'description']);
         });
+
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE marketplace_listings ADD FULLTEXT marketplace_listings_title_description_fulltext (title, description)');
+        }
 
         // ─────────────────────────────────────────────────────────────
         // 3. LISTING MEDIA (multiple images / videos per listing)
