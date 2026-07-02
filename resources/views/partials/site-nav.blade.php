@@ -150,30 +150,42 @@
 
     {{-- Mobile Menu --}}
     <div x-show="mobileOpen" x-cloak x-transition class="md:hidden bg-white border-t border-slate-100 shadow-lg">
-        <div class="px-4 py-4 space-y-3 text-sm font-medium">
-            <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-features-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Features', 'Fonctionnalités')"></button>
-            <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('How It Works', 'Comment Ça Marche')"></button>
-            <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-solidarity-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Solidarity', 'Solidarité')"></button>
-            <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-community-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Community', 'Communauté')"></button>
-            <hr class="border-slate-100">
-            <button @click="$store.lang.toggle()" class="flex items-center gap-2 text-slate-600">
-                🌐 <span x-text="$store.lang.isEn ? 'Français' : 'English'"></span>
-            </button>
-            @auth
-                <a href="{{ route('yard') }}" class="block w-full text-center rounded-xl bg-cm-green py-3 text-white font-bold hover:bg-cm-green-light"
-                   x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
-            @else
-                <a href="{{ route('legal.terms') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
-                   x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')">Terms of Service</a>
-                <a href="{{ route('legal.privacy') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
-                   x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')">Privacy Policy</a>
-                <div class="flex gap-3">
-                    <a href="{{ route('login') }}" class="flex-1 text-center rounded-xl border border-slate-300 py-3 text-slate-700 font-bold hover:bg-slate-50"
-                       x-text="$store.lang.t('Sign In', 'Connexion')">Sign In</a>
-                    <a href="{{ route('register') }}" class="flex-1 text-center rounded-xl bg-cm-green py-3 text-white font-bold hover:bg-cm-green-light"
-                       x-text="$store.lang.t('Join Free', 'Rejoindre')">Join Free</a>
+        <div class="px-4 py-4 space-y-4 text-sm font-medium">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-3">
+                    <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-features-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Features', 'Fonctionnalités')"></button>
+                    <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('How It Works', 'Comment Ça Marche')"></button>
+                    <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-solidarity-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Solidarity', 'Solidarité')"></button>
+                    <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-community-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Community', 'Communauté')"></button>
+                    <hr class="border-slate-100">
+                    <button @click="$store.lang.toggle()" class="flex items-center gap-2 text-slate-600">
+                        🌐 <span x-text="$store.lang.isEn ? 'Français' : 'English'"></span>
+                    </button>
                 </div>
-            @endauth
+                <div class="space-y-3 border-l border-slate-100 pl-4">
+                    @auth
+                        {{-- Placeholder for right column if authenticated --}}
+                    @else
+                        <a href="{{ route('legal.terms') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
+                           x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')">Terms of Service</a>
+                        <a href="{{ route('legal.privacy') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
+                           x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')">Privacy Policy</a>
+                    @endauth
+                </div>
+            </div>
+            <div class="pt-2">
+                @auth
+                    <a href="{{ route('yard') }}" class="block w-full text-center rounded-xl bg-cm-green py-3 text-white font-bold hover:bg-cm-green-light"
+                       x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
+                @else
+                    <div class="flex gap-3">
+                        <a href="{{ route('login') }}" class="flex-1 text-center rounded-xl border border-slate-300 py-3 text-slate-700 font-bold hover:bg-slate-50"
+                           x-text="$store.lang.t('Sign In', 'Connexion')">Sign In</a>
+                        <a href="{{ route('register') }}" class="flex-1 text-center rounded-xl bg-cm-green py-3 text-white font-bold hover:bg-cm-green-light"
+                           x-text="$store.lang.t('Join Free', 'Rejoindre')">Join Free</a>
+                    </div>
+                @endauth
+            </div>
         </div>
     </div>
 </nav>
