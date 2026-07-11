@@ -10,7 +10,7 @@
      @if(!$forceScrolled && !$staysTransparent) @scroll.window="scrolled = (window.scrollY > 40)" @endif
      @click.outside="mobileOpen = false"
      @keydown.escape.window="mobileOpen = false"
-     :class="scrolled ? 'bg-white/95 backdrop-blur shadow-sm' : 'bg-transparent'"
+     :class="scrolled ? 'bg-white/95 backdrop-blur shadow-sm' : '{{ $customNavClass ?? 'bg-transparent' }}'"
      class="fixed top-0 inset-x-0 z-50 transition-all duration-300 pointer-events-auto">
     {{-- Logo — anchored to the top header strip (NOT the full nav), so it
          doesn't drift downward when the mobile dropdown menu opens and the
@@ -29,7 +29,7 @@
 
     {{-- Location strip --}}
     @auth
-    <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300"
+    <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300 gap-4"
          :class="scrolled ? 'text-slate-500' : 'text-white/70'"
          x-data="{
             country: @js(auth()->user()->current_country ?? ''),
@@ -39,13 +39,17 @@
             country = $event.detail?.country || $event.detail?.[0]?.country || country;
             region  = $event.detail?.region  || $event.detail?.[0]?.region  || region;
          ">
+        <button @click="$store.lang.toggle()" class="flex items-center gap-1 rounded-full px-2 py-0.5 border transition-colors text-xs font-bold"
+                :class="scrolled ? 'border-slate-300 text-slate-600 hover:bg-slate-50' : 'border-white/30 text-white hover:bg-white/10'">
+            <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
+        </button>
         <div class="flex items-center gap-1.5 text-[11px] font-medium">
             <span>🇨🇲</span>
             <span x-text="(region ? region + ', ' : '') + (country || $store.lang.t('Detecting…', 'Détection…'))"></span>
         </div>
     </div>
     @else
-    <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300"
+    <div class="hidden sm:flex h-7 items-center justify-end px-6 sm:px-10 lg:px-12 transition-colors duration-300 gap-4"
          :class="scrolled ? 'text-slate-500' : 'text-white/70'"
          x-data="{
             loc: localStorage.getItem('guest_location') || '',
@@ -94,6 +98,10 @@
                 });
             }
          ">
+        <button @click="$store.lang.toggle()" class="flex items-center gap-1 rounded-full px-2 py-0.5 border transition-colors text-xs font-bold"
+                :class="scrolled ? 'border-slate-300 text-slate-600 hover:bg-slate-50' : 'border-white/30 text-white hover:bg-white/10'">
+            <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
+        </button>
         <div class="flex items-center gap-1.5 text-[11px] font-medium">
             <span>🌍</span>
             <span x-text="loc || $store.lang.t('Detecting location…', 'Détection de la localisation…')"></span>
@@ -120,12 +128,6 @@
                     :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm cursor-pointer"
                     x-text="$store.lang.t('Community', 'Communauté')"></button>
 
-            {{-- Language Toggle --}}
-            <button @click="$store.lang.toggle()" class="flex items-center gap-1 rounded-full px-3 py-1 border transition-colors text-xs font-bold"
-                    :class="scrolled ? 'border-slate-300 text-slate-600 hover:bg-slate-50' : 'border-white/30 text-white hover:bg-white/10'">
-                <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
-            </button>
-
             @auth
                 <a href="{{ route('yard') }}" class="rounded-full bg-cm-green px-5 py-2 text-white font-bold text-sm hover:bg-cm-green-light transition-colors"
                    x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
@@ -141,11 +143,17 @@
             @endauth
         </div>
 
-        {{-- Mobile Menu Toggle --}}
-        <button @click="mobileOpen = !mobileOpen" class="md:hidden p-2" :class="scrolled ? 'text-slate-700' : 'text-white'">
-            <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-            <svg x-show="mobileOpen" x-cloak class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        {{-- Mobile Actions --}}
+        <div class="md:hidden flex items-center gap-2">
+            <button @click="$store.lang.toggle()" class="flex items-center gap-1 rounded-full px-2 py-0.5 border transition-colors text-xs font-bold"
+                    :class="scrolled ? 'border-slate-300 text-slate-600 hover:bg-slate-50' : 'border-white/30 text-white hover:bg-white/10'">
+                <span x-text="$store.lang.isEn ? 'FR' : 'EN'"></span>
+            </button>
+            <button @click="mobileOpen = !mobileOpen" class="p-2" :class="scrolled ? 'text-slate-700' : 'text-white'">
+                <svg x-show="!mobileOpen" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <svg x-show="mobileOpen" x-cloak class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
     </div>
 
     {{-- Mobile Menu --}}
@@ -157,10 +165,6 @@
                     <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-how-it-works-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('How It Works', 'Comment Ça Marche')"></button>
                     <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-solidarity-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Solidarity', 'Solidarité')"></button>
                     <button type="button" @click="mobileOpen = false; window.dispatchEvent(new CustomEvent('open-community-modal'))" class="block w-full text-left text-slate-700 hover:text-cm-green" x-text="$store.lang.t('Community', 'Communauté')"></button>
-                    <hr class="border-slate-100">
-                    <button @click="$store.lang.toggle()" class="flex items-center gap-2 text-slate-600">
-                        🌐 <span x-text="$store.lang.isEn ? 'Français' : 'English'"></span>
-                    </button>
                 </div>
                 <div class="space-y-3 border-l border-slate-100 pl-4">
                     @auth

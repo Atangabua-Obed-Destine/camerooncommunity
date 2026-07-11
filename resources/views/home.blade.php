@@ -1027,16 +1027,8 @@
     </div>{{-- /HIDDEN SECTIONS --}}
 
     {{-- ═══════════════════════════════════════════════════════════════
-         SECTION 11 — FOOTER
+         SECTION 11 — FOOTER (Removed Privacy Policy and Terms of Service)
          ═══════════════════════════════════════════════════════════════ --}}
-    <footer class="hidden md:block bg-slate-900 text-slate-400 py-1.5 sm:py-3">
-        <div class="mx-auto max-w-[1440px] px-4 sm:px-10 lg:px-12">
-            <div class="flex flex-row items-center justify-center gap-4 sm:gap-6 text-[11px] sm:text-sm leading-tight">
-                <a href="{{ route('legal.privacy') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a>
-                <a href="{{ route('legal.terms') }}" class="hover:text-white transition-colors" x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')"></a>
-            </div>
-        </div>
-    </footer>
 
     {{-- ═══════════════════════════════════════════════════════════════
          MOBILE-ONLY: "Download Our App" bar (directly below hero)

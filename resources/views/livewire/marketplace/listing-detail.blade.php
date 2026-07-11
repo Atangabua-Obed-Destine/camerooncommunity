@@ -50,7 +50,7 @@
         {{-- Close --}}
         <button type="button" x-on:click="{{ $closeAction }}"
                 aria-label="{{ $lang === 'fr' ? 'Fermer' : 'Close' }}"
-                class="absolute top-3 left-3 z-20 w-10 h-10 rounded-full bg-black/55 hover:bg-black/75 text-white grid place-items-center backdrop-blur-sm transition">
+                class="absolute top-3 left-3 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-slate-900 grid place-items-center shadow-lg transition">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
 

@@ -124,13 +124,13 @@
                 </div>
 
                 @if ($usedImages === 0)
-                    <label class="block w-full border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer hover:border-cm-green hover:bg-cm-green/5 transition group">
+                    <label for="photos-empty" class="block w-full border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer hover:border-cm-green hover:bg-cm-green/5 transition group">
                         <div class="w-12 h-12 mx-auto rounded-full bg-slate-100 group-hover:bg-cm-green/10 grid place-items-center transition">
                             <svg class="w-6 h-6 text-slate-500 group-hover:text-cm-green" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5V18a2 2 0 002 2h14a2 2 0 002-2v-1.5M12 4v12m0-12l-4 4m4-4l4 4"/></svg>
                         </div>
                         <div class="mt-2 text-sm font-bold text-slate-800">{{ $lang === 'fr' ? 'Ajouter des photos' : 'Add photos' }}</div>
                         <div class="mt-0.5 text-xs text-slate-500">{{ $lang === 'fr' ? 'ou glissez-déposez' : 'or drag and drop' }}</div>
-                        <input type="file" wire:model="photos" multiple accept="image/*" class="hidden">
+                        <input type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-empty" id="photos-empty">
                     </label>
                 @else
                     {{-- Drag a thumbnail onto another to reorder; the first photo is the cover (FB-style). --}}
@@ -168,9 +168,9 @@
                             </div>
                         @endforeach
                         @if ($usedImages < $maxImages)
-                            <label class="aspect-square rounded-lg border-2 border-dashed border-slate-300 grid place-items-center cursor-pointer hover:border-cm-green hover:bg-cm-green/5 transition text-slate-400 hover:text-cm-green">
+                            <label for="photos-grid" class="aspect-square rounded-lg border-2 border-dashed border-slate-300 grid place-items-center cursor-pointer hover:border-cm-green hover:bg-cm-green/5 transition text-slate-400 hover:text-cm-green">
                                 <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                <input type="file" wire:model="photos" multiple accept="image/*" class="hidden">
+                                <input id="photos-grid" type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-grid">
                             </label>
                         @endif
                     </div>
@@ -393,6 +393,17 @@
                 </select>
             </label>
         </div>
+
+        @if ($errors->any())
+            <div class="mb-4 p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+                <strong>Please fix the following errors before publishing:</strong>
+                <ul class="list-disc pl-5 mt-1">
+                    @foreach ($errors->all() as $err)
+                        <li>{{ $err }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         {{-- Publish bar --}}
         <div class="sticky bottom-0 bg-white border-t border-slate-200 px-4 sm:px-5 py-3">
