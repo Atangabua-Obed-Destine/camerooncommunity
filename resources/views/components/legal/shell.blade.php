@@ -16,8 +16,10 @@
     $a = $accentMap[$accent] ?? $accentMap['green'];
 @endphp
 
-{{-- Same sticky navbar used across the marketing site --}}
-@php($forceScrolled = true)
+{{-- Same sticky navbar used across the marketing site, customized for legal pages --}}
+@php($forceScrolled = false)
+@php($staysTransparent = true)
+@php($customNavClass = 'bg-[#233957] shadow-sm')
 @include('partials.site-nav')
 
 <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-24 sm:pt-28">
@@ -81,12 +83,6 @@
 
         {{-- Sister page links --}}
         <div class="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm">
-            <a href="{{ route('legal.privacy') }}" class="text-slate-500 hover:text-slate-900 transition-colors"
-               x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a>
-            <span class="text-slate-300">·</span>
-            <a href="{{ route('legal.terms') }}" class="text-slate-500 hover:text-slate-900 transition-colors"
-               x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')"></a>
-            <span class="text-slate-300">·</span>
             <a href="{{ route('home') }}" class="text-slate-500 hover:text-slate-900 transition-colors"
                x-text="$store.lang.t('Home', 'Accueil')"></a>
         </div>
