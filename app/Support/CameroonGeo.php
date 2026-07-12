@@ -71,7 +71,7 @@ class CameroonGeo
 
         foreach (self::aliases() as $key => $aliases) {
             foreach ($aliases as $a) {
-                if (str_contains($s, $a)) { return $key; }
+                if (preg_match('/\b' . preg_quote($a, '/') . '\b/iu', $s)) { return $key; }
             }
         }
         return '';
