@@ -395,7 +395,7 @@
         </div>
 
         @if ($errors->any())
-            <div class="mb-4 p-4 bg-red-50 text-red-600 rounded-lg text-sm">
+            <div class="mb-4 p-4 bg-red-50 text-red-600 rounded-lg text-sm" x-init="window.scrollTo({top: 0, behavior: 'smooth'})">
                 <strong>Please fix the following errors before publishing:</strong>
                 <ul class="list-disc pl-5 mt-1">
                     @foreach ($errors->all() as $err)
