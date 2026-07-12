@@ -14,7 +14,7 @@
     $hasGeo = $listing->latitude && $listing->longitude;
     $mapQuery = $hasGeo ? ($listing->latitude . ',' . $listing->longitude) : ($locStr ?: ($listing->country ?? 'Cameroon'));
     $canBuy = ! $isOwner && ! $isSold && in_array($listing->price_type->value, ['fixed','negotiable']) && (float) $listing->price > 0 && $seller?->momo_number;
-    $closeJs = "window.history.length > 1 ? window.history.back() : window.Livewire.navigate('" . route('marketplace.index') . "')";
+    $closeJs = "if (document.referrer.includes(window.location.host)) { window.history.back() } else { window.Livewire.navigate('" . route('marketplace.index') . "') }";
     // In modal mode the FeedBrowse host owns history/scroll, so we just ask it to close.
     $closeAction = $asModal ? "\$dispatch('mp-close-listing')" : $closeJs;
 @endphp
