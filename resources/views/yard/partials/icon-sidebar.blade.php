@@ -5,6 +5,14 @@
         {{-- Sidebar title --}}
         <div class="yard-icon-sidebar__title"><span style="color:#009639">KA</span><span class="kamer-m" style="color:var(--color-cm-red)">M<span class="kamer-star kamer-star--1">★</span><span class="kamer-star kamer-star--2">★</span></span><span style="color:var(--color-cm-yellow)">ER</span></div>
 
+        {{-- Home (Feed) --}}
+        <a href="{{ route('home') }}"
+           class="yard-icon-sidebar__item {{ $active === 'home' ? 'yard-icon-sidebar__item--active' : '' }}"
+           @mouseenter="tooltip = $store.lang.t('Home', 'Accueil')" @mouseleave="tooltip = ''">
+            <svg class="w-[22px] h-[22px] shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M11.03 2.59a1.5 1.5 0 0 1 1.94 0l8.5 7.25a1.5 1.5 0 0 1 .53 1.14V20a2 2 0 0 1-2 2h-4a1 1 0 0 1-1-1v-6a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v6a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2v-9.02c0-.44.19-.86.53-1.14l8.5-7.25z"/></svg>
+            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Home', 'Accueil')"></span>
+        </a>
+
         {{-- The Yard (Chats) --}}
         <a href="{{ route('yard') }}"
            class="yard-icon-sidebar__item {{ $active === 'yard' ? 'yard-icon-sidebar__item--active' : '' }}"

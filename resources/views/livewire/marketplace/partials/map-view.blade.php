@@ -8,18 +8,9 @@
       $points  array[]  — output of FeedBrowse::mapPoints (id, slug, title, price, lat, lng, thumb, url)
       $center  array    — ['lat'=>..,'lng'=>..,'zoom'=>..]  initial view (defaults to country centre)
 --}}
-@once
-    @push('scripts')
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-              integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-                integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    @endpush
-@endonce
-
 <div x-data="mpMap(@js($points), @js($center))"
      x-init="initMap()"
-     wire:ignore
+     wire:key="mp-map-view"
      class="bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm overflow-hidden">
     <div class="px-4 py-2.5 flex items-center justify-between border-b border-slate-100">
         <div class="text-sm font-semibold text-slate-700 flex items-center gap-2">
@@ -31,7 +22,7 @@
             <span x-data x-text="$store.lang.t('locations','emplacements')"></span>
         </div>
     </div>
-    <div id="mpMapCanvas-{{ uniqid() }}" x-ref="canvas" class="h-[640px] w-full"></div>
+    <div id="mpMapCanvas" wire:ignore x-ref="canvas" class="h-[640px] w-full"></div>
     @if (empty($points))
         <div class="px-4 py-6 text-center text-sm text-slate-500 italic">
             {{ app()->getLocale() === 'fr'
@@ -53,6 +44,18 @@
 
                     initMap() {
                         if (typeof L === 'undefined') {
+                            if (!document.getElementById('leaflet-css')) {
+                                let link = document.createElement('link');
+                                link.id = 'leaflet-css';
+                                link.rel = 'stylesheet';
+                                link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+                                document.head.appendChild(link);
+                                
+                                let script = document.createElement('script');
+                                script.id = 'leaflet-js';
+                                script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+                                document.head.appendChild(script);
+                            }
                             // Leaflet not ready yet — try again next tick
                             setTimeout(() => this.initMap(), 100);
                             return;

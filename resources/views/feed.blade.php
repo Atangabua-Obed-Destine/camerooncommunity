@@ -3,7 +3,7 @@
     Uses the standard app layout so the Facebook-style header is shown.
     This is intentionally minimal for now — a real feed will be added later.
 --}}
-<x-layouts.app :title="'Home · ' . ($__siteName ?? 'Cameroon Network')">
+<x-layouts.rails :title="'Home · ' . ($__siteName ?? 'Cameroon Network')" active="home">
     <div class="max-w-3xl mx-auto px-4 py-8">
 
         {{-- Welcome card --}}
@@ -78,4 +78,4 @@
         </div>
 
     </div>
-</x-layouts.app>
+</x-layouts.rails>
