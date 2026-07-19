@@ -131,7 +131,7 @@
     </div>
 
     {{-- ═══ RIGHT · scrollable detail panel ═══ --}}
-    <aside class="w-full lg:w-[400px] xl:w-[440px] h-full overflow-y-auto bg-white shrink-0 border-l border-slate-200">
+    <aside class="w-full lg:w-[400px] xl:w-[440px] flex-1 lg:flex-none min-h-0 lg:h-full overflow-y-auto bg-white border-l border-slate-200">
         <div class="p-4 sm:p-5 space-y-5">
 
             {{-- ─── Header: title · price · meta ─── --}}
@@ -826,6 +826,30 @@
             @endif
 
         </div>
+
+        {{-- ═══ Mobile Sticky Bottom Actions ═══ --}}
+        @if (! $isOwner && $seller)
+            <div class="lg:hidden sticky bottom-0 left-0 right-0 p-3 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 flex items-center gap-2 pb-safe">
+                @if ($canBuy)
+                    <a href="{{ route('marketplace.checkout', ['slug' => $listing->slug]) }}" wire:navigate
+                       class="flex-1 inline-flex items-center justify-center gap-2 bg-cm-red text-white font-extrabold py-3 rounded-xl hover:bg-cm-red/90 transition text-sm">
+                        {{ $lang === 'fr' ? 'Acheter' : 'Buy' }}
+                    </a>
+                @endif
+                @unless ($isSold)
+                    <button type="button"
+                            @click="$dispatch('open-gomarket-chat', { sellerId: {{ $seller?->id }}, listingId: {{ $listing->id }} })"
+                            class="flex-1 inline-flex items-center justify-center gap-2 bg-cm-green text-white font-bold py-3 rounded-xl hover:bg-cm-green/90 transition text-sm">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                        @if ($this->hasMessaged)
+                            {{ $lang === 'fr' ? 'Message envoyé' : 'Message again' }}
+                        @else
+                            {{ $lang === 'fr' ? 'Message' : 'Message' }}
+                        @endif
+                    </button>
+                @endunless
+            </div>
+        @endif
     </aside>
 
     {{-- ═══ Photo lightbox (FB-style fullscreen viewer) — teleported to body so it
