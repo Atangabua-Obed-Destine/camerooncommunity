@@ -175,7 +175,7 @@ class CategoryAttributeSchema
         $rules = [];
         foreach ($schema as $f) {
             $rule = [];
-            $rule[] = ($f['required'] ?? false) ? 'required' : 'nullable';
+            $rule[] = 'nullable';
             $rule[] = match ($f['type']) {
                 'number' => 'numeric',
                 'toggle' => 'boolean',

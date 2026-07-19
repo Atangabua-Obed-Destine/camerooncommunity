@@ -21,6 +21,8 @@ class FeedBrowse extends Component
 {
     use WithPagination;
 
+    public int $perPage = 24;
+
     #[Url(as: 'q', except: '')]
     public string $query = '';
 
@@ -76,7 +78,11 @@ class FeedBrowse extends Component
     public function mount(?string $slug = null): void
     {
         if ($slug) {
-            $this->categorySlug = $slug;
+            if (request()->routeIs('marketplace.show')) {
+                $this->modalSlug = $slug;
+            } else {
+                $this->categorySlug = $slug;
+            }
         }
 
         // Default the location pin to the viewer's own location so the feed
@@ -130,6 +136,23 @@ class FeedBrowse extends Component
         $this->resetPage();
     }
 
+    public function setLocationByCoords(float $lat, float $lng, ?string $label = null): void
+    {
+        $this->locLat = $lat;
+        $this->locLng = $lng;
+        
+        if ($label) {
+            $this->locLabel = $label;
+        } else {
+            $this->locLabel = app()->getLocale() === 'fr' ? 'Position actuelle' : 'Current Location';
+        }
+
+        if (! $this->radius) {
+            $this->radius = 25; // Default radius when using precise location
+        }
+        $this->resetPage();
+    }
+
     public function clearLocation(): void
     {
         $this->reset(['locLabel', 'locLat', 'locLng', 'radius']);
@@ -142,6 +165,11 @@ class FeedBrowse extends Component
             || str_starts_with($name, 'attrs.')) {
             $this->resetPage();
         }
+    }
+
+    public function loadMore(): void
+    {
+        $this->perPage += 24;
     }
 
     #[Computed]
@@ -166,7 +194,7 @@ class FeedBrowse extends Component
 
         MarketplaceQueryBuilder::applyRadius($q, $this->locLat, $this->locLng, $this->radius);
 
-        $page = $q->paginate(24);
+        $page = $q->paginate($this->perPage);
 
         // Annotate each card with an approximate distance from the viewer's pin
         // (region-centroid based — see App\Support\CameroonGeo). FB shows this.

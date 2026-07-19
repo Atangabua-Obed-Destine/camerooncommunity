@@ -31,7 +31,12 @@
             {{-- ─── Conversation list ─── --}}
             <aside class="flex-col border-r border-slate-200 min-h-0 {{ $this->threadOpen ? 'hidden lg:flex' : 'flex' }}">
                 <div class="px-4 pt-4 pb-2 shrink-0">
-                    <h1 class="text-xl font-extrabold text-slate-900">{{ $lang === 'fr' ? 'Boîte de réception' : 'Inbox' }}</h1>
+                    <div class="flex items-center gap-2">
+                        <a href="{{ route('marketplace.index') }}" class="w-8 h-8 grid place-items-center rounded-full hover:bg-slate-100 text-slate-600 transition" title="{{ $lang === 'fr' ? 'Retour' : 'Back' }}">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                        </a>
+                        <h1 class="text-xl font-extrabold text-slate-900">{{ $lang === 'fr' ? 'Boîte de réception' : 'Inbox' }}</h1>
+                    </div>
                     <div class="mt-3 inline-flex rounded-full bg-slate-100 p-0.5 text-sm font-semibold">
                         <button wire:click="$set('tab','buying')"
                                 class="px-4 py-1.5 rounded-full transition {{ $this->tab === 'buying' ? 'bg-white text-cm-green shadow' : 'text-slate-600 hover:text-slate-900' }}">

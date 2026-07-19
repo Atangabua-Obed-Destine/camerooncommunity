@@ -29,6 +29,10 @@ class ChatDock extends Component
     public ?int $roomId = null;
     public ?int $listingId = null;
     public string $newMessage = '';
+    
+    // Reply state
+    public ?int $replyToId = null;
+    public ?string $replyToPreview = null;
 
     /** Opened from a listing/seller profile: $dispatch('open-gomarket-chat', {sellerId, listingId}). */
     #[On('open-gomarket-chat')]
@@ -68,6 +72,7 @@ class ChatDock extends Component
             $this->newMessage = __('Is this still available?');
         }
 
+        $this->reset('replyToId', 'replyToPreview');
         unset($this->room, $this->messages, $this->partner, $this->listing);
         $this->markRead();
         $this->dispatch('gomarket-scroll');
@@ -131,7 +136,7 @@ class ChatDock extends Component
         if (! $this->room) {
             return collect();
         }
-        return YardMessage::with('user:id,name,username,avatar')
+        return YardMessage::with(['user:id,name,username,avatar', 'parent.user:id,name'])
             ->where('room_id', $this->room->id)
             ->where('is_deleted', false)
             ->whereIn('message_type', [MessageType::Text->value, MessageType::ShareCard->value, MessageType::Image->value])
@@ -164,11 +169,28 @@ class ChatDock extends Component
         }
 
         // No connection gate — marketplace conversations are open (FB-style).
-        app(MarketplaceChatService::class)->postMessage($room, $buyer, $this->newMessage);
+        app(MarketplaceChatService::class)->postMessage($room, $buyer, $this->newMessage, $this->replyToId);
 
         $this->newMessage = '';
+        $this->reset('replyToId', 'replyToPreview');
         unset($this->messages);
         $this->dispatch('gomarket-scroll');
+    }
+
+    // ─── REPLY ───
+    
+    public function setReply(int $messageId): void
+    {
+        $msg = YardMessage::with('user')->find($messageId);
+        if ($msg && $msg->room_id === $this->roomId) {
+            $this->replyToId = $msg->id;
+            $this->replyToPreview = ($msg->user->name ?? 'Unknown') . ': ' . Str::limit($msg->content, 80);
+        }
+    }
+
+    public function cancelReply(): void
+    {
+        $this->reset('replyToId', 'replyToPreview');
     }
 
     /** Called by the Echo listener when a realtime message arrives. */

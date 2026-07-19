@@ -20,8 +20,15 @@
         closeItem() {
             if (!this.modalOpen) return;
             // Step back in history; the popstate handler finishes the close.
-            if (history.state && history.state.mpItem) { history.back(); }
-            else { this.modalOpen = false; this.$wire.closeListing(); }
+            if (history.state && history.state.mpItem) { 
+                history.back(); 
+            } else { 
+                this.modalOpen = false; 
+                this.$wire.closeListing(); 
+                if (window.location.pathname.includes('/listing/')) {
+                    history.pushState(null, '', @js(route('marketplace.index')));
+                }
+            }
         }
      }"
      x-on:mp-open-listing.window="openItem($event.detail.slug, $event.detail.url)"
@@ -62,12 +69,19 @@
                x-transition:leave="transition transform duration-200"
                x-transition:leave-start="translate-x-0"
                x-transition:leave-end="-translate-x-full"
-               class="fixed top-0 left-0 z-50 h-full w-[88%] max-w-sm bg-white p-4 overflow-y-auto shadow-2xl">
-            <div class="flex items-center justify-between mb-3">
+               class="fixed top-0 left-0 z-50 h-full w-[88%] max-w-sm bg-white flex flex-col shadow-2xl">
+            <div class="flex-none flex items-center justify-between p-4 pb-2">
                 <span class="font-bold text-slate-900" x-data x-text="$store.lang.t('Filters & categories','Filtres & catégories')"></span>
                 <button @click="filtersOpen = false" class="text-2xl text-slate-500 hover:text-slate-800 w-9 h-9 grid place-items-center rounded-full hover:bg-slate-100">✕</button>
             </div>
-            @include('livewire.marketplace.partials.sidebar')
+            <div class="flex-1 overflow-y-auto px-4 pb-4">
+                @include('livewire.marketplace.partials.sidebar')
+            </div>
+            <div class="flex-none p-4 border-t border-slate-100 bg-white">
+                <button @click="filtersOpen = false" class="w-full bg-cm-green text-white font-bold py-3 rounded-xl shadow-sm hover:bg-cm-green/90 transition flex justify-center items-center gap-2">
+                    <span x-data x-text="$store.lang.t('Show results','Afficher les résultats')"></span>
+                </button>
+            </div>
         </aside>
     </div>
 
@@ -220,25 +234,42 @@
                     @if ($view === 'map')
                         @include('livewire.marketplace.partials.map-view', ['points' => $this->mapPoints, 'center' => \App\Support\CameroonGeo::center()])
                     @elseif ($this->listings->isEmpty())
-                        <div class="text-center py-20 bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm">
-                            <div class="text-6xl mb-3">🛍️</div>
-                            <div class="text-xl font-bold text-slate-900" x-data x-text="$store.lang.t('No listings yet','Aucune annonce')"></div>
-                            <p class="mt-1 text-sm text-slate-600 max-w-sm mx-auto" x-data x-text="$store.lang.t('Try adjusting your filters or be the first to sell something in this category.','Essayez d\'ajuster vos filtres ou soyez le premier à vendre quelque chose dans cette catégorie.')"></p>
-                            <a href="{{ route('marketplace.sell') }}" wire:navigate
-                               class="mt-5 inline-flex items-center gap-2 bg-cm-green text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-cm-green/90 shadow-md">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
-                                <span x-data x-text="$store.lang.t('Create your first listing','Créer ma première annonce')"></span>
-                            </a>
-                        </div>
+                        @if ($this->hasActiveFilters)
+                            <div class="text-center py-20 bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm">
+                                <div class="text-6xl mb-3">🔍</div>
+                                <div class="text-xl font-bold text-slate-900" x-data x-text="$store.lang.t('No results found','Aucun résultat trouvé')"></div>
+                                <p class="mt-1 text-sm text-slate-600 max-w-sm mx-auto" x-data x-text="$store.lang.t('Try expanding your search radius or clearing some filters.','Essayez d\'élargir votre rayon de recherche ou d\'effacer certains filtres.')"></p>
+                                <button type="button" wire:click="clearFilters"
+                                   class="mt-5 inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-slate-200 shadow-sm transition">
+                                    <span x-data x-text="$store.lang.t('Clear all filters','Effacer tous les filtres')"></span>
+                                </button>
+                            </div>
+                        @else
+                            <div class="text-center py-20 bg-white rounded-2xl ring-1 ring-slate-200 shadow-sm">
+                                <div class="text-6xl mb-3">🛍️</div>
+                                <div class="text-xl font-bold text-slate-900" x-data x-text="$store.lang.t('No listings yet','Aucune annonce')"></div>
+                                <p class="mt-1 text-sm text-slate-600 max-w-sm mx-auto" x-data x-text="$store.lang.t('Be the first to sell something in this category.','Soyez le premier à vendre quelque chose dans cette catégorie.')"></p>
+                                <a href="{{ route('marketplace.sell') }}" wire:navigate
+                                   class="mt-5 inline-flex items-center gap-2 bg-cm-green text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-cm-green/90 shadow-md">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
+                                    <span x-data x-text="$store.lang.t('Create your first listing','Créer ma première annonce')"></span>
+                                </a>
+                            </div>
+                        @endif
                     @else
                         <div class="mp-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-3 gap-y-4">
                             @foreach ($this->listings as $listing)
                                 <x-marketplace.listing-card :listing="$listing" :as-modal="true" />
                             @endforeach
                         </div>
-                        <div class="mt-6">
-                            {{ $this->listings->onEachSide(1)->links() }}
-                        </div>
+                        @if ($this->listings->hasMorePages())
+                            <div x-intersect="$wire.loadMore()" class="mt-8 flex items-center justify-center">
+                                <div wire:loading wire:target="loadMore" class="flex items-center gap-2 text-slate-500 font-semibold text-sm">
+                                    <svg class="w-5 h-5 animate-spin text-cm-green" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                                    <span x-data x-text="$store.lang.t('Loading more...','Chargement...')"></span>
+                                </div>
+                            </div>
+                        @endif
                     @endif
                 </div>
             </main>

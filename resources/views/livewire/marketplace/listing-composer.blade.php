@@ -120,7 +120,7 @@
             <div>
                 <div class="flex items-baseline justify-between mb-1.5">
                     <span class="text-[15px] font-bold text-slate-900">{{ $lang === 'fr' ? 'Photos' : 'Photos' }}</span>
-                    <span class="text-[12px] text-slate-500">{{ $usedImages }}/{{ $maxImages }} · {{ $lang === 'fr' ? 'jusqu\'à '.$maxImages : 'up to '.$maxImages }}</span>
+                    <span class="text-[12px] text-slate-500">{{ $usedImages }}/{{ $maxImages }} · {{ $lang === 'fr' ? 'jusqu\'à '.$maxImages.' · Max 8 Mo/img' : 'up to '.$maxImages.' · Max 8MB/img' }}</span>
                 </div>
 
                 @if ($usedImages === 0)
@@ -129,7 +129,7 @@
                             <svg class="w-6 h-6 text-slate-500 group-hover:text-cm-green" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5V18a2 2 0 002 2h14a2 2 0 002-2v-1.5M12 4v12m0-12l-4 4m4-4l4 4"/></svg>
                         </div>
                         <div class="mt-2 text-sm font-bold text-slate-800">{{ $lang === 'fr' ? 'Ajouter des photos' : 'Add photos' }}</div>
-                        <div class="mt-0.5 text-xs text-slate-500">{{ $lang === 'fr' ? 'ou glissez-déposez' : 'or drag and drop' }}</div>
+                        <div class="mt-0.5 text-xs text-slate-500">{{ $lang === 'fr' ? 'ou glissez-déposez (Max 8 Mo/image)' : 'or drag and drop (Max 8MB/image)' }}</div>
                         <input type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-empty" id="photos-empty">
                     </label>
                 @else
@@ -194,17 +194,82 @@
                 @error('title') <p class="text-xs text-cm-red mt-1 font-medium">⚠ {{ $message }}</p> @enderror
             </label>
 
+            {{-- ─── Description ─── --}}
+            <label class="block">
+                <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Description' : 'Description' }}</span>
+                <textarea wire:model.live.debounce.500ms="description" rows="4" maxlength="5000"
+                          placeholder="{{ $lang === 'fr' ? 'Décrivez l\'état, les caractéristiques…' : 'Describe condition, features…' }}"
+                          class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[15px] text-slate-900 placeholder-slate-400 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none transition resize-y"></textarea>
+                @error('description') <p class="text-xs text-cm-red mt-1 font-medium">⚠ {{ $message }}</p> @enderror
+            </label>
+
+            {{-- ─── Tags ─── --}}
+            <div>
+                <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Mots-clés (aide à la recherche)' : 'Product tags (helps search)' }}</span>
+                <div class="mt-1 flex gap-2">
+                    <input type="text" wire:model="tagInput" wire:keydown.enter.prevent="addTag" maxlength="20"
+                           placeholder="{{ $lang === 'fr' ? 'Ajouter…' : 'Add a tag…' }}"
+                           class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
+                    <button type="button" wire:click="addTag" class="px-4 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold">＋</button>
+                </div>
+                @if (count($tags))
+                    <div class="mt-2 flex flex-wrap gap-1.5">
+                        @foreach ($tags as $tag)
+                            <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
+                                #{{ $tag }}
+                                <button type="button" wire:click="removeTag('{{ addslashes($tag) }}')" class="text-slate-400 hover:text-cm-red">✕</button>
+                            </span>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+
             {{-- ─── Price ─── --}}
             <div>
                 <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Prix' : 'Price' }}</span>
                 <div class="mt-1 flex gap-2">
-                    <div class="flex-1 flex rounded-lg border border-slate-300 focus-within:border-cm-green focus-within:ring-1 focus-within:ring-cm-green transition overflow-hidden {{ in_array($priceType, ['free','contact']) ? 'opacity-50 pointer-events-none' : '' }}">
+                    <div class="flex-1 flex rounded-lg border border-slate-300 focus-within:border-cm-green focus-within:ring-1 focus-within:ring-cm-green transition {{ in_array($priceType, ['free','contact']) ? 'opacity-50 pointer-events-none' : '' }}">
                         <input type="number" min="0" step="any" wire:model.live.debounce.400ms="price"
                                placeholder="0"
-                               class="flex-1 min-w-0 border-0 px-3 py-2.5 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0">
-                        <select wire:model.live="currency" class="bg-slate-100 border-0 px-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-0 cursor-pointer">
-                            <option>XAF</option><option>GBP</option><option>EUR</option><option>USD</option><option>CAD</option>
-                        </select>
+                               class="flex-1 min-w-0 border-0 rounded-l-lg px-3 py-2.5 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0">
+                        <div x-data="{ 
+                                open: false, 
+                                search: '', 
+                                current: @entangle('currency'),
+                                currencies: @js($this->currencies),
+                                get filtered() {
+                                    if (this.search === '') return this.currencies;
+                                    const s = this.search.toLowerCase();
+                                    return this.currencies.filter(c => c.code.toLowerCase().includes(s) || c.name.toLowerCase().includes(s));
+                                }
+                             }" 
+                             @click.away="open = false"
+                             class="relative flex items-center bg-slate-100 px-3 cursor-pointer border-l border-slate-300 focus-within:ring-2 focus-within:ring-cm-green rounded-r-lg">
+                            <button type="button" @click="open = !open" class="flex items-center gap-1 text-sm font-semibold text-slate-700 focus:outline-none h-full w-full">
+                                <span x-text="current"></span>
+                                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+                            </button>
+                            
+                            <div x-show="open" x-cloak x-transition
+                                 class="absolute top-full right-0 mt-2 w-64 bg-white rounded-lg shadow-xl ring-1 ring-black/5 z-50 flex flex-col overflow-hidden">
+                                <div class="p-2 border-b border-slate-100 bg-slate-50">
+                                    <input type="text" x-model="search" placeholder="Search currency..." x-ref="searchInput"
+                                           x-effect="if(open) $nextTick(() => $refs.searchInput.focus())"
+                                           class="w-full bg-white border border-slate-300 rounded-md px-3 py-1.5 text-sm focus:border-cm-green focus:ring-1 focus:ring-cm-green outline-none transition">
+                                </div>
+                                <div class="max-h-56 overflow-y-auto p-1 custom-scrollbar">
+                                    <template x-for="c in filtered" :key="c.code">
+                                        <button type="button" @click="current = c.code; open = false; search = ''" 
+                                                class="w-full text-left px-3 py-2 text-sm rounded-md hover:bg-slate-100 focus:bg-slate-100 focus:outline-none transition flex items-center justify-between gap-2"
+                                                :class="current === c.code ? 'bg-cm-green/10 text-cm-green font-bold' : 'text-slate-700'">
+                                            <span x-text="c.code" class="font-bold shrink-0"></span>
+                                            <span x-text="c.name" class="truncate text-[12px] opacity-80 text-right flex-1"></span>
+                                        </button>
+                                    </template>
+                                    <div x-show="filtered.length === 0" class="px-3 py-3 text-sm text-slate-500 text-center">No results</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <select wire:model.live="priceType" class="rounded-lg border border-slate-300 px-2 py-2.5 text-sm text-slate-700 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none cursor-pointer">
                         @foreach ($this->priceTypeOptions() as $o)
@@ -255,15 +320,6 @@
                 </button>
 
                 <div x-show="more" x-cloak class="space-y-4 pt-3">
-                    {{-- Description --}}
-                    <label class="block">
-                        <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Description' : 'Description' }}</span>
-                        <textarea wire:model.live.debounce.500ms="description" rows="4" maxlength="5000"
-                                  placeholder="{{ $lang === 'fr' ? 'Décrivez l\'état, les caractéristiques…' : 'Describe condition, features…' }}"
-                                  class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[15px] text-slate-900 placeholder-slate-400 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none transition resize-y"></textarea>
-                        @error('description') <p class="text-xs text-cm-red mt-1 font-medium">⚠ {{ $message }}</p> @enderror
-                    </label>
-
                     {{-- Quantity --}}
                     <label class="block">
                         <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Quantité disponible' : 'Quantity available' }}</span>
@@ -280,7 +336,6 @@
                                     <span class="text-[12px] font-semibold text-slate-600 flex items-center gap-1">
                                         @if (! empty($f['icon'])) <span>{{ $f['icon'] }}</span> @endif
                                         <span>{{ $lang === 'fr' ? $f['labelFr'] : $f['label'] }}</span>
-                                        @if (! empty($f['required'])) <span class="text-cm-red">*</span> @endif
                                     </span>
                                     @if ($f['type'] === 'select')
                                         <select wire:model.live="attrs.{{ $f['key'] }}"
@@ -308,26 +363,6 @@
                         </div>
                     @endif
 
-                    {{-- Tags --}}
-                    <div>
-                        <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Mots-clés (aide à la recherche)' : 'Product tags (helps search)' }}</span>
-                        <div class="mt-1 flex gap-2">
-                            <input type="text" wire:model="tagInput" wire:keydown.enter.prevent="addTag" maxlength="20"
-                                   placeholder="{{ $lang === 'fr' ? 'Ajouter…' : 'Add a tag…' }}"
-                                   class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
-                            <button type="button" wire:click="addTag" class="px-4 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold">＋</button>
-                        </div>
-                        @if (count($tags))
-                            <div class="mt-2 flex flex-wrap gap-1.5">
-                                @foreach ($tags as $tag)
-                                    <span class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-medium">
-                                        #{{ $tag }}
-                                        <button type="button" wire:click="removeTag('{{ addslashes($tag) }}')" class="text-slate-400 hover:text-cm-red">✕</button>
-                                    </span>
-                                @endforeach
-                            </div>
-                        @endif
-                    </div>
                 </div>
             </div>
 
@@ -336,9 +371,9 @@
                 <div class="text-[15px] font-bold text-slate-900 mb-2">{{ $lang === 'fr' ? 'Remise & livraison' : 'Delivery method' }}</div>
                 <div class="grid grid-cols-2 gap-2">
                     @foreach ($this->fulfillmentOptions() as $o)
-                        <button type="button" wire:click="$set('fulfillment', '{{ $o['v'] }}')"
+                        <button type="button" wire:click="toggleFulfillment('{{ $o['v'] }}')"
                                 class="p-2.5 text-left rounded-lg border transition
-                                {{ $fulfillment === $o['v'] ? 'border-cm-green bg-cm-green/5 ring-1 ring-cm-green' : 'border-slate-300 hover:border-cm-green/50' }}">
+                                {{ in_array($o['v'], is_array($fulfillment) ? $fulfillment : []) ? 'border-cm-green bg-cm-green/5 ring-1 ring-cm-green' : 'border-slate-300 hover:border-cm-green/50' }}">
                             <div class="text-lg">{{ $o['icon'] }}</div>
                             <div class="mt-0.5 text-[12px] font-semibold text-slate-800 leading-tight">{{ $lang === 'fr' ? $o['fr'] : $o['l'] }}</div>
                         </button>
@@ -349,37 +384,159 @@
             {{-- ─── Location ─── --}}
             <div>
                 <div class="text-[15px] font-bold text-slate-900 mb-2">{{ $lang === 'fr' ? 'Localisation' : 'Location' }}</div>
-                <div class="grid grid-cols-2 gap-2">
-                    <label class="block">
-                        <span class="text-[12px] font-semibold text-slate-600">{{ $lang === 'fr' ? 'Région' : 'Region' }}</span>
-                        <input type="text" wire:model.live.debounce.500ms="region"
-                               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
-                    </label>
-                    <label class="block">
-                        <span class="text-[12px] font-semibold text-slate-600">{{ $lang === 'fr' ? 'Ville' : 'City' }}</span>
-                        <input type="text" wire:model.live.debounce.500ms="city"
-                               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
-                    </label>
-                    <label class="block">
-                        <span class="text-[12px] font-semibold text-slate-600">{{ $lang === 'fr' ? 'Pays' : 'Country' }}</span>
-                        <input type="text" wire:model.live="country" maxlength="2"
-                               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 uppercase focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
-                    </label>
-                    <label class="block">
-                        <span class="text-[12px] font-semibold text-slate-600">{{ $lang === 'fr' ? 'Quartier' : 'Neighborhood' }}</span>
-                        <input type="text" wire:model.live.debounce.500ms="neighborhood"
-                               class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
-                    </label>
-                </div>
-                {{-- Live map preview of the entered location --}}
-                @if ($locStr)
-                    <div class="mt-2 rounded-lg overflow-hidden ring-1 ring-slate-200 bg-slate-100">
-                        <iframe src="https://maps.google.com/maps?q={{ rawurlencode($locStr) }}&z=11&output=embed"
-                                class="w-full h-40 border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                                title="{{ $lang === 'fr' ? 'Carte' : 'Map' }}"></iframe>
+                <div x-data="{ 
+                        q: '',
+                        selectedLabel: @entangle('locationLabel'),
+                        results: [],
+                        isSearching: false,
+                        timeout: null,
+                        mapOpen: false,
+                        pickerMap: null,
+                        pickerMarker: null,
+                        mapLat: @entangle('latitude'),
+                        mapLng: @entangle('longitude'),
+                        init() {
+                            if (!this.mapLat && !localStorage.getItem('sell_loc_prompted')) {
+                                localStorage.setItem('sell_loc_prompted', '1');
+                                this.useCurrentLoc(true);
+                            } else if (this.mapLat && this.mapLng) {
+                                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${this.mapLat}&lon=${this.mapLng}&addressdetails=1`)
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        if (data.display_name) {
+                                            this.selectedLabel = data.display_name;
+                                        }
+                                    }).catch(() => {});
+                            }
+                        },
+                        searchLoc() {
+                            if (this.q.length < 3) { this.results = []; return; }
+                            clearTimeout(this.timeout);
+                            this.timeout = setTimeout(() => {
+                                this.isSearching = true;
+                                fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=' + encodeURIComponent(this.q) + '&limit=5')
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        this.results = data;
+                                        this.isSearching = false;
+                                    }).catch(() => this.isSearching = false);
+                            }, 500);
+                        },
+                        selectLoc(lat, lon, addressObj, name) {
+                            this.selectedLabel = name;
+                            this.q = '';
+                            this.results = [];
+                            $wire.setLocationData(lat, lon, addressObj, name);
+                        },
+                        useCurrentLoc(silent = false) {
+                            if (!navigator.geolocation) return;
+                            navigator.geolocation.getCurrentPosition(pos => {
+                                const lat = pos.coords.latitude;
+                                const lon = pos.coords.longitude;
+                                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`)
+                                    .then(res => res.json())
+                                    .then(data => {
+                                        this.selectLoc(lat, lon, data.address || {}, data.display_name || 'Current Location');
+                                    }).catch(() => this.selectLoc(lat, lon, {}, 'Current Location'));
+                            }, err => { if(!silent) alert('Geolocation failed or denied.'); });
+                        },
+                        initPickerMap() {
+                            if (!document.getElementById('leaflet-css')) {
+                                const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
+                                const script = document.createElement('script'); script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; document.body.appendChild(script);
+                            }
+                            const checkL = setInterval(() => {
+                                if (window.L) {
+                                    clearInterval(checkL);
+                                    this.$nextTick(() => {
+                                        if (!this.pickerMap) {
+                                            const startLat = this.mapLat || 4.22;
+                                            const startLng = this.mapLng || 12.0;
+                                            this.pickerMap = L.map(this.$refs.mapContainer).setView([startLat, startLng], 6);
+                                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(this.pickerMap);
+                                            this.pickerMarker = L.marker([startLat, startLng], {draggable: true}).addTo(this.pickerMap);
+                                            this.pickerMap.on('click', (e) => { this.pickerMarker.setLatLng(e.latlng); });
+                                        } else if (this.mapLat && this.mapLng) {
+                                            this.pickerMarker.setLatLng([this.mapLat, this.mapLng]);
+                                            this.pickerMap.setView([this.mapLat, this.mapLng]);
+                                        }
+                                        setTimeout(() => this.pickerMap.invalidateSize(), 100);
+                                    });
+                                }
+                            }, 100);
+                        },
+                        confirmMapSelection() {
+                            const pos = this.pickerMarker.getLatLng();
+                            this.mapOpen = false;
+                            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}&addressdetails=1`)
+                                .then(res => res.json())
+                                .then(data => {
+                                    this.selectLoc(pos.lat, pos.lng, data.address || {}, data.display_name || 'Map Selection');
+                                }).catch(() => this.selectLoc(pos.lat, pos.lng, {}, 'Map Selection'));
+                        }
+                    }">
+                    <div class="mb-3">
+                        <label class="block text-[12px] font-semibold text-slate-600 mb-1">{{ $lang === 'fr' ? 'Emplacement sélectionné' : 'Selected Location' }}</label>
+                        <div class="flex items-center gap-2 px-3 py-2.5 bg-cm-green/5 border border-cm-green/20 rounded-lg">
+                            <span class="text-cm-green">📍</span>
+                            <span class="text-[14px] font-medium text-slate-900 leading-tight" x-text="selectedLabel || '{{ $lang === 'fr' ? 'Aucun emplacement sélectionné' : 'No location selected' }}'"></span>
+                        </div>
                     </div>
-                    <p class="mt-1 text-[11px] text-slate-400">📍 {{ $locStr }}</p>
-                @endif
+
+                    <div class="relative">
+                        <input type="text" x-model="q" @input="searchLoc"
+                               @keydown.enter.prevent="if(results.length > 0) selectLoc(results[0].lat, results[0].lon, results[0].address || {}, results[0].display_name)"
+                               placeholder="{{ $lang === 'fr' ? 'Rechercher une ville…' : 'Search for a city…' }}"
+                               class="w-full rounded-lg bg-slate-100 border border-slate-300 pl-9 pr-3 py-2.5 text-[15px] text-slate-900 placeholder-slate-500 focus:bg-white focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none transition">
+                        <svg class="w-5 h-5 absolute left-3 top-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                        
+                        {{-- Autocomplete dropdown --}}
+                        <div x-show="results.length > 0 || isSearching" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white ring-1 ring-slate-200 shadow-xl rounded-lg overflow-hidden z-50">
+                            <div x-show="isSearching" class="p-3 text-sm text-slate-500 flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4 animate-spin text-cm-green" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                                <span>{{ $lang === 'fr' ? 'Recherche...' : 'Searching...' }}</span>
+                            </div>
+                            <ul x-show="!isSearching && results.length > 0" class="max-h-48 overflow-y-auto">
+                                <template x-for="res in results" :key="res.place_id">
+                                    <li>
+                                        <button type="button" @click="selectLoc(res.lat, res.lon, res.address || {}, res.display_name)"
+                                                class="w-full text-left px-3 py-2 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none transition border-b border-slate-50 last:border-0">
+                                            <div class="text-[14px] font-semibold text-slate-900 truncate" x-text="res.display_name"></div>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mt-2">
+                        <button type="button" @click="useCurrentLoc()" class="flex-1 flex items-center justify-center gap-1.5 text-sm text-cm-green hover:text-cm-green/80 font-bold py-2 bg-cm-green/10 rounded-lg transition">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
+                            <span>{{ $lang === 'fr' ? 'Position actuelle' : 'Current Location' }}</span>
+                        </button>
+                        <button type="button" @click="mapOpen = true; initPickerMap()" class="flex-1 flex items-center justify-center gap-1.5 text-sm text-slate-700 hover:bg-slate-200 font-bold py-2 bg-slate-100 rounded-lg transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                            <span>{{ $lang === 'fr' ? 'Choisir sur la carte' : 'Choose on map' }}</span>
+                        </button>
+                    </div>
+
+                    {{-- Map Picker Modal --}}
+                    <template x-teleport="body">
+                        <div x-show="mapOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                            <div @click.away="mapOpen = false" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+                                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                                    <h3 class="font-bold text-slate-900">{{ $lang === 'fr' ? 'Choisir sur la carte' : 'Choose on map' }}</h3>
+                                    <button type="button" @click="mapOpen = false" class="text-slate-400 hover:text-slate-600">✕</button>
+                                </div>
+                                <div class="h-[60vh] sm:h-96 w-full bg-slate-100 relative" x-ref="mapContainer"></div>
+                                <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                                    <button type="button" @click="mapOpen = false" class="px-4 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-200 transition">{{ $lang === 'fr' ? 'Annuler' : 'Cancel' }}</button>
+                                    <button type="button" @click="confirmMapSelection" class="px-4 py-2 rounded-lg font-bold text-white bg-cm-green hover:bg-cm-green/90 shadow-sm transition">{{ $lang === 'fr' ? 'Confirmer l\'emplacement' : 'Confirm Location' }}</button>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
             </div>
 
             {{-- ─── Audience ─── --}}
