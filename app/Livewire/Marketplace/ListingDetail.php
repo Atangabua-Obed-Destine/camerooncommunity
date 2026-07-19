@@ -339,6 +339,40 @@ class ListingDetail extends Component
         $this->dispatch('toast', type: 'success', message: __('Message sent ✓'));
 
         $this->inquiryMessage = $this->defaultInquiry();
+        unset($this->hasMessaged); // Clear cache
+    }
+
+    public function messageAgain(): void
+    {
+        $buyer = Auth::user();
+        if (! $buyer || $this->listing->isOwnedBy($buyer->id)) return;
+        
+        $seller = $this->listing->seller;
+        if (! $seller) return;
+
+        $svc = app(\App\Services\MarketplaceChatService::class);
+        $result = $svc->openConversation($buyer, $seller, $this->listing);
+
+        if (isset($result['error'])) {
+            $this->dispatch('toast', type: 'error', message: __('Could not open the conversation.'));
+            return;
+        }
+
+        $this->dispatch('open-gomarket-chat', sellerId: $seller->id, listingId: $this->listing->id);
+    }
+
+    #[Computed]
+    public function hasMessaged(): bool
+    {
+        if (! Auth::check() || $this->listing->isOwnedBy(Auth::id())) {
+            return false;
+        }
+
+        return \App\Models\YardMessage::where('user_id', Auth::id())
+            ->where('message_type', \App\Enums\MessageType::ShareCard->value)
+            ->where('shareable_type', MarketplaceListing::class)
+            ->where('shareable_id', $this->listing->id)
+            ->exists();
     }
 
     public function acceptOffer(int $offerId): void

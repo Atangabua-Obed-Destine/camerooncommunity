@@ -208,7 +208,7 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
         Route::get('/seller/{username}',        \App\Livewire\Marketplace\SellerProfile::class)->name('seller');
         Route::get('/inbox',                    \App\Livewire\Marketplace\Inbox::class)->name('inbox');
         Route::get('/c/{slug}',                 \App\Livewire\Marketplace\FeedBrowse::class)->name('category');
-        Route::get('/listing/{slug}',           \App\Livewire\Marketplace\ListingDetail::class)->name('show');
+        Route::get('/listing/{slug}',           \App\Livewire\Marketplace\FeedBrowse::class)->name('show');
         Route::get('/listing/{slug}/review',    \App\Livewire\Marketplace\LeaveReview::class)->name('review');
         Route::get('/listing/{slug}/checkout',  \App\Livewire\Marketplace\Checkout::class)->name('checkout');
         Route::get('/listing/{listing}/edit',   \App\Livewire\Marketplace\ListingComposer::class)

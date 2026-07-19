@@ -57,7 +57,7 @@ class MarketplaceQueryBuilder
         if (! empty($filters['region']))      { $q->where('region', 'like', '%' . $filters['region'] . '%'); }
         if (! empty($filters['country']))     { $q->where('country', $filters['country']); }
         if (! empty($filters['condition']))   { $q->where('condition', $filters['condition']); }
-        if (! empty($filters['fulfillment'])) { $q->where('fulfillment', $filters['fulfillment']); }
+        if (! empty($filters['fulfillment'])) { $q->whereJsonContains('fulfillment', $filters['fulfillment']); }
         if (isset($filters['priceMin']) && $filters['priceMin'] !== '' && $filters['priceMin'] !== null) {
             $q->where('price', '>=', (int) $filters['priceMin']);
         }

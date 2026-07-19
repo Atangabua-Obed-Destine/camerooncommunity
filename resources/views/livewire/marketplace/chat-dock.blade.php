@@ -98,11 +98,26 @@
                                 </a>
                             </div>
                         @else
-                            <div class="flex {{ $own ? 'justify-end' : 'justify-start' }}">
-                                <div class="max-w-[78%] px-3 py-1.5 rounded-2xl text-[13.5px] leading-snug whitespace-pre-line break-words
+                            <div class="group flex {{ $own ? 'justify-end' : 'justify-start' }} items-center gap-1">
+                                @if ($own)
+                                    <button type="button" wire:click="setReply({{ $m->id }})" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-cm-green transition p-1" title="{{ $lang === 'fr' ? 'Répondre' : 'Reply' }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                    </button>
+                                @endif
+                                <div class="max-w-[78%] px-3 py-1.5 rounded-2xl text-[13.5px] leading-snug whitespace-pre-line break-words flex flex-col gap-1
                                     {{ $own ? 'bg-cm-green text-white rounded-br-md' : 'bg-white text-slate-800 ring-1 ring-slate-200 rounded-bl-md' }}">
+                                    @if ($m->parent)
+                                        <div class="text-[11px] opacity-75 border-b {{ $own ? 'border-white/20' : 'border-slate-200' }} pb-1 mb-0.5 truncate">
+                                            <span class="font-bold">{{ $m->parent->user?->name ?? 'Unknown' }}</span>: {{ \Illuminate\Support\Str::limit($m->parent->content, 40) }}
+                                        </div>
+                                    @endif
                                     {{ $m->content }}
                                 </div>
+                                @if (!$own)
+                                    <button type="button" wire:click="setReply({{ $m->id }})" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-cm-green transition p-1" title="{{ $lang === 'fr' ? 'Répondre' : 'Reply' }}">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
+                                    </button>
+                                @endif
                             </div>
                         @endif
                     @empty
@@ -113,16 +128,28 @@
                 </div>
 
                 {{-- ── Composer ── --}}
-                <form wire:submit="send" class="flex items-center gap-2 p-2 border-t border-slate-100 bg-white">
-                    <input type="text" wire:model="newMessage" maxlength="4000"
-                           placeholder="{{ $lang === 'fr' ? 'Écrivez un message…' : 'Write a message…' }}"
-                           class="flex-1 rounded-full bg-slate-100 border-0 px-3.5 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
-                    <button type="submit"
-                            class="w-9 h-9 grid place-items-center rounded-full bg-cm-green text-white hover:bg-cm-green/90 transition shrink-0 disabled:opacity-50"
-                            wire:loading.attr="disabled" wire:target="send">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                    </button>
-                </form>
+                <div class="bg-white border-t border-slate-100 flex flex-col">
+                    @if ($this->replyToId)
+                        <div class="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                            <div class="flex-1 min-w-0 text-[11px] text-slate-600 truncate border-l-2 border-cm-green pl-2">
+                                <span class="font-bold">{{ $lang === 'fr' ? 'En réponse à' : 'Replying to' }}</span> {{ $this->replyToPreview }}
+                            </div>
+                            <button type="button" wire:click="cancelReply" class="w-5 h-5 grid place-items-center rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 transition shrink-0 ml-2">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                    @endif
+                    <form wire:submit="send" class="flex items-center gap-2 p-2">
+                        <input type="text" wire:model="newMessage" maxlength="4000"
+                               placeholder="{{ $lang === 'fr' ? 'Écrivez un message…' : 'Write a message…' }}"
+                               class="flex-1 rounded-full bg-slate-100 border-0 px-3.5 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
+                        <button type="submit"
+                                class="w-9 h-9 grid place-items-center rounded-full bg-cm-green text-white hover:bg-cm-green/90 transition shrink-0 disabled:opacity-50"
+                                wire:loading.attr="disabled" wire:target="send">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                        </button>
+                    </form>
+                </div>
             @endif
         </div>
     </div>

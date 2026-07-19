@@ -44,15 +44,33 @@
          x-on:keydown.arrow-left.window="if (lb && limgs.length) li = (li - 1 + limgs.length) % limgs.length"
          x-on:keydown.arrow-right.window="if (lb && limgs.length) li = (li + 1) % limgs.length">
 
-    {{-- ═══ LEFT · image stage ═══ --}}
-    <div class="relative bg-[#18191a] shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none">
+        {{-- ═══ MOBILE HEADER (Sticky top bar with Back button) ═══ --}}
+        <header class="lg:hidden flex-none bg-white border-b border-slate-200 px-2 py-2 flex items-center gap-2 shrink-0 relative z-20">
+            <button type="button" x-on:click="{{ $closeAction }}" class="p-2 -ml-1 rounded-full hover:bg-slate-100 text-slate-900 transition flex items-center justify-center">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+            </button>
+            <div class="flex-1 min-w-0 font-bold text-slate-900 truncate text-[15px]">
+                {{ $listing->title }}
+            </div>
+            <div class="flex items-center gap-0.5">
+                <button type="button" wire:click="toggleFavorite" class="p-2 rounded-full hover:bg-slate-100 {{ $this->isFavorited() ? 'text-cm-red' : 'text-slate-600' }} flex items-center justify-center transition">
+                    <svg class="w-5 h-5" fill="{{ $this->isFavorited() ? 'currentColor' : 'none' }}" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/></svg>
+                </button>
+                <button type="button" @click="navigator.share ? navigator.share({ title: @js($listing->title), url: window.location.href }).catch(()=>{}) : (navigator.clipboard.writeText(window.location.href), $dispatch('toast', { type: 'success', message: @js($lang === 'fr' ? 'Lien copié' : 'Link copied') }))" class="p-2 rounded-full hover:bg-slate-100 text-slate-600 flex items-center justify-center transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
+                </button>
+            </div>
+        </header>
 
-        {{-- Close --}}
-        <button type="button" x-on:click="{{ $closeAction }}"
-                aria-label="{{ $lang === 'fr' ? 'Fermer' : 'Close' }}"
-                class="absolute top-3 left-3 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-slate-900 grid place-items-center shadow-lg transition">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        {{-- ═══ LEFT · image stage ═══ --}}
+        <div class="relative bg-[#18191a] shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none">
+
+            {{-- Close (Desktop only) --}}
+            <button type="button" x-on:click="{{ $closeAction }}"
+                    aria-label="{{ $lang === 'fr' ? 'Fermer' : 'Close' }}"
+                    class="hidden lg:grid absolute top-3 left-3 z-20 w-10 h-10 rounded-full bg-white/90 hover:bg-white text-slate-900 place-items-center shadow-lg transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
 
         @if ($cover)
             <img src="{{ $cover->url() }}" alt="{{ $listing->title }}"
@@ -133,9 +151,24 @@
                             {{ $listing->category->icon }} {{ $listing->category->localizedName() }}
                         </span>
                     @endif
-                    <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
-                        {{ $listing->fulfillment->icon() }} {{ $lang === 'fr' ? $listing->fulfillment->labelFr() : $listing->fulfillment->label() }}
-                    </span>
+                    @if (is_array($listing->fulfillment))
+                        @foreach ($listing->fulfillment as $fVal)
+                            @php $fEnum = \App\Enums\ListingFulfillment::tryFrom($fVal); @endphp
+                            @if ($fEnum)
+                                <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
+                                    {{ $fEnum->icon() }} {{ $lang === 'fr' ? $fEnum->labelFr() : $fEnum->label() }}
+                                </span>
+                            @endif
+                        @endforeach
+                    @elseif ($listing->fulfillment instanceof \App\Enums\ListingFulfillment)
+                        <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
+                            {{ $listing->fulfillment->icon() }} {{ $lang === 'fr' ? $listing->fulfillment->labelFr() : $listing->fulfillment->label() }}
+                        </span>
+                    @elseif (is_string($listing->fulfillment) && $fEnum = \App\Enums\ListingFulfillment::tryFrom($listing->fulfillment))
+                        <span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-medium">
+                            {{ $fEnum->icon() }} {{ $lang === 'fr' ? $fEnum->labelFr() : $fEnum->label() }}
+                        </span>
+                    @endif
                 </div>
             </div>
 
@@ -161,7 +194,11 @@
                                 @click="$dispatch('open-gomarket-chat', { sellerId: {{ $seller?->id }}, listingId: {{ $listing->id }} })"
                                 class="flex-1 inline-flex items-center justify-center gap-2 bg-cm-green text-white font-bold py-2.5 rounded-lg hover:bg-cm-green/90 shadow-sm text-sm transition">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-                            {{ $lang === 'fr' ? 'Message' : 'Message' }}
+                            @if ($this->hasMessaged)
+                                {{ $lang === 'fr' ? 'Message envoyé' : 'Message again' }}
+                            @else
+                                {{ $lang === 'fr' ? 'Message' : 'Message' }}
+                            @endif
                         </button>
                     @endunless
                     <button type="button" wire:click="toggleFavorite"
@@ -264,21 +301,32 @@
             {{-- ─── Send seller a message ─── --}}
             @if (! $isOwner && $seller)
                 <div class="border-t border-slate-200 pt-4">
-                    <div class="flex items-center gap-2 mb-2.5">
-                        <svg class="w-5 h-5 text-cm-green" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-                        <h2 class="text-base font-bold text-slate-900">{{ $lang === 'fr' ? 'Envoyer un message au vendeur' : 'Send seller a message' }}</h2>
-                    </div>
-                    <div class="rounded-xl ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-cm-green overflow-hidden transition">
-                        <textarea wire:model="inquiryMessage" rows="2" maxlength="1000"
-                                  wire:keydown.enter.prevent="sendInquiry"
-                                  placeholder="{{ $lang === 'fr' ? 'Écrivez un message…' : 'Write a message…' }}"
-                                  class="w-full border-0 px-3.5 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0 resize-none"></textarea>
-                    </div>
-                    <button wire:click="sendInquiry" wire:loading.attr="disabled" wire:target="sendInquiry"
-                            class="mt-2 w-full py-2.5 rounded-lg bg-cm-green text-white text-sm font-extrabold hover:bg-cm-green/90 shadow-sm disabled:opacity-60 inline-flex items-center justify-center gap-2 transition">
-                        <svg wire:loading wire:target="sendInquiry" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
-                        {{ $lang === 'fr' ? 'Envoyer' : 'Send' }}
-                    </button>
+                    @if ($this->hasMessaged)
+                        <div class="flex items-center gap-2 mb-2.5">
+                            <svg class="w-5 h-5 text-cm-green" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                            <h2 class="text-base font-bold text-slate-900">{{ $lang === 'fr' ? 'Contacter le vendeur' : 'Contact seller' }}</h2>
+                        </div>
+                        <button wire:click="messageAgain"
+                                class="w-full py-2.5 rounded-lg bg-slate-100 text-slate-900 text-sm font-extrabold hover:bg-slate-200 shadow-sm inline-flex items-center justify-center gap-2 transition ring-1 ring-slate-200">
+                            {{ $lang === 'fr' ? 'Envoyer un autre message' : 'Message again' }}
+                        </button>
+                    @else
+                        <div class="flex items-center gap-2 mb-2.5">
+                            <svg class="w-5 h-5 text-cm-green" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                            <h2 class="text-base font-bold text-slate-900">{{ $lang === 'fr' ? 'Envoyer un message au vendeur' : 'Send seller a message' }}</h2>
+                        </div>
+                        <div class="rounded-xl ring-1 ring-slate-200 focus-within:ring-2 focus-within:ring-cm-green overflow-hidden transition">
+                            <textarea wire:model="inquiryMessage" rows="2" maxlength="1000"
+                                      wire:keydown.enter.prevent="sendInquiry"
+                                      placeholder="{{ $lang === 'fr' ? 'Écrivez un message…' : 'Write a message…' }}"
+                                      class="w-full border-0 px-3.5 py-3 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0 resize-none"></textarea>
+                        </div>
+                        <button wire:click="sendInquiry" wire:loading.attr="disabled" wire:target="sendInquiry"
+                                class="mt-2 w-full py-2.5 rounded-lg bg-cm-green text-white text-sm font-extrabold hover:bg-cm-green/90 shadow-sm disabled:opacity-60 inline-flex items-center justify-center gap-2 transition">
+                            <svg wire:loading wire:target="sendInquiry" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                            {{ $lang === 'fr' ? 'Envoyer' : 'Send' }}
+                        </button>
+                    @endif
                 </div>
             @endif
 
@@ -292,11 +340,48 @@
                             {{ $locStr }}
                         </div>
                     @endif
-                    <div class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-100">
-                        <iframe
-                            src="https://maps.google.com/maps?q={{ rawurlencode($mapQuery) }}&z=13&output=embed"
-                            class="w-full h-48 border-0" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
-                            title="{{ $lang === 'fr' ? 'Carte de localisation' : 'Location map' }}"></iframe>
+                    <div class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-100 relative h-48 w-full z-10"
+                         x-data="{
+                            mapLat: {{ $listing->latitude ?? 'null' }},
+                            mapLng: {{ $listing->longitude ?? 'null' }},
+                            locQuery: @js($mapQuery),
+                            initMap() {
+                                if (!document.getElementById('leaflet-css')) {
+                                    const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
+                                    const script = document.createElement('script'); script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; document.body.appendChild(script);
+                                }
+                                const checkL = setInterval(() => {
+                                    if (window.L) {
+                                        clearInterval(checkL);
+                                        this.$nextTick(() => {
+                                            if (this.mapLat && this.mapLng) {
+                                                this.renderMap(this.mapLat, this.mapLng);
+                                            } else {
+                                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.locQuery)}&limit=1`)
+                                                    .then(res => res.json())
+                                                    .then(data => {
+                                                        if (data && data.length > 0) {
+                                                            this.renderMap(parseFloat(data[0].lat), parseFloat(data[0].lon));
+                                                        }
+                                                    });
+                                            }
+                                        });
+                                    }
+                                }, 100);
+                            },
+                            renderMap(lat, lng) {
+                                const map = L.map(this.$refs.displayMap).setView([lat, lng], 13);
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+                                L.circle([lat, lng], {
+                                    color: '#10b981',
+                                    fillColor: '#10b981',
+                                    fillOpacity: 0.25,
+                                    radius: 1200
+                                }).addTo(map);
+                            }
+                         }"
+                         x-init="initMap()"
+                         x-ref="displayMap">
                     </div>
                     <p class="mt-1.5 text-[11px] text-slate-400">{{ $lang === 'fr' ? 'Localisation approximative.' : 'Location is approximate.' }}</p>
                 </div>
@@ -595,9 +680,126 @@
                 </div>
             @endif
 
+            {{-- ─── Sponsored Ads ─── --}}
+            <div class="border-t border-slate-200 pt-4" x-data="{
+                    ads: [],
+                    activeIdx: 0,
+                    init() {
+                        fetch('{{ route("ads.yard") }}', { headers: { 'Accept': 'application/json' } })
+                            .then(r => r.ok ? r.json() : [])
+                            .then(data => {
+                                this.ads = data;
+                                this.$nextTick(() => {
+                                    const scrl = this.$refs.adscrl;
+                                    if(!scrl) return;
+                                    const updateCenter = () => {
+                                        const scrlRect = scrl.getBoundingClientRect();
+                                        const scrlCenter = scrlRect.left + scrlRect.width / 2;
+                                        let closestIdx = 0; let minDiff = Infinity;
+                                        const items = [...scrl.children].filter(c => c.tagName !== 'TEMPLATE');
+                                        items.forEach((child, i) => {
+                                            const rect = child.getBoundingClientRect();
+                                            const childCenter = rect.left + rect.width / 2;
+                                            const diff = Math.abs(scrlCenter - childCenter);
+                                            if (diff < minDiff) { minDiff = diff; closestIdx = i; }
+                                        });
+                                        if (this.activeIdx !== closestIdx) this.activeIdx = closestIdx;
+                                    };
+                                    scrl.addEventListener('scroll', updateCenter, { passive: true });
+                                    updateCenter();
+
+                                    if(data.length > 1) {
+                                        setInterval(() => {
+                                            if(!scrl || scrl.matches(':hover') || scrl.matches(':active')) return;
+                                            const items = [...scrl.children].filter(c => c.tagName !== 'TEMPLATE');
+                                            const nextIdx = (this.activeIdx + 1) % items.length;
+                                            if (items[nextIdx]) {
+                                                const child = items[nextIdx];
+                                                scrl.scrollTo({ left: child.offsetLeft - scrl.clientWidth / 2 + child.offsetWidth / 2, behavior: 'smooth' });
+                                            }
+                                        }, 6000);
+                                    }
+                                });
+                            })
+                            .catch(e => console.warn('Failed to load ads', e));
+                    }
+                }" x-show="ads.length > 0" x-cloak>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-bold text-slate-900">
+                        {{ $lang === 'fr' ? 'Sponsorisé' : 'Sponsored' }}
+                    </h2>
+                </div>
+                <div x-ref="adscrl" class="relative flex overflow-x-auto snap-x snap-mandatory gap-3 pb-6 px-[calc(50%-70px)] sm:px-[calc(50%-80px)] -mx-4 sm:mx-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-center">
+                    <template x-for="(ad, index) in ads" :key="ad.id">
+                        <div :class="activeIdx === index ? 'scale-100 opacity-100 shadow-lg z-10 ring-2 ring-cm-green' : 'scale-90 opacity-50 hover:opacity-80 z-0 ring-1 ring-slate-200'" 
+                             class="w-[140px] sm:w-[160px] shrink-0 snap-center bg-white rounded-2xl overflow-hidden flex flex-col group relative transition-all duration-500 ease-out origin-center cursor-pointer"
+                             @click="if(activeIdx !== index) { $event.preventDefault(); $event.stopPropagation(); $refs.adscrl.scrollTo({ left: $el.offsetLeft - $refs.adscrl.clientWidth / 2 + $el.offsetWidth / 2, behavior: 'smooth' }); }">
+                            {{-- Image or Video --}}
+                            <div class="relative w-full aspect-square bg-slate-100 flex-shrink-0">
+                                <template x-if="ad.video">
+                                    <iframe :src="ad.video + '?autoplay=0&mute=1&loop=1&playlist=' + ad.video.split('/').pop()" frameborder="0"
+                                            class="absolute inset-0 w-full h-full pointer-events-none"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowfullscreen loading="lazy"></iframe>
+                                </template>
+                                <template x-if="!ad.video && ad.image">
+                                    <img :src="ad.image" :alt="ad.title" loading="lazy" class="w-full h-full object-cover pointer-events-none">
+                                </template>
+                                <template x-if="!ad.video && !ad.image">
+                                    <div class="w-full h-full grid place-items-center text-2xl">📢</div>
+                                </template>
+                                <div class="absolute top-1 right-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">Ad</div>
+                            </div>
+                            
+                            {{-- Body --}}
+                            <a :href="'{{ url('/') }}/ad/' + ad.id + '/click'" target="_blank" rel="noopener noreferrer" class="p-2.5 flex flex-col flex-1 bg-white">
+                                <div class="text-[12px] font-bold text-slate-900 line-clamp-2 leading-snug" x-text="ad.title"></div>
+                                <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5 mb-1.5 flex-1" x-text="ad.description" x-show="ad.description"></div>
+                                <div class="flex items-center justify-between mt-auto pt-1.5 border-t border-slate-100">
+                                    <span class="text-[10px] text-slate-400 font-medium truncate pr-1" x-text="ad.advertiser" x-show="ad.advertiser"></span>
+                                    <span class="text-[10px] font-bold text-cm-green whitespace-nowrap" x-text="ad.cta || '{{ $lang === 'fr' ? 'Plus' : 'More' }}'"></span>
+                                </div>
+                            </a>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
             {{-- ─── Similar listings ─── --}}
             @if ($this->similarListings->isNotEmpty())
-                <div class="border-t border-slate-200 pt-4">
+                <div class="border-t border-slate-200 pt-4" x-data="{
+                        activeIdx: 0,
+                        init() {
+                            this.$nextTick(() => {
+                                const scrl = this.$refs.simscrl;
+                                if(!scrl) return;
+                                
+                                const updateCenter = () => {
+                                    const scrlRect = scrl.getBoundingClientRect();
+                                    const scrlCenter = scrlRect.left + scrlRect.width / 2;
+                                    let closestIdx = 0; let minDiff = Infinity;
+                                    [...scrl.children].forEach((child, i) => {
+                                        const rect = child.getBoundingClientRect();
+                                        const childCenter = rect.left + rect.width / 2;
+                                        const diff = Math.abs(scrlCenter - childCenter);
+                                        if (diff < minDiff) { minDiff = diff; closestIdx = i; }
+                                    });
+                                    if (this.activeIdx !== closestIdx) this.activeIdx = closestIdx;
+                                };
+                                scrl.addEventListener('scroll', updateCenter, { passive: true });
+                                updateCenter();
+
+                                if (scrl.children.length > 1) {
+                                    setInterval(() => {
+                                        if(!scrl || scrl.matches(':hover') || scrl.matches(':active')) return;
+                                        const nextIdx = (this.activeIdx + 1) % scrl.children.length;
+                                        const child = scrl.children[nextIdx];
+                                        if (child) scrl.scrollTo({ left: child.offsetLeft - scrl.clientWidth / 2 + child.offsetWidth / 2, behavior: 'smooth' });
+                                    }, 6000);
+                                }
+                            });
+                        }
+                    }">
                     <div class="flex items-center justify-between mb-3">
                         <h2 class="text-lg font-bold text-slate-900">
                             {{ $lang === 'fr' ? 'Annonces similaires' : 'More like this' }}
@@ -609,9 +811,15 @@
                             </a>
                         @endif
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        @foreach ($this->similarListings as $similar)
-                            <x-marketplace.listing-card :listing="$similar" :as-modal="$asModal" />
+                    <div x-ref="simscrl" class="relative flex overflow-x-auto snap-x snap-mandatory gap-3 pb-6 px-[calc(50%-70px)] sm:px-[calc(50%-80px)] -mx-4 sm:mx-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-center">
+                        @foreach ($this->similarListings as $index => $similar)
+                            <div :class="activeIdx === {{ $index }} ? 'scale-100 opacity-100 shadow-lg z-10 ring-2 ring-cm-green rounded-2xl' : 'scale-90 opacity-50 hover:opacity-80 z-0 ring-1 ring-slate-200 rounded-2xl'" 
+                                 class="w-[140px] sm:w-[160px] shrink-0 snap-center transition-all duration-500 ease-out origin-center cursor-pointer relative"
+                                 @click="if(activeIdx !== {{ $index }}) { $event.preventDefault(); $event.stopPropagation(); $refs.simscrl.scrollTo({ left: $el.offsetLeft - $refs.simscrl.clientWidth / 2 + $el.offsetWidth / 2, behavior: 'smooth' }); }">
+                                <x-marketplace.listing-card :listing="$similar" :as-modal="$asModal" />
+                                {{-- An invisible overlay to block clicks on non-centered items so they just scroll to center --}}
+                                <div x-show="activeIdx !== {{ $index }}" class="absolute inset-0 z-20"></div>
+                            </div>
                         @endforeach
                     </div>
                 </div>

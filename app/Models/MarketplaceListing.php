@@ -45,7 +45,7 @@ class MarketplaceListing extends Model
             'longitude' => 'decimal:7',
             'price_type' => ListingPriceType::class,
             'condition' => ListingCondition::class,
-            'fulfillment' => ListingFulfillment::class,
+            'fulfillment' => 'array',
             'visibility' => ListingVisibility::class,
             'status' => ListingStatus::class,
             'target_regions' => 'array',

@@ -51,7 +51,7 @@ class MarketplaceChatService
      * Post a text message into a marketplace conversation (shared by the
      * floating dock and the inbox). Broadcasts + updates room meta.
      */
-    public function postMessage(YardRoom $room, User $sender, string $text): ?YardMessage
+    public function postMessage(YardRoom $room, User $sender, string $text, ?int $parentMessageId = null): ?YardMessage
     {
         $text = trim($text);
         if ($text === '') {
@@ -68,6 +68,7 @@ class MarketplaceChatService
             'uuid'         => Str::uuid()->toString(),
             'room_id'      => $room->id,
             'user_id'      => $sender->id,
+            'parent_message_id' => $parentMessageId,
             'message_type' => MessageType::Text,
             'content'      => mb_substr($text, 0, 4000),
         ]);

@@ -65,7 +65,7 @@
 
     {{-- ─── Search ─── --}}
     <div class="relative">
-        <input type="text" wire:model.live.debounce.400ms="query"
+        <input type="text" wire:model.live.debounce.800ms="query"
                placeholder="{{ $mpLang === 'fr' ? 'Rechercher dans Marketplace' : 'Search Marketplace' }}"
                class="w-full rounded-full bg-slate-100 border-0 pl-10 pr-3 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
         <svg class="w-4 h-4 absolute left-3.5 top-3 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
@@ -182,7 +182,84 @@
             $_locText = $locLabel !== '' ? $locLabel : ($mpLang === 'fr' ? 'Tout le Cameroun' : 'All of Cameroon');
             $_radiusText = $radius ? ('· ' . $radius . ' km') : '';
         @endphp
-        <div class="px-1" x-data="{ open: false, q: @js($locLabel) }">
+        <div class="px-1" x-data="{ 
+                open: false, 
+                q: @js($locLabel),
+                results: [],
+                isSearching: false,
+                timeout: null,
+                mapOpen: false,
+                pickerMap: null,
+                pickerMarker: null,
+                mapLat: @js($locLat ?? 4.22),
+                mapLng: @js($locLng ?? 12.0),
+                init() {
+                    if (!@js($locLat) && !localStorage.getItem('mp_loc_prompted')) {
+                        localStorage.setItem('mp_loc_prompted', '1');
+                        this.useCurrentLoc(true);
+                    }
+                },
+                searchLoc() {
+                    if (this.q.length < 3) { this.results = []; return; }
+                    clearTimeout(this.timeout);
+                    this.timeout = setTimeout(() => {
+                        this.isSearching = true;
+                        fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(this.q) + '&limit=5')
+                            .then(res => res.json())
+                            .then(data => {
+                                this.results = data;
+                                this.isSearching = false;
+                            }).catch(() => this.isSearching = false);
+                    }, 500);
+                },
+                selectLoc(lat, lon, name) {
+                    this.q = name;
+                    this.results = [];
+                    $wire.setLocationByCoords(lat, lon, name);
+                    this.open = false;
+                },
+                useCurrentLoc(silent = false) {
+                    if (!navigator.geolocation) return;
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        const lat = pos.coords.latitude;
+                        const lon = pos.coords.longitude;
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                            .then(res => res.json())
+                            .then(data => {
+                                this.selectLoc(lat, lon, data.display_name || 'Current Location');
+                            }).catch(() => this.selectLoc(lat, lon, 'Current Location'));
+                    }, err => { if(!silent) alert('Geolocation failed or denied.'); });
+                },
+                initPickerMap() {
+                    if (!document.getElementById('leaflet-css')) {
+                        const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
+                        const script = document.createElement('script'); script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; document.body.appendChild(script);
+                    }
+                    const checkL = setInterval(() => {
+                        if (window.L) {
+                            clearInterval(checkL);
+                            this.$nextTick(() => {
+                                if (!this.pickerMap) {
+                                    this.pickerMap = L.map(this.$refs.mapContainer).setView([this.mapLat, this.mapLng], 6);
+                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(this.pickerMap);
+                                    this.pickerMarker = L.marker([this.mapLat, this.mapLng], {draggable: true}).addTo(this.pickerMap);
+                                    this.pickerMap.on('click', (e) => { this.pickerMarker.setLatLng(e.latlng); });
+                                }
+                                setTimeout(() => this.pickerMap.invalidateSize(), 100);
+                            });
+                        }
+                    }, 100);
+                },
+                confirmMapSelection() {
+                    const pos = this.pickerMarker.getLatLng();
+                    this.mapOpen = false;
+                    fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.lat}&lon=${pos.lng}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            this.selectLoc(pos.lat, pos.lng, data.display_name || 'Map Selection');
+                        }).catch(() => this.selectLoc(pos.lat, pos.lng, 'Map Selection'));
+                }
+            }">
             <div class="text-[13px] font-semibold text-slate-700 mb-1" x-data x-text="$store.lang.t('Location','Lieu')"></div>
 
             {{-- Trigger button --}}
@@ -198,36 +275,70 @@
                  x-transition:enter="transition ease-out duration-150"
                  x-transition:enter-start="opacity-0 -translate-y-1"
                  x-transition:enter-end="opacity-100 translate-y-0"
-                 class="mt-2 rounded-xl bg-white ring-1 ring-slate-200 p-3 space-y-3 shadow-sm">
+                 class="mt-2 rounded-xl bg-white ring-1 ring-slate-200 p-3 shadow-sm relative z-40">
                 <div class="relative">
-                    <input type="text" x-model="q"
-                           @keydown.enter.prevent="$wire.setLocation(q); open = false"
-                           placeholder="{{ $mpLang === 'fr' ? 'Ville ou région…' : 'City or region…' }}"
+                    <input type="text" x-model="q" @input="searchLoc"
+                           @keydown.enter.prevent="if(results.length > 0) selectLoc(results[0].lat, results[0].lon, results[0].display_name)"
+                           placeholder="{{ $mpLang === 'fr' ? 'Rechercher une ville…' : 'Search for a city…' }}"
                            class="w-full rounded-lg bg-slate-100 border-0 pl-9 pr-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
                     <svg class="w-4 h-4 absolute left-3 top-2.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z"/></svg>
+                    
+                    {{-- Autocomplete dropdown --}}
+                    <div x-show="results.length > 0 || isSearching" x-cloak class="absolute left-0 right-0 top-full mt-1 bg-white ring-1 ring-slate-200 shadow-xl rounded-lg overflow-hidden z-50">
+                        <div x-show="isSearching" class="p-3 text-sm text-slate-500 flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4 animate-spin text-cm-green" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg>
+                            <span x-data x-text="$store.lang.t('Searching...','Recherche...')"></span>
+                        </div>
+                        <ul x-show="!isSearching && results.length > 0" class="max-h-48 overflow-y-auto">
+                            <template x-for="res in results" :key="res.place_id">
+                                <li>
+                                    <button type="button" @click="selectLoc(res.lat, res.lon, res.display_name)"
+                                            class="w-full text-left px-3 py-2 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none transition border-b border-slate-50 last:border-0">
+                                        <div class="text-[13px] font-semibold text-slate-900 truncate" x-text="res.display_name"></div>
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
                 </div>
 
-                <div>
-                    <div class="text-[12px] font-semibold text-slate-600 mb-1.5" x-data x-text="$store.lang.t('Radius','Rayon')"></div>
-                    <div class="flex flex-wrap gap-1.5">
-                        <button type="button" wire:click="$set('radius', null)"
-                                @class([
-                                    'text-[12px] font-semibold rounded-full px-2.5 py-1 transition',
-                                    'bg-cm-green text-white' => ! $radius,
-                                    'bg-slate-100 text-slate-700 hover:bg-slate-200' => (bool) $radius,
-                                ])>
-                            {{ $mpLang === 'fr' ? 'Tout' : 'All' }}
-                        </button>
-                        @foreach ($_radiusOpts as $r)
-                            <button type="button" wire:click="$set('radius', {{ $r }})"
-                                    @class([
-                                        'text-[12px] font-semibold rounded-full px-2.5 py-1 transition',
-                                        'bg-cm-green text-white' => $radius === $r,
-                                        'bg-slate-100 text-slate-700 hover:bg-slate-200' => $radius !== $r,
-                                    ])>
-                                {{ $r }} km
-                            </button>
-                        @endforeach
+                <div class="flex gap-2 mt-2.5">
+                    <button type="button" @click="useCurrentLoc()" class="flex-1 flex items-center justify-center gap-1.5 text-xs text-cm-green hover:text-cm-green/80 font-bold py-2 bg-cm-green/10 rounded-lg transition">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
+                        <span x-data x-text="$store.lang.t('Current Loc','Pos. actuelle')"></span>
+                    </button>
+                    <button type="button" @click="mapOpen = true; initPickerMap()" class="flex-1 flex items-center justify-center gap-1.5 text-xs text-slate-700 hover:bg-slate-200 font-bold py-2 bg-slate-100 rounded-lg transition">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+                        <span x-data x-text="$store.lang.t('Map picker','Carte')"></span>
+                    </button>
+                </div>
+                
+                {{-- Map Picker Modal --}}
+                <template x-teleport="body">
+                    <div x-show="mapOpen" x-cloak class="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                        <div @click.away="mapOpen = false" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+                            <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                                <h3 class="font-bold text-slate-900" x-data x-text="$store.lang.t('Choose location on map','Choisir sur la carte')"></h3>
+                                <button type="button" @click="mapOpen = false" class="text-slate-400 hover:text-slate-600">✕</button>
+                            </div>
+                            <div class="h-[60vh] sm:h-96 w-full bg-slate-100 relative" x-ref="mapContainer"></div>
+                            <div class="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+                                <button type="button" @click="mapOpen = false" class="px-4 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-200 transition" x-data x-text="$store.lang.t('Cancel','Annuler')"></button>
+                                <button type="button" @click="confirmMapSelection" class="px-4 py-2 rounded-lg font-bold text-white bg-cm-green hover:bg-cm-green/90 shadow-sm transition" x-data x-text="$store.lang.t('Confirm Location','Confirmer')"></button>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <div class="pt-3 mt-3 border-t border-slate-100">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="text-[12px] font-semibold text-slate-600" x-data x-text="$store.lang.t('Radius','Rayon')"></div>
+                        <div class="text-[12px] font-bold text-slate-900">{{ $radius ? $radius . ' km' : ($mpLang === 'fr' ? 'Tout' : 'All') }}</div>
+                    </div>
+                    <input type="range" wire:model.live.debounce.800ms="radius" min="0" max="500" step="5" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cm-green">
+                    <div class="flex justify-between text-[10px] text-slate-400 mt-1.5">
+                        <span x-data x-text="$store.lang.t('Any','Tout')"></span>
+                        <span>500 km</span>
                     </div>
                 </div>
 
@@ -270,10 +381,10 @@
         <div class="px-1">
             <div class="text-[13px] font-semibold text-slate-700 mb-1" x-data x-text="$store.lang.t('Price (XAF)','Prix (XAF)')"></div>
             <div class="grid grid-cols-2 gap-2">
-                <input type="number" min="0" wire:model.live.debounce.600ms="priceMin"
+                <input type="number" min="0" wire:model.live.debounce.800ms="priceMin"
                        placeholder="{{ $mpLang === 'fr' ? 'Min' : 'Min' }}"
                        class="w-full rounded-lg bg-slate-100 border-0 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
-                <input type="number" min="0" wire:model.live.debounce.600ms="priceMax"
+                <input type="number" min="0" wire:model.live.debounce.800ms="priceMax"
                        placeholder="{{ $mpLang === 'fr' ? 'Max' : 'Max' }}"
                        class="w-full rounded-lg bg-slate-100 border-0 px-3 py-2 text-sm text-slate-900 placeholder-slate-500 focus:bg-white focus:ring-2 focus:ring-cm-green focus:outline-none transition">
             </div>
