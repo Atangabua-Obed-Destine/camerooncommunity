@@ -63,7 +63,7 @@
         </header>
 
         {{-- ═══ LEFT · image stage ═══ --}}
-        <div class="relative backdrop-blur-sm shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none cursor-pointer" style="background-color: rgba(0,0,0,0.85);" x-on:click.self="{{ $closeAction }}">
+        <div class="relative shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none cursor-pointer" x-on:click.self="{{ $closeAction }}">
 
             {{-- Close (Desktop only) --}}
             <button type="button" x-on:click="{{ $closeAction }}"
