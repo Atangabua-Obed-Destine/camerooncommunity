@@ -399,6 +399,7 @@
                         </button>
                     @endforeach
                 </div>
+                @error('fulfillment') <p class="text-xs text-cm-red mt-2 font-medium">⚠ {{ $message }}</p> @enderror
             </div>
 
             {{-- ─── Location ─── --}}
