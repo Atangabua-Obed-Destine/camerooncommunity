@@ -38,7 +38,7 @@
              x-data x-on:click="{{ $closeAction }}"></div>
     @endif
 
-    <div class="fixed z-[60] flex flex-col lg:flex-row overflow-hidden {{ $asModal ? 'inset-0 lg:inset-4 xl:inset-8 lg:rounded-2xl lg:shadow-2xl ring-1 ring-black/10' : 'inset-0 bg-black/90' }}"
+    <div class="fixed z-[60] flex flex-col lg:flex-row overflow-hidden {{ $asModal ? 'inset-0 lg:inset-4 xl:inset-8 lg:rounded-2xl lg:shadow-2xl ring-1 ring-black/10' : 'inset-0' }}"
          x-data="{ lb: false, li: 0, limgs: @js($media->map(fn ($m) => $m->url())->values()) }"
          x-on:keydown.escape.window="lb ? (lb = false) : ({{ $closeAction }})"
          x-on:keydown.arrow-left.window="if (lb && limgs.length) li = (li - 1 + limgs.length) % limgs.length"
@@ -63,7 +63,7 @@
         </header>
 
         {{-- ═══ LEFT · image stage ═══ --}}
-        <div class="relative bg-black/85 backdrop-blur-sm shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none cursor-pointer" x-on:click.self="{{ $closeAction }}">
+        <div class="relative bg-black/80 backdrop-blur-sm shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none cursor-pointer" x-on:click.self="{{ $closeAction }}">
 
             {{-- Close (Desktop only) --}}
             <button type="button" x-on:click="{{ $closeAction }}"
