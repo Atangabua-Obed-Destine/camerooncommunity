@@ -170,7 +170,27 @@
                         @if ($usedImages < $maxImages)
                             <label for="photos-grid" class="aspect-square rounded-lg border-2 border-dashed border-slate-300 grid place-items-center cursor-pointer hover:border-cm-green hover:bg-cm-green/5 transition text-slate-400 hover:text-cm-green">
                                 <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-                                <input id="photos-grid" type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-grid">
+                                <input id="photos-grid" type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-grid"
+                                    x-on:change="
+                                        const maxSize = 8 * 1024 * 1024;
+                                        for (let i = 0; i < $event.target.files.length; i++) {
+                                            const file = $event.target.files[i];
+                                            if (file.size > maxSize) {
+                                                alert('{{ $lang === 'fr' ? 'Fichier trop volumineux :' : 'File size issue:' }} \'' + file.name + '\' {{ $lang === 'fr' ? 'dépasse la limite de 8 Mo. Veuillez réduire sa taille ou choisir une autre image pour pouvoir continuer.' : 'exceeds the 8MB limit. Please compress the image or choose a smaller one to proceed.' }}');
+                                                $event.target.value = '';
+                                                return;
+                                            }
+                                            if (!file.type.startsWith('image/')) {
+                                                alert('{{ $lang === 'fr' ? 'Format non supporté :' : 'Format issue:' }} \'' + file.name + '\' {{ $lang === 'fr' ? 'n\'est pas une image. Veuillez choisir un fichier JPG, PNG ou WEBP.' : 'is not an image. Please choose a JPG, PNG, or WEBP file.' }}');
+                                                $event.target.value = '';
+                                                return;
+                                            }
+                                        }
+                                    "
+                                    x-on:livewire-upload-error="
+                                        alert('{{ $lang === 'fr' ? 'Échec du téléversement. Cela est souvent dû à une connexion instable ou à un fichier bloqué. Essayez avec une image plus petite.' : 'Upload failed. This is often due to an unstable connection or the server blocking the file. Try using a smaller image.' }}');
+                                    "
+                                >
                             </label>
                         @endif
                     </div>

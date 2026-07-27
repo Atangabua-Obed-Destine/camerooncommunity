@@ -24,13 +24,17 @@ use Livewire\Component;
  * and the active thread with the product pinned + composer. Marketplace-scoped
  * (only origin='marketplace' DM rooms); no connection gate.
  */
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 #[Title('Inbox · GoMarket')]
 class Inbox extends Component
 {
     /** 'buying' | 'selling' (mirrors FB's targetTab=BUYER/SELLER). */
     #[Url(except: 'buying')]
     public string $tab = 'buying';
+
+    /** Optional filter to only show conversations about a specific listing. */
+    #[Url(as: 'l', except: null)]
+    public ?int $filterListingId = null;
 
     /** Active conversation room id (reflected in the URL like FB). */
     #[Url(as: 'c', except: null)]
@@ -96,7 +100,11 @@ class Inbox extends Component
     #[Computed]
     public function conversations(): Collection
     {
-        return $this->allConversations->where('role', $this->tab)->values();
+        $filtered = $this->allConversations->where('role', $this->tab);
+        if ($this->filterListingId) {
+            $filtered = $filtered->filter(fn($c) => $c->listing && $c->listing->id === (int) $this->filterListingId);
+        }
+        return $filtered->values();
     }
 
     #[Computed]

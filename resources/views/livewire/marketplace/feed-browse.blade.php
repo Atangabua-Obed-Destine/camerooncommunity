@@ -75,7 +75,8 @@
                 <button @click="filtersOpen = false" class="text-2xl text-slate-500 hover:text-slate-800 w-9 h-9 grid place-items-center rounded-full hover:bg-slate-100">✕</button>
             </div>
             <div class="flex-1 overflow-y-auto px-4 pb-4">
-                @include('livewire.marketplace.partials.sidebar')
+                @include('livewire.marketplace.partials.sidebar-nav')
+                @include('livewire.marketplace.partials.sidebar-filters')
             </div>
             <div class="flex-none p-4 border-t border-slate-100 bg-white">
                 <button @click="filtersOpen = false" class="w-full bg-cm-green text-white font-bold py-3 rounded-xl shadow-sm hover:bg-cm-green/90 transition flex justify-center items-center gap-2">
@@ -85,22 +86,12 @@
         </aside>
     </div>
 
-    {{-- ─── Page grid ─── --}}
-    <div class="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-5 py-4 lg:py-5">
-        <div class="grid lg:grid-cols-[300px_1fr] gap-5">
+    <x-slot:sidebar_filters>
+        @include('livewire.marketplace.partials.sidebar-filters')
+    </x-slot:sidebar_filters>
 
-            {{-- ─── Desktop sidebar (FB-style panel) ─── --}}
-            <aside class="hidden lg:block lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-128px)] lg:overflow-y-auto">
-                <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-3">
-                    @include('livewire.marketplace.partials.sidebar')
-                </div>
-            </aside>
-
-            {{-- ─── Main column ─── --}}
-            <main class="min-w-0">
-
-                {{-- Hero header (desktop only) --}}
-                <div class="hidden lg:flex items-center justify-between mb-4">
+    {{-- Hero header (desktop only) --}}
+    <div class="hidden lg:flex items-center justify-between mb-4">
                     <div class="min-w-0">
                         <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight truncate">
                             @if ($this->activeCategory)
@@ -272,9 +263,6 @@
                         @endif
                     @endif
                 </div>
-            </main>
-        </div>
-    </div>
 
     {{-- ═══ FB-style in-grid item modal (loads over the dimmed grid) ═══ --}}
     @if ($modalSlug)

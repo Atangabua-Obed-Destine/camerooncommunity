@@ -12,7 +12,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 class MyListings extends Component
 {
     public string $filter = 'all'; // all|active|sold|expired|draft|paused
@@ -24,42 +24,10 @@ class MyListings extends Component
     public string $sellPrice = '';
     public string $sellCurrency = 'XAF';
 
-    // ─── MoMo (Mobile Money) seller settings ───
-    public bool $showMomoModal = false;
-    public string $momoProvider = 'mtn';
-    public string $momoNumber = '';
+    // ─── Bulk Actions state ───
+    public array $selected = [];
 
-    public function openMomoSettings(): void
-    {
-        $u = Auth::user();
-        $this->momoProvider = $u?->momo_provider ?: 'mtn';
-        $this->momoNumber   = $u?->momo_number ?: '';
-        $this->showMomoModal = true;
-    }
 
-    public function closeMomoSettings(): void
-    {
-        $this->showMomoModal = false;
-    }
-
-    public function saveMomo(): void
-    {
-        $data = $this->validate([
-            'momoProvider' => 'required|in:mtn,orange,express',
-            'momoNumber'   => ['required', 'string', 'regex:/^[0-9+\s\-]{8,20}$/'],
-        ]);
-
-        $u = Auth::user();
-        $u->forceFill([
-            'momo_provider' => $data['momoProvider'],
-            'momo_number'   => preg_replace('/\s+/', '', $data['momoNumber']),
-        ])->save();
-
-        \App\Support\TrustBadges::forget($u->id);
-
-        $this->showMomoModal = false;
-        $this->dispatch('toast', type: 'success', message: __('Mobile Money saved'));
-    }
 
     public function setFilter(string $f): void
     {
@@ -197,16 +165,30 @@ class MyListings extends Component
         $l = MarketplaceListing::where('user_id', Auth::id())->find($this->sellListingId);
         if (! $l) { $this->cancelMarkSold(); return; }
 
+        // Spam prevention: if already sold to this buyer and quantity <= 0, do nothing
+        if ($l->status?->value === 'sold' && $l->buyer_id === $this->sellBuyerId) {
+            $this->cancelMarkSold();
+            $this->dispatch('toast', type: 'error', message: __('Listing is already marked as sold to this buyer.'));
+            return;
+        }
+
         $price = trim($this->sellPrice) === '' ? null : (float) $this->sellPrice;
         $currency = trim($this->sellCurrency) ?: ($l->currency ?: 'XAF');
 
-        $l->update([
-            'status'        => 'sold',
-            'sold_at'       => now(),
-            'sold_price'    => $price,
-            'sold_currency' => $currency,
-            'buyer_id'      => $this->sellBuyerId,
-        ]);
+        $isPartialSale = false;
+        if ($l->quantity > 1) {
+            $l->update(['quantity' => $l->quantity - 1]);
+            $isPartialSale = true;
+        } else {
+            $l->update([
+                'status'        => 'sold',
+                'sold_at'       => now(),
+                'sold_price'    => $price,
+                'sold_currency' => $currency,
+                'buyer_id'      => $this->sellBuyerId,
+                'quantity'      => 0,
+            ]);
+        }
 
         if ($this->sellBuyerId) {
             $buyer = User::find($this->sellBuyerId);
@@ -226,7 +208,60 @@ class MyListings extends Component
         }
 
         $this->cancelMarkSold();
-        $this->dispatch('toast', type: 'success', message: __('Listing marked as sold'));
+        if ($isPartialSale) {
+            $this->dispatch('toast', type: 'success', message: __('1 item sold. Quantity updated.'));
+        } else {
+            $this->dispatch('toast', type: 'success', message: __('Listing marked as sold'));
+        }
+    }
+
+    // ─── Bulk Actions ───
+
+    public function toggleSelectAll(): void
+    {
+        $visibleIds = $this->listings->pluck('id')->map(fn($id) => (string)$id)->toArray();
+        $allSelected = count(array_intersect($visibleIds, $this->selected)) === count($visibleIds);
+
+        if ($allSelected) {
+            $this->selected = array_diff($this->selected, $visibleIds);
+        } else {
+            $this->selected = array_unique(array_merge($this->selected, $visibleIds));
+        }
+    }
+
+    public function bulkPause(): void
+    {
+        if (empty($this->selected)) return;
+        MarketplaceListing::where('user_id', Auth::id())
+            ->whereIn('id', $this->selected)
+            ->update(['status' => 'paused']);
+        $this->selected = [];
+        $this->dispatch('toast', type: 'success', message: __('Selected listings paused'));
+    }
+
+    public function bulkReactivate(): void
+    {
+        if (empty($this->selected)) return;
+        MarketplaceListing::where('user_id', Auth::id())
+            ->whereIn('id', $this->selected)
+            ->update([
+                'status' => 'active',
+                'published_at' => \Illuminate\Support\Facades\DB::raw('COALESCE(published_at, NOW())')
+            ]);
+        $this->selected = [];
+        $this->dispatch('toast', type: 'success', message: __('Selected listings reactivated'));
+    }
+
+    public function bulkRemove(): void
+    {
+        if (empty($this->selected)) return;
+        $listings = MarketplaceListing::where('user_id', Auth::id())->whereIn('id', $this->selected)->get();
+        foreach ($listings as $l) {
+            $l->update(['status' => 'removed']);
+            $l->delete();
+        }
+        $this->selected = [];
+        $this->dispatch('toast', type: 'success', message: __('Selected listings removed'));
     }
 
     public function remove(int $id): void
@@ -240,3 +275,4 @@ class MyListings extends Component
         return view('livewire.marketplace.my-listings');
     }
 }
+

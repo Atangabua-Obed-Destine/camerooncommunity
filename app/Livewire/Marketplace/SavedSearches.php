@@ -10,7 +10,7 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 #[Title('Saved Searches')]
 class SavedSearches extends Component
 {
@@ -148,3 +148,4 @@ class SavedSearches extends Component
         return view('livewire.marketplace.saved-searches');
     }
 }
+

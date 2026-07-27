@@ -14,7 +14,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 class ListingDetail extends Component
 {
     use InteractsWithFollows;
@@ -620,3 +620,4 @@ class ListingDetail extends Component
         return view('livewire.marketplace.listing-detail');
     }
 }
+

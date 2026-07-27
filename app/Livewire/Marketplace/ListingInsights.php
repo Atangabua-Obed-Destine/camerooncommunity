@@ -17,7 +17,7 @@ use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 #[Title('Listing insights')]
 class ListingInsights extends Component
 {
@@ -121,3 +121,4 @@ class ListingInsights extends Component
         return view('livewire.marketplace.listing-insights');
     }
 }
+

@@ -17,7 +17,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 class ListingComposer extends Component
 {
     use WithFileUploads;
@@ -656,3 +656,4 @@ class ListingComposer extends Component
         }
     }
 }
+
