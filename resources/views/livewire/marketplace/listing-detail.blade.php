@@ -38,7 +38,7 @@
              x-data x-on:click="{{ $closeAction }}"></div>
     @endif
 
-    <div class="fixed z-[60] bg-white flex flex-col lg:flex-row overflow-hidden {{ $asModal ? 'inset-0 lg:inset-4 xl:inset-8 lg:rounded-2xl lg:shadow-2xl ring-1 ring-black/10' : 'inset-0' }}"
+    <div class="fixed z-[60] flex flex-col lg:flex-row overflow-hidden {{ $asModal ? 'inset-0 lg:inset-4 xl:inset-8 lg:rounded-2xl lg:shadow-2xl ring-1 ring-black/10' : 'inset-0 bg-black/90' }}"
          x-data="{ lb: false, li: 0, limgs: @js($media->map(fn ($m) => $m->url())->values()) }"
          x-on:keydown.escape.window="lb ? (lb = false) : ({{ $closeAction }})"
          x-on:keydown.arrow-left.window="if (lb && limgs.length) li = (li - 1 + limgs.length) % limgs.length"
@@ -63,7 +63,7 @@
         </header>
 
         {{-- ═══ LEFT · image stage ═══ --}}
-        <div class="relative bg-[#18191a] shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none">
+        <div class="relative bg-black/85 backdrop-blur-sm shrink-0 h-[44vh] sm:h-[52vh] lg:h-full lg:flex-1 flex items-center justify-center select-none cursor-pointer" x-on:click.self="{{ $closeAction }}">
 
             {{-- Close (Desktop only) --}}
             <button type="button" x-on:click="{{ $closeAction }}"
@@ -332,7 +332,56 @@
 
             {{-- ─── Location + Google map ─── --}}
             @if ($locStr || $hasGeo)
-                <div class="border-t border-slate-200 pt-4">
+                <div class="border-t border-slate-200 pt-4"
+                     x-data="{
+                        showMapModal: false,
+                        mapLat: {{ $listing->latitude ?? 'null' }},
+                        mapLng: {{ $listing->longitude ?? 'null' }},
+                        locQuery: @js($mapQuery),
+                        largeMapInstance: null,
+                        initData() {
+                            if (!document.getElementById('leaflet-css')) {
+                                const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
+                                const script = document.createElement('script'); script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; document.body.appendChild(script);
+                            }
+                            const checkL = setInterval(() => {
+                                if (window.L) {
+                                    clearInterval(checkL);
+                                    if (!this.mapLat || !this.mapLng) {
+                                        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.locQuery)}&limit=1`)
+                                            .then(res => res.json())
+                                            .then(data => {
+                                                if (data && data.length > 0) {
+                                                    this.mapLat = parseFloat(data[0].lat);
+                                                    this.mapLng = parseFloat(data[0].lon);
+                                                    this.renderSmallMap();
+                                                }
+                                            });
+                                    } else {
+                                        this.renderSmallMap();
+                                    }
+                                }
+                            }, 100);
+                        },
+                        renderSmallMap() {
+                            if(!this.$refs.smallMap) return;
+                            const map = L.map(this.$refs.smallMap, { zoomControl: false, dragging: false, scrollWheelZoom: false }).setView([this.mapLat, this.mapLng], 13);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
+                            L.circle([this.mapLat, this.mapLng], { color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: 1200 }).addTo(map);
+                        },
+                        renderLargeMap() {
+                            if(!this.$refs.largeMap) return;
+                            if(this.largeMapInstance) {
+                                this.largeMapInstance.invalidateSize();
+                                return;
+                            }
+                            this.largeMapInstance = L.map(this.$refs.largeMap).setView([this.mapLat, this.mapLng], 14);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(this.largeMapInstance);
+                            L.circle([this.mapLat, this.mapLng], { color: '#10b981', fillColor: '#10b981', fillOpacity: 0.25, radius: 1200 }).addTo(this.largeMapInstance);
+                        }
+                     }"
+                     x-init="initData()">
+                     
                     <h2 class="text-lg font-bold text-slate-900 mb-1">{{ $lang === 'fr' ? 'Localisation' : 'Location' }}</h2>
                     @if ($locStr)
                         <div class="text-sm text-slate-600 flex items-center gap-1.5 mb-2.5">
@@ -340,50 +389,40 @@
                             {{ $locStr }}
                         </div>
                     @endif
-                    <div class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-100 relative h-48 w-full z-10"
-                         x-data="{
-                            mapLat: {{ $listing->latitude ?? 'null' }},
-                            mapLng: {{ $listing->longitude ?? 'null' }},
-                            locQuery: @js($mapQuery),
-                            initMap() {
-                                if (!document.getElementById('leaflet-css')) {
-                                    const link = document.createElement('link'); link.id = 'leaflet-css'; link.rel = 'stylesheet'; link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link);
-                                    const script = document.createElement('script'); script.id = 'leaflet-js'; script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; document.body.appendChild(script);
-                                }
-                                const checkL = setInterval(() => {
-                                    if (window.L) {
-                                        clearInterval(checkL);
-                                        this.$nextTick(() => {
-                                            if (this.mapLat && this.mapLng) {
-                                                this.renderMap(this.mapLat, this.mapLng);
-                                            } else {
-                                                fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(this.locQuery)}&limit=1`)
-                                                    .then(res => res.json())
-                                                    .then(data => {
-                                                        if (data && data.length > 0) {
-                                                            this.renderMap(parseFloat(data[0].lat), parseFloat(data[0].lon));
-                                                        }
-                                                    });
-                                            }
-                                        });
-                                    }
-                                }, 100);
-                            },
-                            renderMap(lat, lng) {
-                                const map = L.map(this.$refs.displayMap).setView([lat, lng], 13);
-                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(map);
-                                L.circle([lat, lng], {
-                                    color: '#10b981',
-                                    fillColor: '#10b981',
-                                    fillOpacity: 0.25,
-                                    radius: 1200
-                                }).addTo(map);
-                            }
-                         }"
-                         x-init="initMap()"
-                         x-ref="displayMap">
+                    
+                    {{-- Mini map wrapper --}}
+                    <div class="relative group cursor-pointer" @click="showMapModal = true; $nextTick(() => { setTimeout(() => renderLargeMap(), 150) })">
+                        <div class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-100 relative h-48 w-full z-10 pointer-events-none" x-ref="smallMap"></div>
+                        <div class="absolute inset-0 z-20 rounded-xl bg-black/5 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                            <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm pointer-events-none">
+                                {{ $lang === 'fr' ? 'Agrandir la carte' : 'Expand map' }}
+                            </span>
+                        </div>
                     </div>
                     <p class="mt-1.5 text-[11px] text-slate-400">{{ $lang === 'fr' ? 'Localisation approximative.' : 'Location is approximate.' }}</p>
+
+                    {{-- Modal Map --}}
+                    <template x-teleport="body">
+                        <div x-show="showMapModal" style="display: none" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 sm:p-6"
+                             x-transition.opacity>
+                            <div class="bg-white w-full flex flex-col rounded-xl shadow-2xl overflow-hidden ring-1 ring-black/5"
+                                 style="max-width: 600px; height: 500px;"
+                                 @click.outside="showMapModal = false"
+                                 x-transition.scale.95>
+                                
+                                {{-- Header --}}
+                                <div class="relative flex items-center justify-center px-4 py-3.5 shrink-0">
+                                    <h3 class="font-bold text-[17px] text-slate-900">{{ $lang === 'fr' ? 'Localisation de l\'annonce' : 'Listing Location' }}</h3>
+                                    <button type="button" @click="showMapModal = false" class="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                                    </button>
+                                </div>
+                                
+                                {{-- Large Map container --}}
+                                <div class="flex-1 w-full bg-[#e5e3df] relative min-h-0" x-ref="largeMap"></div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
             @endif
 

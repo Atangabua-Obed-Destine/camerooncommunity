@@ -12,7 +12,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 #[Title('Leave a review')]
 class LeaveReview extends Component
 {
@@ -125,3 +125,4 @@ class LeaveReview extends Component
         return view('livewire.marketplace.leave-review');
     }
 }
+

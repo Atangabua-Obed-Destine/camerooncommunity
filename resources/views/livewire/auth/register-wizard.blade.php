@@ -187,14 +187,12 @@
 
             {{-- Concentric circles (from hero section) --}}
             <svg class="absolute -top-20 -left-20 w-96 h-96 animate-pulse-soft opacity-20" viewBox="0 0 200 200">
-                <circle cx="100" cy="100" r="80" fill="none" stroke="#FCD116" stroke-width="1.5"/>
-                <circle cx="100" cy="100" r="60" fill="none" stroke="#FCD116" stroke-width="1"/>
-                <circle cx="100" cy="100" r="40" fill="none" stroke="#FCD116" stroke-width="0.5"/>
+                <circle cx="100" cy="100" r="80" fill="none" stroke="#FCD116" stroke-width="1.5" opacity="0.3"/>
+                <circle cx="100" cy="100" r="60" fill="none" stroke="#FCD116" stroke-width="1" opacity="0.3"/>
+                <circle cx="100" cy="100" r="40" fill="none" stroke="#FCD116" stroke-width="0.5" opacity="0.3"/>
             </svg>
-            <svg class="absolute -bottom-16 -right-16 w-80 h-80 animate-pulse-soft opacity-15" viewBox="0 0 200 200" style="animation-delay: 1s">
-                <circle cx="100" cy="100" r="80" fill="none" stroke="#FCD116" stroke-width="1.5"/>
-                <circle cx="100" cy="100" r="60" fill="none" stroke="#FCD116" stroke-width="1"/>
-                <circle cx="100" cy="100" r="40" fill="none" stroke="#FCD116" stroke-width="0.5"/>
+            <svg class="absolute -bottom-16 -right-16 w-80 h-80 opacity-20" viewBox="0 0 200 200">
+                <rect x="30" y="30" width="140" height="140" rx="20" fill="none" stroke="#FCD116" stroke-width="1" opacity="0.3" class="animate-pulse-soft" style="animation-delay: 1s"/>
             </svg>
         </div>
 

@@ -8,7 +8,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 class Favorites extends Component
 {
     #[Computed]
@@ -33,3 +33,4 @@ class Favorites extends Component
         return view('livewire.marketplace.favorites');
     }
 }
+

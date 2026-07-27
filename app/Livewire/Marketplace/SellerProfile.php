@@ -18,7 +18,7 @@ use Livewire\WithPagination;
  * sortable grid of the seller's active listings. Lives inside the GoMarket
  * rails chrome.
  */
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 class SellerProfile extends Component
 {
     use InteractsWithFollows, WithPagination;
@@ -87,3 +87,4 @@ class SellerProfile extends Component
         return view('livewire.marketplace.seller-profile');
     }
 }
+

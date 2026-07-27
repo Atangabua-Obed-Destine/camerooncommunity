@@ -14,7 +14,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 #[Title('Checkout')]
 class Checkout extends Component
 {
@@ -190,3 +190,4 @@ class Checkout extends Component
         return view('livewire.marketplace.checkout');
     }
 }
+

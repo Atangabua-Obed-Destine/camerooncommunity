@@ -25,45 +25,7 @@
             </a>
         </div>
 
-        {{-- MoMo banner --}}
-        @php
-            $u = auth()->user();
-            $providerLabel = match ($u?->momo_provider) {
-                'mtn' => 'MTN MoMo',
-                'orange' => 'Orange Money',
-                'express' => 'Express Union',
-                default => null,
-            };
-        @endphp
-        @if (! $u?->momo_number)
-            <div class="bg-amber-50 ring-1 ring-amber-200 rounded-2xl p-4 mb-4 flex items-start gap-3">
-                <div class="text-2xl">📱</div>
-                <div class="flex-1 min-w-0">
-                    <div class="font-bold text-amber-900 text-sm">
-                        {{ $lang === 'fr' ? 'Activez Mobile Money pour recevoir des paiements' : 'Enable Mobile Money to receive payments' }}
-                    </div>
-                    <div class="text-[12px] text-amber-800 mt-0.5">
-                        {{ $lang === 'fr' ? "Sans numéro MoMo, les acheteurs ne peuvent pas cliquer sur \"Acheter maintenant\"." : 'Without a MoMo number, buyers can\'t use the "Buy now" button on your listings.' }}
-                    </div>
-                </div>
-                <button wire:click="openMomoSettings" type="button"
-                        class="text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-full px-3 py-1.5 shrink-0">
-                    {{ $lang === 'fr' ? 'Configurer' : 'Set up' }}
-                </button>
-            </div>
-        @else
-            <div class="bg-emerald-50 ring-1 ring-emerald-200 rounded-2xl p-3 mb-4 flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2 text-[13px] text-emerald-900 min-w-0">
-                    <span class="text-lg">📱</span>
-                    <span class="font-semibold truncate">{{ $providerLabel }}</span>
-                    <span class="font-mono tracking-wider truncate">{{ $u->momo_number }}</span>
-                </div>
-                <button wire:click="openMomoSettings" type="button"
-                        class="text-xs font-semibold text-emerald-800 hover:underline shrink-0">
-                    {{ $lang === 'fr' ? 'Modifier' : 'Edit' }}
-                </button>
-            </div>
-        @endif
+
 
         {{-- Filter pills --}}
         <div class="flex gap-2 overflow-x-auto mb-4 pb-1 -mx-1 px-1 scrollbar-hide">
@@ -107,7 +69,10 @@
                             default => 'bg-gray-100 text-gray-700',
                         };
                     @endphp
-                    <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden hover:shadow-md transition flex flex-col">
+                    <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden hover:shadow-md transition flex flex-col relative">
+                        <div class="absolute top-2 left-2 z-10 bg-white/90 backdrop-blur rounded p-1 shadow-sm flex items-center justify-center">
+                            <input type="checkbox" wire:model.live="selected" value="{{ $listing->id }}" class="w-4 h-4 rounded text-cm-green focus:ring-cm-green border-gray-300 cursor-pointer">
+                        </div>
                         <a href="{{ route('marketplace.show', ['slug' => $listing->slug]) }}" wire:navigate
                            class="block aspect-[4/3] bg-slate-100 relative group">
                             @if ($listing->coverUrl())
@@ -115,7 +80,7 @@
                             @else
                                 <div class="absolute inset-0 flex items-center justify-center text-5xl text-slate-300">📦</div>
                             @endif
-                            <span class="absolute top-2.5 left-2.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm {{ $statusColor }}">
+                            <span class="absolute bottom-2.5 left-2.5 text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm {{ $statusColor }}">
                                 {{ $lang === 'fr' ? $listing->status?->labelFr() : $listing->status?->label() }}
                             </span>
                             @if ($listing->is_featured)
@@ -135,10 +100,10 @@
                                     <svg class="w-3.5 h-3.5 text-cm-red" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                                     {{ $listing->favorites_count }}
                                 </span>
-                                <span class="flex items-center gap-1" title="{{ $lang === 'fr' ? 'Messages' : 'Inquiries' }}">
+                                <a href="{{ route('marketplace.inbox', ['tab' => 'selling', 'l' => $listing->id]) }}" wire:navigate class="flex items-center gap-1 hover:text-cm-green transition" title="{{ $lang === 'fr' ? 'Messages' : 'Inquiries' }}">
                                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
                                     {{ $listing->messages_count }}
-                                </span>
+                                </a>
                             </div>
                             <div class="mt-auto pt-3 flex flex-wrap gap-1.5">
                                 <a href="{{ route('marketplace.edit', ['listing' => $listing->id]) }}" wire:navigate
@@ -312,61 +277,25 @@
             </div>
         </div>
     @endif
-
-    {{-- ─── MoMo Settings Modal ─── --}}
-    @if ($showMomoModal)
-        <div class="fixed inset-0 z-50 grid place-items-center bg-black/60 backdrop-blur-sm p-4"
-             wire:click.self="closeMomoSettings"
-             x-data x-trap.noscroll>
-            <div class="bg-white rounded-2xl shadow-2xl ring-1 ring-slate-200 max-w-md w-full overflow-hidden"
-                 x-transition:enter="transition duration-200" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100">
-                <div class="px-5 py-4 border-b border-slate-200 bg-gradient-to-r from-cm-green to-cm-green/80 text-white">
-                    <h3 class="text-lg font-extrabold">
-                        📱 {{ $lang === 'fr' ? 'Mobile Money' : 'Mobile Money' }}
-                    </h3>
-                    <p class="text-xs opacity-90 mt-0.5">
-                        {{ $lang === 'fr' ? 'Recevez les paiements directement sur votre numéro.' : 'Receive payments directly on your number.' }}
-                    </p>
-                </div>
-
-                <div class="p-5 space-y-4">
-                    <div>
-                        <label class="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                            {{ $lang === 'fr' ? 'Opérateur' : 'Provider' }} <span class="text-cm-red">*</span>
-                        </label>
-                        <div class="grid grid-cols-3 gap-2">
-                            @foreach (['mtn' => 'MTN MoMo', 'orange' => 'Orange Money', 'express' => 'Express Union'] as $val => $label)
-                                <button type="button" wire:click="$set('momoProvider','{{ $val }}')"
-                                        class="text-xs font-bold rounded-xl py-2.5 ring-2 transition
-                                        {{ $momoProvider === $val ? 'bg-cm-yellow/20 ring-cm-yellow text-slate-900' : 'bg-white ring-slate-200 text-slate-700 hover:ring-cm-yellow/50' }}">
-                                    {{ $label }}
-                                </button>
-                            @endforeach
-                        </div>
-                        @error('momoProvider') <p class="text-xs text-cm-red mt-1">{{ $message }}</p> @enderror
-                    </div>
-
-                    <div>
-                        <label class="block text-[13px] font-semibold text-slate-700 mb-1.5">
-                            {{ $lang === 'fr' ? 'Numéro' : 'Number' }} <span class="text-cm-red">*</span>
-                        </label>
-                        <input type="tel" wire:model="momoNumber" placeholder="6XX XX XX XX" maxlength="20"
-                               class="w-full rounded-xl ring-1 ring-slate-300 px-3 py-2.5 text-sm font-mono tracking-wider focus:ring-2 focus:ring-cm-green focus:outline-none">
-                        @error('momoNumber') <p class="text-xs text-cm-red mt-1">{{ $message }}</p> @enderror
-                        <p class="text-[11px] text-slate-500 mt-1">
-                            {{ $lang === 'fr' ? 'Visible uniquement par vos acheteurs en cours de paiement.' : 'Only visible to buyers during checkout.' }}
-                        </p>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-end gap-2 px-5 py-4 bg-slate-50 border-t border-slate-200">
-                    <button wire:click="closeMomoSettings" type="button"
-                            class="text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 ring-1 ring-slate-300 rounded-full px-4 py-2">
-                        {{ $lang === 'fr' ? 'Annuler' : 'Cancel' }}
+    {{-- ─── Bulk Actions Bar ─── --}}
+    @if (count($selected) > 0)
+        <div class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4">
+            <div class="max-w-6xl mx-auto w-full flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <button wire:click="toggleSelectAll" class="text-sm font-bold text-slate-700 hover:text-cm-green">
+                        {{ count($selected) === count($this->listings->pluck('id')) ? ($lang === 'fr' ? 'Désélectionner tout' : 'Deselect All') : ($lang === 'fr' ? 'Sélectionner tout' : 'Select All') }}
                     </button>
-                    <button wire:click="saveMomo" type="button"
-                            class="text-sm font-bold text-white bg-cm-green hover:bg-cm-green/90 rounded-full px-5 py-2 shadow">
-                        {{ $lang === 'fr' ? 'Enregistrer' : 'Save' }}
+                    <span class="text-sm font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">{{ count($selected) }} {{ $lang === 'fr' ? 'sélectionné(s)' : 'selected' }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button wire:click="bulkPause" class="text-sm font-bold px-4 py-2 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 ring-1 ring-amber-200 transition">
+                        ⏸ {{ $lang === 'fr' ? 'Pause' : 'Pause' }}
+                    </button>
+                    <button wire:click="bulkReactivate" class="text-sm font-bold px-4 py-2 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 transition">
+                        ▶ {{ $lang === 'fr' ? 'Réactiver' : 'Reactivate' }}
+                    </button>
+                    <button wire:click="bulkRemove" wire:confirm="{{ $lang === 'fr' ? 'Supprimer les annonces sélectionnées ?' : 'Remove selected listings?' }}" class="text-sm font-bold px-4 py-2 rounded-full bg-cm-red/10 hover:bg-cm-red text-cm-red hover:text-white transition">
+                        🗑 {{ $lang === 'fr' ? 'Supprimer' : 'Delete' }}
                     </button>
                 </div>
             </div>

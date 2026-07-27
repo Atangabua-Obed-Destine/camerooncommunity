@@ -17,7 +17,7 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
-#[Layout('components.layouts.rails', ['active' => 'marketplace'])]
+#[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 class ListingComposer extends Component
 {
     use WithFileUploads;
@@ -47,7 +47,7 @@ class ListingComposer extends Component
     public int $quantity = 1;
 
     // Step 4: fulfillment + location
-    public array $fulfillment = [];
+    public array $fulfillment = ['pickup'];
     public string $country = 'CM';
     public string $region = '';
     public string $city = '';
@@ -68,12 +68,13 @@ class ListingComposer extends Component
     protected function validationAttributes(): array
     {
         return [
-            'categoryId' => __('category'),
-            'priceType'  => __('price type'),
-            'title'      => __('title'),
-            'price'      => __('price'),
-            'condition'  => __('condition'),
-            'photos'     => __('photos'),
+            'categoryId'  => __('category'),
+            'priceType'   => __('price type'),
+            'title'       => __('title'),
+            'price'       => __('price'),
+            'condition'   => __('condition'),
+            'photos'      => __('photos'),
+            'fulfillment' => __('delivery method'),
         ];
     }
 
@@ -656,3 +657,4 @@ class ListingComposer extends Component
         }
     }
 }
+
