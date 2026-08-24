@@ -35,8 +35,8 @@
      x-on:mp-close-listing.window="closeItem()">
 
     {{-- ─── Mobile sticky bar with title + filters trigger ─── --}}
-    <div class="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
-        <h1 class="text-lg font-extrabold text-slate-900 truncate">
+    <div class="lg:hidden sticky top-0 z-30 bg-cm-green border-b border-cm-green-dark px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
+        <h1 class="text-lg font-extrabold text-white truncate">
             @if ($this->activeCategory)
                 <span class="mr-1">{{ $this->activeCategory->icon }}</span>{{ $this->activeCategory->localizedName() }}
             @else
@@ -45,12 +45,12 @@
         </h1>
         <div class="flex items-center gap-1.5">
             <button type="button" @click="filtersOpen = true"
-                    class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs rounded-full px-3 py-1.5 transition">
+                    class="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white font-semibold text-xs rounded-full px-3 py-1.5 transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 4h18M6 12h12M10 20h4"/></svg>
                 <span x-data x-text="$store.lang.t('Filters','Filtres')"></span>
             </button>
             <a href="{{ route('marketplace.sell') }}" wire:navigate
-               class="inline-flex items-center gap-1 bg-cm-green hover:bg-cm-green/90 text-white font-semibold rounded-full px-3 py-1.5 text-xs shadow-sm transition">
+               class="inline-flex items-center gap-1 bg-white hover:bg-slate-100 text-cm-green font-semibold rounded-full px-3 py-1.5 text-xs shadow-sm transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
                 <span x-data x-text="$store.lang.t('Sell','Vendre')"></span>
             </a>
