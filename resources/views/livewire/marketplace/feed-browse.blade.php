@@ -35,7 +35,7 @@
      x-on:mp-close-listing.window="closeItem()">
 
     {{-- ─── Mobile sticky bar with title + filters trigger ─── --}}
-    <div class="lg:hidden sticky top-0 z-30 bg-cm-green border-b border-cm-green-dark px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
+    <div class="lg:hidden sticky top-0 z-30 bg-cm-bar border-b border-cm-bar-dark px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
         <h1 class="text-lg font-extrabold text-white truncate">
             @if ($this->activeCategory)
                 <span class="mr-1">{{ $this->activeCategory->icon }}</span>{{ $this->activeCategory->localizedName() }}
@@ -50,7 +50,7 @@
                 <span x-data x-text="$store.lang.t('Filters','Filtres')"></span>
             </button>
             <a href="{{ route('marketplace.sell') }}" wire:navigate
-               class="inline-flex items-center gap-1 bg-white hover:bg-slate-100 text-cm-green font-semibold rounded-full px-3 py-1.5 text-xs shadow-sm transition">
+               class="inline-flex items-center gap-1 bg-white hover:bg-slate-100 text-cm-bar font-semibold rounded-full px-3 py-1.5 text-xs shadow-sm transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
                 <span x-data x-text="$store.lang.t('Sell','Vendre')"></span>
             </a>

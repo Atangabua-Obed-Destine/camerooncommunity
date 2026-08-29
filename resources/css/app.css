@@ -33,6 +33,10 @@
     --color-cm-blue-light: #4a6baf;
     --color-cm-blue-dark: #2d4373;
 
+    /* Panel top-bar blue (GoConnect chat list, GoMarket sidebar) */
+    --color-cm-bar: #015083;
+    --color-cm-bar-dark: #01395e;
+
     /* Neutral palette */
     --color-slate-50: #f8fafc;
     --color-slate-100: #f1f5f9;
@@ -763,8 +767,8 @@
     gap: 8px;
     height: 56px;
     padding: 0 8px;
-    background: var(--color-cm-green);
-    border-bottom: 1px solid var(--color-cm-green-dark);
+    background: var(--color-cm-bar);
+    border-bottom: 1px solid var(--color-cm-bar-dark);
     flex-shrink: 0;
 }
 .yard-header__btn {
@@ -1023,7 +1027,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1.5px solid var(--color-cm-green);
+    border: 1.5px solid var(--color-cm-bar);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     pointer-events: none;
 }
@@ -6605,8 +6609,8 @@
     gap: 8px;
     height: 56px;
     padding: 0 12px;
-    background: var(--color-cm-green);
-    border-bottom: 1px solid var(--color-cm-green-dark);
+    background: var(--color-cm-bar);
+    border-bottom: 1px solid var(--color-cm-bar-dark);
     flex-shrink: 0;
     position: sticky;
     top: 0;
