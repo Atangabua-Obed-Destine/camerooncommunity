@@ -392,7 +392,7 @@
                     
                     {{-- Mini map wrapper --}}
                     <div class="relative group cursor-pointer" @click="showMapModal = true; $nextTick(() => { setTimeout(() => renderLargeMap(), 150) })">
-                        <div class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-100 relative h-48 w-full z-10 pointer-events-none" x-ref="smallMap"></div>
+                        <div class="rounded-xl overflow-hidden ring-1 ring-slate-200 bg-slate-100 relative h-32 w-full z-10 pointer-events-none" x-ref="smallMap"></div>
                         <div class="absolute inset-0 z-20 rounded-xl bg-black/5 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
                             <span class="bg-white/95 text-slate-900 text-xs font-bold px-3 py-1.5 rounded-full shadow-sm pointer-events-none">
                                 {{ $lang === 'fr' ? 'Agrandir la carte' : 'Expand map' }}
@@ -425,6 +425,91 @@
                     </template>
                 </div>
             @endif
+
+            {{-- ─── Sponsored Ads ─── --}}
+            <div class="border-t border-slate-200 pt-4" x-data="{
+                    ads: [],
+                    activeIdx: 0,
+                    init() {
+                        fetch('{{ route("ads.yard") }}', { headers: { 'Accept': 'application/json' } })
+                            .then(r => r.ok ? r.json() : [])
+                            .then(data => {
+                                this.ads = data;
+                                this.$nextTick(() => {
+                                    const scrl = this.$refs.adscrl;
+                                    if(!scrl) return;
+                                    const updateCenter = () => {
+                                        const scrlRect = scrl.getBoundingClientRect();
+                                        const scrlCenter = scrlRect.left + scrlRect.width / 2;
+                                        let closestIdx = 0; let minDiff = Infinity;
+                                        const items = [...scrl.children].filter(c => c.tagName !== 'TEMPLATE');
+                                        items.forEach((child, i) => {
+                                            const rect = child.getBoundingClientRect();
+                                            const childCenter = rect.left + rect.width / 2;
+                                            const diff = Math.abs(scrlCenter - childCenter);
+                                            if (diff < minDiff) { minDiff = diff; closestIdx = i; }
+                                        });
+                                        if (this.activeIdx !== closestIdx) this.activeIdx = closestIdx;
+                                    };
+                                    scrl.addEventListener('scroll', updateCenter, { passive: true });
+                                    updateCenter();
+
+                                    if(data.length > 1) {
+                                        setInterval(() => {
+                                            if(!scrl || scrl.matches(':hover') || scrl.matches(':active')) return;
+                                            const items = [...scrl.children].filter(c => c.tagName !== 'TEMPLATE');
+                                            const nextIdx = (this.activeIdx + 1) % items.length;
+                                            if (items[nextIdx]) {
+                                                const child = items[nextIdx];
+                                                scrl.scrollTo({ left: child.offsetLeft - scrl.clientWidth / 2 + child.offsetWidth / 2, behavior: 'smooth' });
+                                            }
+                                        }, 6000);
+                                    }
+                                });
+                            })
+                            .catch(e => console.warn('Failed to load ads', e));
+                    }
+                }" x-show="ads.length > 0" x-cloak>
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-bold text-slate-900">
+                        {{ $lang === 'fr' ? 'Sponsorisé' : 'Sponsored' }}
+                    </h2>
+                </div>
+                <div x-ref="adscrl" class="relative flex overflow-x-auto snap-x snap-mandatory gap-3 pb-6 px-[calc(50%-70px)] sm:px-[calc(50%-80px)] -mx-4 sm:mx-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-center">
+                    <template x-for="(ad, index) in ads" :key="ad.id">
+                        <div :class="activeIdx === index ? 'scale-100 opacity-100 shadow-lg z-10 ring-2 ring-cm-green' : 'scale-90 opacity-50 hover:opacity-80 z-0 ring-1 ring-slate-200'" 
+                             class="w-[140px] sm:w-[160px] shrink-0 snap-center bg-white rounded-2xl overflow-hidden flex flex-col group relative transition-all duration-500 ease-out origin-center cursor-pointer"
+                             @click="if(activeIdx !== index) { $event.preventDefault(); $event.stopPropagation(); $refs.adscrl.scrollTo({ left: $el.offsetLeft - $refs.adscrl.clientWidth / 2 + $el.offsetWidth / 2, behavior: 'smooth' }); }">
+                            {{-- Image or Video --}}
+                            <div class="relative w-full aspect-square bg-slate-100 flex-shrink-0">
+                                <template x-if="ad.video">
+                                    <iframe :src="ad.video + '?autoplay=0&mute=1&loop=1&playlist=' + ad.video.split('/').pop()" frameborder="0"
+                                            class="absolute inset-0 w-full h-full pointer-events-none"
+                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                            allowfullscreen loading="lazy"></iframe>
+                                </template>
+                                <template x-if="!ad.video && ad.image">
+                                    <img :src="ad.image" :alt="ad.title" loading="lazy" class="w-full h-full object-cover pointer-events-none">
+                                </template>
+                                <template x-if="!ad.video && !ad.image">
+                                    <div class="w-full h-full grid place-items-center text-2xl">📢</div>
+                                </template>
+                                <div class="absolute top-1 right-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">Ad</div>
+                            </div>
+                            
+                            {{-- Body --}}
+                            <a :href="'{{ url('/') }}/ad/' + ad.id + '/click'" target="_blank" rel="noopener noreferrer" class="p-2.5 flex flex-col flex-1 bg-white">
+                                <div class="text-[12px] font-bold text-slate-900 line-clamp-2 leading-snug" x-text="ad.title"></div>
+                                <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5 mb-1.5 flex-1" x-text="ad.description" x-show="ad.description"></div>
+                                <div class="flex items-center justify-between mt-auto pt-1.5 border-t border-slate-100">
+                                    <span class="text-[10px] text-slate-400 font-medium truncate pr-1" x-text="ad.advertiser" x-show="ad.advertiser"></span>
+                                    <span class="text-[10px] font-bold text-cm-green whitespace-nowrap" x-text="ad.cta || '{{ $lang === 'fr' ? 'Plus' : 'More' }}'"></span>
+                                </div>
+                            </a>
+                        </div>
+                    </template>
+                </div>
+            </div>
 
             {{-- ─── Seller card ─── --}}
             @if ($seller)
@@ -718,91 +803,6 @@
                     @endif
                 </div>
             @endif
-
-            {{-- ─── Sponsored Ads ─── --}}
-            <div class="border-t border-slate-200 pt-4" x-data="{
-                    ads: [],
-                    activeIdx: 0,
-                    init() {
-                        fetch('{{ route("ads.yard") }}', { headers: { 'Accept': 'application/json' } })
-                            .then(r => r.ok ? r.json() : [])
-                            .then(data => {
-                                this.ads = data;
-                                this.$nextTick(() => {
-                                    const scrl = this.$refs.adscrl;
-                                    if(!scrl) return;
-                                    const updateCenter = () => {
-                                        const scrlRect = scrl.getBoundingClientRect();
-                                        const scrlCenter = scrlRect.left + scrlRect.width / 2;
-                                        let closestIdx = 0; let minDiff = Infinity;
-                                        const items = [...scrl.children].filter(c => c.tagName !== 'TEMPLATE');
-                                        items.forEach((child, i) => {
-                                            const rect = child.getBoundingClientRect();
-                                            const childCenter = rect.left + rect.width / 2;
-                                            const diff = Math.abs(scrlCenter - childCenter);
-                                            if (diff < minDiff) { minDiff = diff; closestIdx = i; }
-                                        });
-                                        if (this.activeIdx !== closestIdx) this.activeIdx = closestIdx;
-                                    };
-                                    scrl.addEventListener('scroll', updateCenter, { passive: true });
-                                    updateCenter();
-
-                                    if(data.length > 1) {
-                                        setInterval(() => {
-                                            if(!scrl || scrl.matches(':hover') || scrl.matches(':active')) return;
-                                            const items = [...scrl.children].filter(c => c.tagName !== 'TEMPLATE');
-                                            const nextIdx = (this.activeIdx + 1) % items.length;
-                                            if (items[nextIdx]) {
-                                                const child = items[nextIdx];
-                                                scrl.scrollTo({ left: child.offsetLeft - scrl.clientWidth / 2 + child.offsetWidth / 2, behavior: 'smooth' });
-                                            }
-                                        }, 6000);
-                                    }
-                                });
-                            })
-                            .catch(e => console.warn('Failed to load ads', e));
-                    }
-                }" x-show="ads.length > 0" x-cloak>
-                <div class="flex items-center justify-between mb-3">
-                    <h2 class="text-lg font-bold text-slate-900">
-                        {{ $lang === 'fr' ? 'Sponsorisé' : 'Sponsored' }}
-                    </h2>
-                </div>
-                <div x-ref="adscrl" class="relative flex overflow-x-auto snap-x snap-mandatory gap-3 pb-6 px-[calc(50%-70px)] sm:px-[calc(50%-80px)] -mx-4 sm:mx-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden items-center">
-                    <template x-for="(ad, index) in ads" :key="ad.id">
-                        <div :class="activeIdx === index ? 'scale-100 opacity-100 shadow-lg z-10 ring-2 ring-cm-green' : 'scale-90 opacity-50 hover:opacity-80 z-0 ring-1 ring-slate-200'" 
-                             class="w-[140px] sm:w-[160px] shrink-0 snap-center bg-white rounded-2xl overflow-hidden flex flex-col group relative transition-all duration-500 ease-out origin-center cursor-pointer"
-                             @click="if(activeIdx !== index) { $event.preventDefault(); $event.stopPropagation(); $refs.adscrl.scrollTo({ left: $el.offsetLeft - $refs.adscrl.clientWidth / 2 + $el.offsetWidth / 2, behavior: 'smooth' }); }">
-                            {{-- Image or Video --}}
-                            <div class="relative w-full aspect-square bg-slate-100 flex-shrink-0">
-                                <template x-if="ad.video">
-                                    <iframe :src="ad.video + '?autoplay=0&mute=1&loop=1&playlist=' + ad.video.split('/').pop()" frameborder="0"
-                                            class="absolute inset-0 w-full h-full pointer-events-none"
-                                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                            allowfullscreen loading="lazy"></iframe>
-                                </template>
-                                <template x-if="!ad.video && ad.image">
-                                    <img :src="ad.image" :alt="ad.title" loading="lazy" class="w-full h-full object-cover pointer-events-none">
-                                </template>
-                                <template x-if="!ad.video && !ad.image">
-                                    <div class="w-full h-full grid place-items-center text-2xl">📢</div>
-                                </template>
-                                <div class="absolute top-1 right-1 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide">Ad</div>
-                            </div>
-                            
-                            {{-- Body --}}
-                            <a :href="'{{ url('/') }}/ad/' + ad.id + '/click'" target="_blank" rel="noopener noreferrer" class="p-2.5 flex flex-col flex-1 bg-white">
-                                <div class="text-[12px] font-bold text-slate-900 line-clamp-2 leading-snug" x-text="ad.title"></div>
-                                <div class="text-[11px] text-slate-500 line-clamp-1 mt-0.5 mb-1.5 flex-1" x-text="ad.description" x-show="ad.description"></div>
-                                <div class="flex items-center justify-between mt-auto pt-1.5 border-t border-slate-100">
-                                    <span class="text-[10px] text-slate-400 font-medium truncate pr-1" x-text="ad.advertiser" x-show="ad.advertiser"></span>
-                                    <span class="text-[10px] font-bold text-cm-green whitespace-nowrap" x-text="ad.cta || '{{ $lang === 'fr' ? 'Plus' : 'More' }}'"></span>
-                                </div>
-                            </a>
-                        </div>
-                    </template>
-                </div>
-            </div>
 
             {{-- ─── Similar listings ─── --}}
             @if ($this->similarListings->isNotEmpty())
