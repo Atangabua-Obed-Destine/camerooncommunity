@@ -861,7 +861,10 @@
     @endif
 
     {{-- ── Input Bar ── --}}
-    <div class="yard-chat__input-bar" x-data="inputBar()" @message-sent.window="msgText = ''; if($refs.msgInput) { $refs.msgInput.value = ''; $refs.msgInput.style.height = 'auto'; $nextTick(() => $refs.msgInput.focus()); }" @media-sent.window="closePreview()" @poll-created.window="closePoll()">
+    {{-- No @message-sent handler here on purpose: that event also fires for media, polls and
+         every incoming message (onMessageReceived). Clearing/refocusing on it wiped half-typed
+         drafts and popped the mobile keyboard back up. Text sends clear the input themselves. --}}
+    <div class="yard-chat__input-bar" x-data="inputBar()" @media-sent.window="closePreview()" @poll-created.window="closePoll()">
         {{-- Hidden file inputs --}}
         <input type="file" x-ref="photoInput" class="hidden" accept="image/*" wire:model="mediaUpload"
                @change="onFileSelected($event, 'image')">
@@ -1156,8 +1159,11 @@
             </div>
 
             {{-- Send button outside pill (only when text) --}}
+            {{-- @mousedown.prevent stops the tap from stealing focus from the textarea,
+                 so the mobile keyboard stays up after sending, like WhatsApp. --}}
             <button type="submit" class="yard-chat__send-btn"
                     wire:loading.attr="disabled"
+                    @mousedown.prevent
                     @click.prevent="if(msgText.trim()){ let t=msgText; msgText=''; if($refs.msgInput){ $refs.msgInput.value=''; $refs.msgInput.style.height='auto'; } window.dispatchEvent(new CustomEvent('optimistic-msg',{detail:{text:t}})); $wire.sendMessage(t) }"
                     x-show="msgText">
                 <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
