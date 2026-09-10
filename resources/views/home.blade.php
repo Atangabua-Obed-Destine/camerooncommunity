@@ -564,7 +564,7 @@
                        )"></p>
                     <div class="mt-4 flex items-center gap-2 text-cm-yellow-dark font-semibold text-sm">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-                        <span x-text="$store.lang.t('Solved by EasyGoParcel', 'Résolu par EasyGoParcel')"></span>
+                        <span x-text="$store.lang.t('Solved by GoParcel', 'Résolu par GoParcel')"></span>
                     </div>
                 </div>
             </div>
@@ -593,11 +593,11 @@
                     ['name' => 'GoConnect', 'nameFr' => 'GoConnect', 'icon' => '💬', 'desc' => 'Real-time chat rooms for your country and city', 'descFr' => 'Salons de discussion en temps réel pour votre pays et ville', 'live' => true],
                     ['name' => 'Solidarity', 'nameFr' => 'Solidarité', 'icon' => '🤝', 'desc' => 'Community fundraising for those in need', 'descFr' => 'Collectes communautaires pour ceux dans le besoin', 'live' => false],
                     ['name' => 'Marché', 'nameFr' => 'Marché', 'icon' => '🛒', 'desc' => 'Buy and sell within the community', 'descFr' => 'Achetez et vendez au sein de la communauté', 'live' => false],
-                    ['name' => 'EasyGoParcel', 'nameFr' => 'EasyGoParcel', 'icon' => '📦', 'desc' => 'Send parcels home with trusted travellers', 'descFr' => 'Envoyez des colis au pays avec des voyageurs de confiance', 'live' => false],
+                    ['name' => 'GoParcel', 'nameFr' => 'GoParcel', 'icon' => '📦', 'desc' => 'Send parcels home with trusted travellers', 'descFr' => 'Envoyez des colis au pays avec des voyageurs de confiance', 'live' => false],
                     ['name' => 'GoRide', 'nameFr' => 'GoRide', 'icon' => '🚗', 'desc' => 'Ride sharing for community events and travel', 'descFr' => 'Covoiturage pour événements et voyages communautaires', 'live' => false],
                     ['name' => 'CamEvents', 'nameFr' => 'CamEvents', 'icon' => '🎉', 'desc' => 'Discover and create community events', 'descFr' => 'Découvrez et créez des événements communautaires', 'live' => false],
                     ['name' => 'KamerNest', 'nameFr' => 'KamerNest', 'icon' => '🏠', 'desc' => 'Find trusted housing from the community', 'descFr' => 'Trouvez un logement de confiance dans la communauté', 'live' => false],
-                    ['name' => 'WorkConnect', 'nameFr' => 'WorkConnect', 'icon' => '💼', 'desc' => 'Job listings and career opportunities', 'descFr' => 'Offres d\'emploi et opportunités de carrière', 'live' => false],
+                    ['name' => 'GoPartner', 'nameFr' => 'GoPartner', 'icon' => '💼', 'desc' => 'Job listings and career opportunities', 'descFr' => 'Offres d\'emploi et opportunités de carrière', 'live' => false],
                     ['name' => 'KamerEats', 'nameFr' => 'KamerEats', 'icon' => '🍲', 'desc' => 'Find Cameroonian food near you', 'descFr' => 'Trouvez de la nourriture camerounaise près de chez vous', 'live' => false],
                     ['name' => 'KamerSOS', 'nameFr' => 'KamerSOS', 'icon' => '🆘', 'desc' => 'Emergency help from community leaders', 'descFr' => 'Aide d\'urgence des leaders communautaires', 'live' => false],
                     ['name' => 'CamStories', 'nameFr' => 'CamStories', 'icon' => '📸', 'desc' => '24-hour stories from the diaspora', 'descFr' => 'Stories de 24h de la diaspora', 'live' => false],
@@ -914,8 +914,8 @@
                             'city' => 'Birmingham',
                             'initial' => 'NM',
                             'color' => 'bg-cm-yellow-dark',
-                            'quote' => 'I found my flat through KamerNest, send packages home through EasyGoParcel, and found my best friend in the Birmingham Room. This app is everything.',
-                            'quoteFr' => 'J\'ai trouvé mon appartement sur KamerNest, j\'envoie des colis au pays via EasyGoParcel, et j\'ai trouvé ma meilleure amie dans le Salon de Birmingham. Cette appli est tout.',
+                            'quote' => 'I found my flat through KamerNest, send packages home through GoParcel, and found my best friend in the Birmingham Room. This app is everything.',
+                            'quoteFr' => 'J\'ai trouvé mon appartement sur KamerNest, j\'envoie des colis au pays via GoParcel, et j\'ai trouvé ma meilleure amie dans le Salon de Birmingham. Cette appli est tout.',
                         ],
                     ];
                 @endphp
@@ -1035,8 +1035,8 @@
         <a href="{{ route('login') }}"
            aria-label="{{ __('Login') }}"
            class="absolute left-4 top-1/2 -translate-y-1/2 flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/30 text-white transition-colors hover:bg-white/20">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
             </svg>
         </a>
         <span class="text-white font-semibold text-sm tracking-wide" x-text="$store.lang.t('Download Our App', 'Téléchargez notre app')"></span>

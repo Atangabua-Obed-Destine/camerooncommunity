@@ -6,9 +6,9 @@
         - Home          (live)
         - The Yard      (live)
         - Marketplace   (coming soon — non-clickable, shows label)
-        - EasyGoParcel  (coming soon)
+        - GoParcel  (coming soon)
         - RoadFam       (coming soon)
-        - WorkConnect   (coming soon)
+        - GoPartner   (coming soon)
 
     Props (in $__data):
         - $mode    : 'desktop' | 'mobile'
@@ -83,9 +83,9 @@
     // tap (mobile) toggles a small label badge below the icon. Tapping
     // does NOT navigate anywhere.
     $soonTabs = [
-        ['key' => 'easygoparcel', 'en' => 'EasyGoParcel', 'fr' => 'EasyGoParcel'],
+        ['key' => 'easygoparcel', 'en' => 'GoParcel', 'fr' => 'GoParcel'],
         ['key' => 'roadfam',      'en' => 'GoRide',       'fr' => 'GoRide'],
-        ['key' => 'workconnect',  'en' => 'WorkConnect',  'fr' => 'WorkConnect'],
+        ['key' => 'workconnect',  'en' => 'GoPartner',  'fr' => 'GoPartner'],
     ];
 @endphp
 
