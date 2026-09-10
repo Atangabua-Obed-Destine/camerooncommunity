@@ -221,7 +221,7 @@
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
                             <div class="text-2xl mb-1">📦</div>
-                            <p class="text-xs font-semibold text-slate-700">EasyGoParcel</p>
+                            <p class="text-xs font-semibold text-slate-700">GoParcel</p>
                             <span class="inline-block mt-1 text-[10px] font-bold text-cm-yellow bg-cm-yellow/10 rounded-full px-2 py-0.5" x-text="$store.lang.t('Coming Soon', 'Bientôt')"></span>
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 text-center border border-slate-200">
