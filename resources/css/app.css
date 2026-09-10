@@ -36,6 +36,7 @@
     /* Panel top-bar blue (GoConnect chat list, GoMarket sidebar) */
     --color-cm-bar: #015083;
     --color-cm-bar-dark: #01395e;
+    --color-cm-bar-deep: #012a47;
 
     /* Neutral palette */
     --color-slate-50: #f8fafc;
@@ -49,6 +50,16 @@
     --color-slate-800: #1e293b;
     --color-slate-900: #0f172a;
     --color-slate-950: #020617;
+}
+
+/* Panel top-bar gradient — shared by .yard-header, .mp-header and the
+   GoMarket mobile bar (.bg-cm-bar-gradient). Same stops as the Yard
+   sidebar header so every branded bar reads as one surface. */
+:root {
+    --cm-bar-gradient: linear-gradient(135deg, var(--color-cm-bar) 0%, var(--color-cm-bar-dark) 60%, var(--color-cm-bar-deep) 100%);
+}
+.bg-cm-bar-gradient {
+    background: var(--cm-bar-gradient);
 }
 
 /* Hide Alpine x-cloak elements until Alpine initializes (prevents flash). */
@@ -767,8 +778,8 @@
     gap: 8px;
     height: 56px;
     padding: 0 8px;
-    background: var(--color-cm-bar);
-    border-bottom: 1px solid var(--color-cm-bar-dark);
+    background: var(--cm-bar-gradient);
+    border-bottom: 1px solid var(--color-cm-bar-deep);
     flex-shrink: 0;
 }
 .yard-header__btn {
@@ -1027,7 +1038,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 1.5px solid var(--color-cm-bar);
+    border: 1.5px solid var(--color-cm-bar-dark);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     pointer-events: none;
 }
@@ -6609,8 +6620,8 @@
     gap: 8px;
     height: 56px;
     padding: 0 12px;
-    background: var(--color-cm-bar);
-    border-bottom: 1px solid var(--color-cm-bar-dark);
+    background: var(--cm-bar-gradient);
+    border-bottom: 1px solid var(--color-cm-bar-deep);
     flex-shrink: 0;
     position: sticky;
     top: 0;

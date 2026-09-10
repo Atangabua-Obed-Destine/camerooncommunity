@@ -35,7 +35,7 @@
      x-on:mp-close-listing.window="closeItem()">
 
     {{-- ─── Mobile sticky bar with title + filters trigger ─── --}}
-    <div class="lg:hidden sticky top-0 z-30 bg-cm-bar border-b border-cm-bar-dark px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
+    <div class="lg:hidden sticky top-0 z-30 bg-cm-bar-gradient border-b border-cm-bar-deep px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
         <h1 class="text-lg font-extrabold text-white truncate">
             @if ($this->activeCategory)
                 <span class="mr-1">{{ $this->activeCategory->icon }}</span>{{ $this->activeCategory->localizedName() }}
