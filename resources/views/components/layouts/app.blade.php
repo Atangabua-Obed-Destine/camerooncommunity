@@ -19,6 +19,9 @@
     <link rel="alternate icon" href="{{ asset('favicon.ico') }}">
     @endif
 
+    {{-- PWA: manifest, icons, service worker --}}
+    @include('partials.pwa-head')
+
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
@@ -219,6 +222,9 @@
 
     {{-- Real-time connection request / accept notifier (toast + chime + confetti) --}}
     <x-connection-notifier />
+
+    {{-- PWA install banner --}}
+    @include('partials.pwa-install')
 
     @livewireScripts
     <script>
