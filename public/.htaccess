@@ -6,6 +6,16 @@
     # Serve .webm as audio so <audio> elements play them
     <IfModule mod_mime.c>
         AddType audio/webm .webm
+        AddType application/manifest+json .webmanifest
+    </IfModule>
+
+    # Long-cache icons only. Never add a broad Cache-Control here: it would catch
+    # HTML responses, which carry CSRF tokens and must stay uncached.
+    # sw.js needs no rule — it is a route and sets its own no-cache header.
+    <IfModule mod_headers.c>
+        <FilesMatch "\.(png|ico|svg)$">
+            Header set Cache-Control "public, max-age=604800"
+        </FilesMatch>
     </IfModule>
 
     RewriteEngine On

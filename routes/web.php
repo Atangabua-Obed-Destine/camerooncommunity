@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LanguageController;
 use App\Http\Controllers\LocationController;
+use App\Http\Controllers\PwaController;
 use App\Http\Controllers\Yard\YardController;
 use Illuminate\Support\Facades\Route;
 
@@ -18,6 +19,14 @@ Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
 Route::view('/terms', 'legal.terms')->name('legal.terms');
 Route::view('/contact', 'pages.contact')->name('contact');
 Route::view('/about', 'pages.about')->name('about');
+
+// ─── PWA (public — must stay outside auth/verified/location/onboarded) ───
+// Served as routes so start_url/scope adapt to the subdirectory in dev vs the
+// domain root in production. Do not create physical files at these paths:
+// Apache would serve them and shadow the routes.
+Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
+Route::get('/sw.js', [PwaController::class, 'serviceWorker'])->name('pwa.sw');
+Route::get('/offline', [PwaController::class, 'offline'])->name('pwa.offline');
 
 // ─── Language Toggle API ───
 Route::post('/api/language', [LanguageController::class, 'update'])->name('language.update');
