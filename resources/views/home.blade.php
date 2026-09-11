@@ -146,8 +146,9 @@
                         <p class="text-xs font-bold text-white/80 mt-0.5" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
                     </div>
 
-                    {{-- Get the App — Store badges (tablet/desktop; mobile uses fixed bottom bar) --}}
-                    <div class="pt-1 hidden md:block">
+                    {{-- Get the App — Store badges (tablet/desktop; mobile uses fixed bottom bar).
+                         Hidden inside the installed app — see partials/pwa-head. --}}
+                    <div class="pt-1 hidden md:block" data-pwa-hide-when-installed>
                         <p class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-white/60 mb-2 text-center lg:text-left"
                            x-text="$store.lang.t('Get the app', 'Téléchargez l’app')"></p>
                         <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-3 justify-center lg:justify-start">
@@ -1030,7 +1031,10 @@
     {{-- ═══════════════════════════════════════════════════════════════
          MOBILE-ONLY: "Download Our App" bar (directly below hero)
          ═══════════════════════════════════════════════════════════════ --}}
-    <div class="md:hidden relative z-40 bg-cm-green/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-2 shadow-[0_-4px_18px_rgba(0,0,0,0.25)]">
+    {{-- Hidden inside the installed app — see partials/pwa-head. Sign In stays
+         reachable from the site-nav mobile menu. --}}
+    <div class="md:hidden relative z-40 bg-cm-green/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-2 shadow-[0_-4px_18px_rgba(0,0,0,0.25)]"
+         data-pwa-hide-when-installed>
         {{-- Profile / Login (pinned to extreme left) --}}
         <a href="{{ route('login') }}"
            aria-label="{{ __('Login') }}"
