@@ -116,7 +116,7 @@ class Orders extends Component
                 $other,
                 'marketplace.order_released',
                 __('Order :ref completed', ['ref' => $o->reference]),
-                __('Both sides confirmed — leave a review when you can.'),
+                __('Both sides confirmed, leave a review when you can.'),
                 ['order_id' => $o->id, 'url' => route('marketplace.show', ['slug' => $listing?->slug])],
             );
         }

@@ -19,8 +19,8 @@ return [
 
     // Hero
     'hero_title' => 'Votre communauté camerounaise. Où que vous soyez.',
-    'hero_subtitle' => 'Connectez-vous avec les Camerounais de votre ville et de votre pays. Trouvez un logement, envoyez des colis au pays, obtenez de l\'aide — tout en un seul endroit conçu pour vous.',
-    'gps_detected' => 'Nous avons détecté que vous êtes en :country — votre communauté est ici',
+    'hero_subtitle' => 'Connectez-vous avec les Camerounais de votre ville et de votre pays. Trouvez un logement, envoyez des colis au pays, obtenez de l\'aide, tout en un seul endroit conçu pour vous.',
+    'gps_detected' => 'Nous avons détecté que vous êtes en :country, votre communauté est ici',
     'members_connected' => ':count Camerounais déjà connectés',
     'see_how_it_works' => 'Voir comment ça marche',
 
@@ -40,7 +40,7 @@ return [
     'coming_soon' => 'Bientôt disponible',
 
     // Yard highlight
-    'yard_title' => 'Le Yard — Là où votre communauté se rassemble.',
+    'yard_title' => 'Le Yard : là où votre communauté se rassemble.',
     'yard_description' => 'Seuls les Camerounais physiquement dans votre pays peuvent rejoindre votre Yard. De vraies personnes. Une vraie proximité. Une vraie communauté.',
 
     // Solidarity highlight
@@ -49,8 +49,8 @@ return [
 
     // How it works
     'how_title' => 'Comment ça marche',
-    'how_step_1' => 'Créez votre profil — dites-nous d\'où vous venez',
-    'how_step_2' => 'Nous détectons où vous êtes — votre Yard s\'ouvre instantanément',
+    'how_step_1' => 'Créez votre profil, dites-nous d\'où vous venez',
+    'how_step_2' => 'Nous détectons où vous êtes, votre Yard s\'ouvre instantanément',
     'how_step_3' => 'Connectez-vous avec les Camerounais de votre ville et pays',
     'how_step_4' => 'Accédez à chaque fonctionnalité conçue pour votre vie à l\'étranger',
 
@@ -65,11 +65,11 @@ return [
 
     // Vision
     'vision_title' => 'Conçu pour le Cameroun. Pensé pour l\'Afrique.',
-    'vision_description' => 'Nigeria, Ghana, Sénégal — bientôt. Vous voulez apporter cela à votre communauté ? Parlons-en.',
+    'vision_description' => 'Nigeria, Ghana, Sénégal : bientôt. Vous voulez apporter cela à votre communauté ? Parlons-en.',
 
     // CTA
     'cta_title' => 'Votre communauté vous attend déjà.',
-    'cta_button' => 'Rejoignez Cameroon Network — C\'est gratuit',
+    'cta_button' => 'Rejoignez Cameroon Network. C\'est gratuit',
     'cta_subtext' => 'Pas de carte de crédit. Pas de frais. Juste votre communauté.',
 
     // Footer
@@ -109,14 +109,14 @@ return [
     'where_are_you' => 'Où êtes-vous en ce moment ?',
     'gps_explanation' => 'Nous utilisons votre position pour vous connecter avec les Camerounais du même pays. Nous ne partageons jamais votre position exacte.',
     'gps_detected_at' => 'Nous avons détecté que vous êtes à :city, :country ✓',
-    'gps_denied' => 'Pas de GPS ? Pas de problème — dites-nous où vous êtes.',
+    'gps_denied' => 'Pas de GPS ? Pas de problème, dites-nous où vous êtes.',
     'select_country' => 'Sélectionnez votre pays',
     'enter_city' => 'Entrez votre ville',
 
     // Onboarding
     'welcome_to_yard' => 'Bienvenue au Yard :country, :name ! 🎉',
     'founding_member' => 'Vous faites partie de nos 20 premiers membres ! Vous avez gagné le badge de Membre Fondateur.',
-    'first_in_city' => 'Vous êtes le premier Camerounais que nous avons trouvé à :city ! Votre salon de ville est prêt — invitez d\'autres à vous rejoindre.',
+    'first_in_city' => 'Vous êtes le premier Camerounais que nous avons trouvé à :city ! Votre salon de ville est prêt, invitez d\'autres à vous rejoindre.',
     'city_room_prompt' => ':count Camerounais sont déjà dans le salon de :city. Voulez-vous rejoindre ?',
     'join' => 'Rejoindre',
     'maybe_later' => 'Peut-être plus tard',

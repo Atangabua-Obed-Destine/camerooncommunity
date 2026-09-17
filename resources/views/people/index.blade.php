@@ -127,7 +127,7 @@
                             <a href="{{ route('people', ['tab' => 'suggestions']) }}" class="text-sm font-semibold text-cm-green hover:underline" x-text="$store.lang.t('See all', 'Voir tout')"></a>
                         </div>
                         @if($suggestions->isEmpty())
-                            @include('people._empty', ['message' => __('No suggestions for now — try browsing all people.')])
+                            @include('people._empty', ['message' => __('No suggestions for now, try browsing all people.')])
                         @else
                             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                 @foreach($suggestions as $u)

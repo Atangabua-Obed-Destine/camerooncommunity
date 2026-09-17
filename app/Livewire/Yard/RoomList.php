@@ -400,13 +400,13 @@ class RoomList extends Component
         $greetings = [
             'en' => [
                 "The door is open and the people are waiting! Step inside and say hello 🔥",
-                "Your people are in here! Come join the conversation — we saved you a seat 🪑",
+                "Your people are in here! Come join the conversation, we saved you a seat 🪑",
                 "This room is buzzing! Jump in and add your voice to the mix 🎉",
                 "You're about to meet some amazing Cameroonians. Ready? Let's go! 🚀",
             ],
             'fr' => [
                 "La porte est ouverte et les gens vous attendent ! Entrez et dites bonjour 🔥",
-                "Vos compatriotes sont ici ! Rejoignez la conversation — on vous a gardé une place 🪑",
+                "Vos compatriotes sont ici ! Rejoignez la conversation, on vous a gardé une place 🪑",
                 "Cette salle est en feu ! Sautez dedans et ajoutez votre voix 🎉",
                 "Vous allez rencontrer des Camerounais incroyables. Prêt(e) ? C'est parti ! 🚀",
             ],

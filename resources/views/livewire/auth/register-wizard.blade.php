@@ -21,7 +21,7 @@
         {{-- ── GPS / IP detection ── --}}
         async detectLocation() {
             if (this._detectInFlight) {
-                console.log('[Register] detectLocation already running — ignoring duplicate call');
+                console.log('[Register] detectLocation already running, ignoring duplicate call');
                 return;
             }
             this._detectInFlight = true;
@@ -34,7 +34,7 @@
             this.gpsDenied = false;
             try {
                 if (this.locationMode === 'ip') {
-                    console.log('[Register] IP mode — skipping GPS');
+                    console.log('[Register] IP mode, skipping GPS');
                     await this.detectByIP();
                     return;
                 }
@@ -44,14 +44,14 @@
                      that up front so we can show the user a real explanation instead of silently
                      falling back to a wildly inaccurate IP location. --}}
                 if (typeof window !== 'undefined' && window.isSecureContext === false) {
-                    console.warn('[Register] Insecure origin — Geolocation API blocked by browser');
+                    console.warn('[Register] Insecure origin, Geolocation API blocked by browser');
                     this.insecureContext = true;
                     this.insecureHost = window.location.host;
                     await this.detectByIP();
                     return;
                 }
                 if (!navigator.geolocation) {
-                    console.warn('[Register] Geolocation API not available — falling back to IP');
+                    console.warn('[Register] Geolocation API not available, falling back to IP');
                     this.insecureContext = true;
                     this.insecureHost = window.location.host;
                     await this.detectByIP();
@@ -81,7 +81,7 @@
                          double-check / retry. We still keep the result so the form is pre-filled. --}}
                     const POOR_ACCURACY_M = 50000;
                     if (acc > POOR_ACCURACY_M) {
-                        console.warn('[Register] GPS fix is too coarse (' + acc + 'm) — marking as poor');
+                        console.warn('[Register] GPS fix is too coarse (' + acc + 'm), marking as poor');
                         this.poorAccuracy = true;
                     }
 
@@ -98,13 +98,13 @@
                               || '';
                     console.log('[Register] Nominatim:', { country, region, city, address: data.address });
                     if (!country) {
-                        console.warn('[Register] Nominatim returned no country — falling back to IP');
+                        console.warn('[Register] Nominatim returned no country, falling back to IP');
                         await this.detectByIP();
                         return;
                     }
                     $wire.setLocation(pos.coords.latitude, pos.coords.longitude, country, region, city);
                 } catch (e) {
-                    console.warn('[Register] GPS failed (' + (e?.message || e) + ') — falling back to IP');
+                    console.warn('[Register] GPS failed (' + (e?.message || e) + '), falling back to IP');
                     {{-- code 1 = PERMISSION_DENIED, 2 = POSITION_UNAVAILABLE, 3 = TIMEOUT.
                          Track explicit user denial so we can lock the manual selectors and
                          force the user to unblock location in their browser settings. --}}
@@ -144,7 +144,7 @@
                 }
                 console.log('[Register] IP response:', data);
                 if (!data || data.error || !data.country_name) {
-                    console.error('[Register] IP detection failed — payload:', data);
+                    console.error('[Register] IP detection failed, payload:', data);
                 } else {
                     $wire.setLocation(data.latitude || 0, data.longitude || 0, data.country_name, data.region || '', data.city || '');
                 }
@@ -417,19 +417,19 @@
                                     </p>
                                     <p class="mt-0.5 text-xs text-amber-700 leading-relaxed">
                                         <span x-show="insecureContext" x-text="$store.lang.t(
-                                            'Your browser only allows precise location on secure sites (https://) or on localhost. We\'re showing your approximate location based on your internet provider — it can be far from where you actually are. You can correct it manually below.',
-                                            'Votre navigateur n\'autorise la localisation précise que sur les sites sécurisés (https://) ou en local. Nous affichons donc une position approximative basée sur votre fournisseur internet — elle peut être éloignée de votre position réelle. Vous pouvez la corriger manuellement ci-dessous.'
+                                            'Your browser only allows precise location on secure sites (https://) or on localhost. We\'re showing your approximate location based on your internet provider, it can be far from where you actually are. You can correct it manually below.',
+                                            'Votre navigateur n\'autorise la localisation précise que sur les sites sécurisés (https://) ou en local. Nous affichons donc une position approximative basée sur votre fournisseur internet, elle peut être éloignée de votre position réelle. Vous pouvez la corriger manuellement ci-dessous.'
                                         )"></span>
                                         <span x-show="!insecureContext && poorAccuracy">
                                             <span x-text="$store.lang.t(
-                                                'Your device returned a coarse fix — likely from cell towers rather than GPS satellites. The country is usually right but the city may not be. Try moving outdoors and tap Refresh, or correct it manually below.',
-                                                'Votre appareil a renvoyé une position imprecise — vraisemblablement basée sur les antennes cellulaires plutôt que sur les satellites GPS. Le pays est généralement correct mais la ville peut ne pas l\'être. Sortez en extérieur et appuyez sur Actualiser, ou corrigez manuellement ci-dessous.'
+                                                'Your device returned a coarse fix, likely from cell towers rather than GPS satellites. The country is usually right but the city may not be. Try moving outdoors and tap Refresh, or correct it manually below.',
+                                                'Votre appareil a renvoyé une position imprecise, vraisemblablement basée sur les antennes cellulaires plutôt que sur les satellites GPS. Le pays est généralement correct mais la ville peut ne pas l\'être. Sortez en extérieur et appuyez sur Actualiser, ou corrigez manuellement ci-dessous.'
                                             )"></span>
                                             <span class="block mt-0.5 text-amber-600" x-text="$store.lang.t('Accuracy: ', 'Précision : ') + (accuracyMeters >= 1000 ? Math.round(accuracyMeters/1000) + ' km' : accuracyMeters + ' m')"></span>
                                         </span>
                                         <span x-show="!insecureContext && !poorAccuracy && accuracySource === 'ip'" x-text="$store.lang.t(
-                                            'GPS was not available, so we used your internet provider\'s location. It can be off by tens of kilometres — please verify and correct it below if needed.',
-                                            'Le GPS n\'était pas disponible, nous avons donc utilisé la position de votre fournisseur internet. Elle peut être erronée de plusieurs dizaines de kilomètres — veuillez vérifier et corriger ci-dessous si besoin.'
+                                            'GPS was not available, so we used your internet provider\'s location. It can be off by tens of kilometres, please verify and correct it below if needed.',
+                                            'Le GPS n\'était pas disponible, nous avons donc utilisé la position de votre fournisseur internet. Elle peut être erronée de plusieurs dizaines de kilomètres, veuillez vérifier et corriger ci-dessous si besoin.'
                                         )"></span>
                                     </p>
                                     <p x-show="insecureContext" class="mt-1 text-[11px] text-amber-600/80 font-mono break-all" x-text="insecureHost"></p>
@@ -533,7 +533,7 @@
                         <h2 class="text-2xl font-extrabold text-slate-900"
                             x-text="$store.lang.t('Create Your Account', 'Créez Votre Compte')"></h2>
                         <p class="mt-1 text-sm font-bold text-slate-700"
-                           x-text="$store.lang.t('This takes under a minute — we promise.', 'Ça prend moins d\'une minute — promis.')"></p>
+                           x-text="$store.lang.t('This takes under a minute, we promise.', 'Ça prend moins d\'une minute, promis.')"></p>
 
                         @if($isGoogle)
                             <div class="mt-6 flex items-center gap-3 rounded-xl border border-cm-green/20 bg-cm-green/5 px-4 py-3">
@@ -640,7 +640,7 @@
                                     </template>
                                 </div>
                                 <p class="mt-1 text-xs font-bold" :class="strength <= 1 ? 'text-cm-red' : (strength <= 2 ? 'text-cm-yellow-dark' : 'text-cm-green')"
-                                   x-text="strength === 0 ? '' : (strength <= 1 ? $store.lang.t('Weak — like watered garri', 'Faible — comme du garri dilué') : (strength <= 2 ? $store.lang.t('Getting there...', 'On y arrive...') : (strength <= 3 ? $store.lang.t('Solid! 💪', 'Solide ! 💪') : $store.lang.t('Fort like ndolé! 🔥', 'Fort comme le ndolé ! 🔥'))))"></p>
+                                   x-text="strength === 0 ? '' : (strength <= 1 ? $store.lang.t('Weak, like watered garri', 'Faible, comme du garri dilué') : (strength <= 2 ? $store.lang.t('Getting there...', 'On y arrive...') : (strength <= 3 ? $store.lang.t('Solid! 💪', 'Solide ! 💪') : $store.lang.t('Fort like ndolé! 🔥', 'Fort comme le ndolé ! 🔥'))))"></p>
 
                                 {{-- Live requirements checklist --}}
                                 <div class="mt-2 grid grid-cols-2 gap-x-3 text-xs">

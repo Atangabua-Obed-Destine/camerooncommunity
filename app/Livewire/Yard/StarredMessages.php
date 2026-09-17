@@ -86,7 +86,7 @@ class StarredMessages extends Component
             $isDm = $row->room_type === RoomType::DirectMessage->value;
             $partner = $partners->get($row->room_id);
 
-            $row->display_room_name = $isDm && $partner ? $partner->name : ($row->room_name ?: '—');
+            $row->display_room_name = $isDm && $partner ? $partner->name : ($row->room_name ?: '-');
             $row->display_room_avatar = $isDm && $partner ? $partner->avatar : $row->room_avatar;
             $row->is_dm = $isDm;
 

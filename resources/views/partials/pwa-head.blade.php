@@ -37,8 +37,18 @@
             document.documentElement.classList.add('pwa-standalone');
         }
 
+        // Keep the install prompt event globally. It can fire before Alpine starts, so the
+        // banner in partials/pwa-install would miss it if it listened for it itself.
+        window.__pwaDeferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            window.__pwaDeferredPrompt = e;
+            window.dispatchEvent(new CustomEvent('pwa-installable'));
+        });
+
         // Covers an install that happens while this page is open.
         window.addEventListener('appinstalled', function () {
+            window.__pwaDeferredPrompt = null;
             document.documentElement.classList.add('pwa-standalone');
         });
     })();

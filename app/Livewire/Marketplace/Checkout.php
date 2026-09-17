@@ -102,7 +102,7 @@ class Checkout extends Component
 
         $price = (float) ($this->listing->price ?? 0);
         if ($price <= 0) {
-            $this->dispatch('toast', type: 'error', message: __('This listing has no fixed price — message the seller instead.'));
+            $this->dispatch('toast', type: 'error', message: __('This listing has no fixed price, message the seller instead.'));
             return;
         }
 
@@ -172,7 +172,7 @@ class Checkout extends Component
         if (! $this->order) { return; }
         if (! $this->order->isBuyer((int) Auth::id())) { return; }
         if ($this->order->status === OrderStatus::Paid) {
-            $this->dispatch('toast', type: 'error', message: __('Order already paid — ask the seller to refund.'));
+            $this->dispatch('toast', type: 'error', message: __('Order already paid, ask the seller to refund.'));
             return;
         }
 

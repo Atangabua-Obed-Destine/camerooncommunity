@@ -305,7 +305,7 @@
                 <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Catégorie' : 'Category' }}</span>
                 <select wire:model.live="categoryId"
                         class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[15px] text-slate-900 bg-white focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none transition cursor-pointer">
-                    <option value="">{{ $lang === 'fr' ? '— Choisir une catégorie —' : '— Select a category —' }}</option>
+                    <option value="">{{ $lang === 'fr' ? 'Choisir une catégorie' : 'Select a category' }}</option>
                     @foreach ($roots as $root)
                         @php $children = $allCats->where('parent_id', $root->id); @endphp
                         <optgroup label="{{ $root->icon }} {{ $root->localizedName() }}">
@@ -360,7 +360,7 @@
                                     @if ($f['type'] === 'select')
                                         <select wire:model.live="attrs.{{ $f['key'] }}"
                                                 class="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
-                                            <option value="">{{ $lang === 'fr' ? '— Choisir —' : '— Select —' }}</option>
+                                            <option value="">{{ $lang === 'fr' ? 'Choisir' : 'Select' }}</option>
                                             @foreach ($f['options'] as $opt)
                                                 <option value="{{ $opt['value'] }}">{{ $lang === 'fr' ? ($opt['labelFr'] ?? $opt['label']) : $opt['label'] }}</option>
                                             @endforeach

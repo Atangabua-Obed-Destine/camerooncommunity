@@ -168,7 +168,7 @@ class ConnectionService
                 $aName = $a->username ?: $a->name;
                 $bName = $b->username ?: $b->name;
 
-                $preview = "🎉 You're now connected — say hi 👋";
+                $preview = "🎉 You're now connected, say hi 👋";
 
                 try {
                     $sysMsg = \App\Models\YardMessage::create([

@@ -26,7 +26,7 @@
                 </div>
             </div>
 
-            <button type="button" @click="ios ? (howTo = !howTo) : install()"
+            <button type="button" @click="canPrompt ? install() : (howTo = !howTo)"
                     style="flex-shrink:0; background:#015083; color:#ffffff; border:0; cursor:pointer;
                            font-family:inherit; font-size:0.82rem; font-weight:700;
                            padding:9px 18px; border-radius:9999px;">
@@ -41,7 +41,8 @@
             </button>
         </div>
 
-        {{-- iOS only: there is no programmatic install on iOS, so explain the manual steps. --}}
+        {{-- Manual steps, for when the browser gives no install prompt (always on iOS; on other
+             browsers when the prompt isn't available, e.g. unsupported or not yet eligible). --}}
         <div x-show="howTo" x-cloak x-transition
              style="border-top:1px solid #e2e8f0; background:#f8fafc; padding:12px 14px; font-size:0.8rem; color:#334155; line-height:1.5;">
             <div style="display:flex; align-items:center; gap:8px;">
@@ -50,9 +51,12 @@
                     <path d="M12 16V3"/><path d="M8 7l4-4 4 4"/>
                     <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
                 </svg>
-                <span x-text="$store.lang.t(
+                <span x-show="ios" x-text="$store.lang.t(
                     'Tap Share, then choose Add to Home Screen.',
                     'Touchez Partager, puis Sur l\'écran d\'accueil.')"></span>
+                <span x-show="!ios" x-text="$store.lang.t(
+                    'Open your browser menu (⋮), then choose Install app or Add to Home screen.',
+                    'Ouvrez le menu du navigateur (⋮), puis Installer l\'application ou Ajouter à l\'écran d\'accueil.')"></span>
             </div>
         </div>
     </div>
@@ -62,55 +66,80 @@
 <script>
     function pwaInstall() {
         return {
-            deferred: null,
             show: false,
             ios: false,
             howTo: false,
-            // 14-day snooze, not permanent: someone who dismisses once may still want it later.
-            dismissedAt: window.Alpine.$persist(0).as('cc_pwa_dismissed_at'),
+            canPrompt: false,
+            // 14-day snooze, only set when the user closes the banner. New storage key: the old
+            // one was also set on install, which kept the banner hidden after an uninstall.
+            snoozedAt: window.Alpine.$persist(0).as('cc_pwa_snoozed_at'),
 
             get installed() {
                 return window.matchMedia('(display-mode: standalone)').matches
                     || window.navigator.standalone === true;
             },
 
+            get snoozed() {
+                return Date.now() - this.snoozedAt < 14 * 24 * 60 * 60 * 1000;
+            },
+
             init() {
                 if (this.installed) return;
-                if (Date.now() - this.dismissedAt < 14 * 24 * 60 * 60 * 1000) return;
 
                 const ua = navigator.userAgent;
                 this.ios = /iphone|ipad|ipod/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
 
+                // "Download Our App" buttons open the install flow directly, ignoring the snooze.
+                window.addEventListener('pwa-open-install', () => this.open());
+
                 if (this.ios) {
                     // No beforeinstallprompt on iOS, ever — show the manual path,
                     // but not the instant someone lands on the page.
-                    setTimeout(() => { this.show = true; }, 8000);
+                    if (!this.snoozed) setTimeout(() => { this.show = true; }, 8000);
                     return;
                 }
 
-                window.addEventListener('beforeinstallprompt', (e) => {
-                    e.preventDefault();
-                    this.deferred = e;
-                    this.show = true;
+                // The prompt event itself is captured in partials/pwa-head.
+                this.canPrompt = !!window.__pwaDeferredPrompt;
+                if (this.canPrompt && !this.snoozed) this.show = true;
+
+                window.addEventListener('pwa-installable', () => {
+                    this.canPrompt = true;
+                    if (!this.snoozed) this.show = true;
                 });
 
                 window.addEventListener('appinstalled', () => {
+                    this.canPrompt = false;
                     this.show = false;
-                    this.dismissedAt = Date.now();
                 });
             },
 
             async install() {
-                if (!this.deferred) return;
-                this.deferred.prompt();
-                await this.deferred.userChoice;
-                this.deferred = null;
+                const prompt = window.__pwaDeferredPrompt;
+                if (!prompt) return;
+                prompt.prompt();
+                await prompt.userChoice;
+                window.__pwaDeferredPrompt = null;
+                this.canPrompt = false;
                 this.show = false;
+            },
+
+            // Called from "Download Our App": the browser's own install prompt when it has one,
+            // otherwise the banner with the manual steps.
+            open() {
+                if (window.__pwaDeferredPrompt) {
+                    this.install();
+                    return;
+                }
+
+                this.howTo = true;
+                this.show = true;
             },
 
             dismiss() {
                 this.show = false;
-                this.dismissedAt = Date.now();
+                this.howTo = false;
+                this.snoozedAt = Date.now();
             },
         };
     }

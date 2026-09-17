@@ -80,7 +80,7 @@
                                 🤖 <span x-text="$store.lang.t('Help me write this', 'Aide-moi à écrire')"></span>
                             </button>
                             <div x-show="showDraft" x-transition class="mt-2 p-3 bg-cm-green/5 rounded-lg border border-cm-green/10">
-                                <p class="text-xs text-slate-500 mb-2" x-text="$store.lang.t('Briefly describe the situation — Kamer AI will draft a description for you.', 'Décrivez brièvement la situation — Kamer IA rédigera une description pour vous.')"></p>
+                                <p class="text-xs text-slate-500 mb-2" x-text="$store.lang.t('Briefly describe the situation, Kamer AI will draft a description for you.', 'Décrivez brièvement la situation, Kamer IA rédigera une description pour vous.')"></p>
                                 <textarea wire:model="draftSituation" rows="2"
                                           class="w-full rounded-lg border-slate-300 text-xs focus:ring-cm-green focus:border-cm-green"
                                           :placeholder="$store.lang.t('e.g. My uncle passed away and the family needs help with funeral costs...', 'ex. Mon oncle est décédé et la famille a besoin d\\'aide pour les frais funéraires...')"></textarea>

@@ -10,7 +10,7 @@
     /** @var \App\Models\MarketplaceListing $listing */
     $cover = $listing->coverUrl();
     $lang = app()->getLocale();
-    $loc = trim(($listing->city ? $listing->city . ', ' : '') . ($listing->region ?? $listing->country ?? '')) ?: '—';
+    $loc = trim(($listing->city ? $listing->city . ', ' : '') . ($listing->region ?? $listing->country ?? '')) ?: '-';
     $isNew = $listing->created_at && $listing->created_at->gt(now()->subDays(2));
     // Region-approx distance from the viewer's pin, set by FeedBrowse (may be null).
     $dist = $listing->distance_km ?? null;

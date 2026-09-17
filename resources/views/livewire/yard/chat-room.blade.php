@@ -267,7 +267,7 @@
                     class="flex items-center gap-2 flex-1 min-w-0 text-left">
                 <svg class="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5.2v6h1.6v-6H18v-2l-2-2z"/></svg>
                 <span class="text-xs font-medium text-slate-700 shrink-0">{{ $pinnedMessages->count() }} {{ __('pinned') }}</span>
-                <span class="text-xs text-slate-500 truncate flex-1">— {{ Str::limit($pinnedMessages->first()->content, 40) }}</span>
+                <span class="text-xs text-slate-500 truncate flex-1">· {{ Str::limit($pinnedMessages->first()->content, 40) }}</span>
             </button>
             @if($pinnedMessages->count() > 1)
                 <button type="button" @click.prevent.stop="expanded = !expanded"

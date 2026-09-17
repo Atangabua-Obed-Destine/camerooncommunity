@@ -1,5 +1,5 @@
 <x-layouts.guest>
-    <x-slot:title>Login — Cameroon Network</x-slot:title>
+    <x-slot:title>Login | Cameroon Network</x-slot:title>
 
     <div class="fixed inset-0 flex flex-col overflow-hidden lg:static lg:flex-row lg:overflow-visible lg:min-h-screen bg-white">
 

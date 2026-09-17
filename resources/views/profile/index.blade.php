@@ -220,7 +220,7 @@
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1" x-text="$store.lang.t('Region of Origin', 'Région d\'Origine')"></label>
                     <select name="home_region" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-cm-green focus:ring-1 focus:ring-cm-green">
-                        <option value="">—</option>
+                        <option value="">-</option>
                         @foreach(config('cameroon.regions', []) as $region)
                             <option value="{{ $region }}" {{ $user->home_region === $region ? 'selected' : '' }}>{{ $region }}</option>
                         @endforeach

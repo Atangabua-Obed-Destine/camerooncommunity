@@ -68,7 +68,7 @@ class PwaController extends Controller
             'id'               => $base,
             'name'             => SiteSettings::name(),
             'short_name'       => 'CM Network',
-            'description'      => 'Connect with Cameroonians in your city and country. Chat, buy and sell, and find help — all in one place.',
+            'description'      => 'Connect with Cameroonians in your city and country. Chat, buy and sell, and find help, all in one place.',
             // The app root serves the landing page to guests and the feed to
             // signed-in users, so it is the one correct entry point for both.
             'start_url'        => $base . '?src=pwa',

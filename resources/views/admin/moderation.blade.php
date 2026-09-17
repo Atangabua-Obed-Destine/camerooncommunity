@@ -24,7 +24,7 @@
                         <div class="flex items-center gap-2 mb-1">
                             <span class="font-medium text-slate-900">{{ $message->user?->name ?? 'Deleted User' }}</span>
                             <span class="text-xs text-slate-400">in</span>
-                            <span class="text-xs font-medium text-cm-green">{{ $message->room?->name ?? '—' }}</span>
+                            <span class="text-xs font-medium text-cm-green">{{ $message->room?->name ?? '-' }}</span>
                             <span class="text-xs text-slate-400">•</span>
                             <span class="text-xs text-slate-400">{{ $message->created_at->diffForHumans() }}</span>
                         </div>

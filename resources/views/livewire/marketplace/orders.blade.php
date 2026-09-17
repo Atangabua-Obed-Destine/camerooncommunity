@@ -71,7 +71,7 @@
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-start justify-between gap-2">
                                     <a href="{{ route('marketplace.show', ['slug' => $o->listing?->slug]) }}" wire:navigate
-                                       class="font-bold text-slate-900 hover:text-cm-green truncate">{{ $o->listing?->title ?? '—' }}</a>
+                                       class="font-bold text-slate-900 hover:text-cm-green truncate">{{ $o->listing?->title ?? '-' }}</a>
                                     <span class="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ring-1 {{ $o->status->chip() }} shrink-0">
                                         {{ app()->getLocale() === 'fr' ? $o->status->labelFr() : $o->status->label() }}
                                     </span>
@@ -81,7 +81,7 @@
                                     <span>•</span>
                                     <span class="font-bold text-cm-green">{{ $o->formattedAmount() }}</span>
                                     <span>•</span>
-                                    <span>{{ $tab === 'buying' ? __('seller:') : __('buyer:') }} <span class="font-semibold text-slate-800">{{ $mine?->name ?: $mine?->username ?: '—' }}</span></span>
+                                    <span>{{ $tab === 'buying' ? __('seller:') : __('buyer:') }} <span class="font-semibold text-slate-800">{{ $mine?->name ?: $mine?->username ?: '-' }}</span></span>
                                     <span>•</span>
                                     <span>{{ $o->created_at->diffForHumans() }}</span>
                                 </div>

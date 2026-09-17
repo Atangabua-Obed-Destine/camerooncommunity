@@ -30,9 +30,9 @@
                                     {{ class_basename($report->reportable_type ?? 'Unknown') }}
                                 </span>
                             </td>
-                            <td class="px-4 py-3 text-slate-600">{{ $report->reporter?->name ?? '—' }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ $report->reporter?->name ?? '-' }}</td>
                             <td class="px-4 py-3">
-                                <span class="text-sm text-slate-700">{{ $report->reason?->value ?? $report->reason ?? '—' }}</span>
+                                <span class="text-sm text-slate-700">{{ $report->reason?->value ?? $report->reason ?? '-' }}</span>
                                 @if($report->details)
                                     <p class="text-xs text-slate-400 mt-0.5 line-clamp-1">{{ $report->details }}</p>
                                 @endif

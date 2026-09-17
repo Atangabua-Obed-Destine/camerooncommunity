@@ -116,7 +116,7 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="text-sm text-slate-700 truncate">{{ Str::limit($msg->content, 60) }}</p>
-                    <p class="text-xs text-slate-400">{{ $msg->user?->name ?? 'Unknown' }} · {{ $msg->room?->name ?? '—' }} · {{ $msg->created_at->diffForHumans() }}</p>
+                    <p class="text-xs text-slate-400">{{ $msg->user?->name ?? 'Unknown' }} · {{ $msg->room?->name ?? '-' }} · {{ $msg->created_at->diffForHumans() }}</p>
                 </div>
                 @if($msg->ai_moderation_score)
                 <span class="text-xs font-bold {{ $msg->ai_moderation_score >= 70 ? 'text-red-600' : 'text-yellow-600' }}">
@@ -127,7 +127,7 @@
             @empty
             <div class="text-center py-6 text-slate-400">
                 <div class="text-3xl mb-2">🎉</div>
-                <p class="text-sm" x-text="$store.lang.t('No AI flags yet — the community is behaving!', 'Aucun signalement IA — la communauté se comporte bien !')"></p>
+                <p class="text-sm" x-text="$store.lang.t('No AI flags yet, the community is behaving!', 'Aucun signalement IA, la communauté se comporte bien !')"></p>
             </div>
             @endforelse
         </div>

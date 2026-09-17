@@ -46,7 +46,7 @@
                         <div class="flex flex-wrap items-center gap-4 text-xs text-slate-500">
                             <span>👤 {{ $campaign->creator?->name ?? 'Unknown' }}</span>
                             <span>💰 {{ number_format($campaign->goal_amount) }} {{ $campaign->currency }}</span>
-                            <span>📍 {{ $campaign->room?->name ?? '—' }}</span>
+                            <span>📍 {{ $campaign->room?->name ?? '-' }}</span>
                             <span>📅 {{ $campaign->created_at->format('M d, Y') }}</span>
                             @if($campaign->deadline)
                                 <span>⏰ Deadline: {{ $campaign->deadline->format('M d, Y') }}</span>

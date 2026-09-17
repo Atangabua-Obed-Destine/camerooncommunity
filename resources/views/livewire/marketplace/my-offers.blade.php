@@ -112,7 +112,7 @@
                                 </div>
                                 <div class="mt-1 text-xs text-slate-500">
                                     {{ $tab === 'sent' ? ($lang === 'fr' ? 'À' : 'To') : ($lang === 'fr' ? 'De' : 'From') }}
-                                    <span class="font-semibold text-slate-700">{{ $otherParty?->name ?? '—' }}</span>
+                                    <span class="font-semibold text-slate-700">{{ $otherParty?->name ?? '-' }}</span>
                                     · {{ $offer->created_at->diffForHumans() }}
                                 </div>
                                 @if ($offer->message)

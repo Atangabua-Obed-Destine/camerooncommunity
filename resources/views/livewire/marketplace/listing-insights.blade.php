@@ -133,13 +133,13 @@
             <div class="font-bold mb-1">💡 {{ $lang === 'fr' ? 'Conseils pour vendre plus vite' : 'Tips to sell faster' }}</div>
             <ul class="list-disc pl-5 space-y-0.5">
                 @if ($s['views'] < 20)
-                    <li>{{ $lang === 'fr' ? 'Faible visibilité : pensez à booster votre annonce.' : 'Low visibility — consider bumping your listing.' }}</li>
+                    <li>{{ $lang === 'fr' ? 'Faible visibilité : pensez à booster votre annonce.' : 'Low visibility, consider bumping your listing.' }}</li>
                 @endif
                 @if ($s['views'] >= 20 && $s['ctr'] < 2)
-                    <li>{{ $lang === 'fr' ? 'Beaucoup de vues, peu d\'intérêt : améliorez les photos ou baissez le prix.' : 'Lots of views but low interest — improve photos or lower the price.' }}</li>
+                    <li>{{ $lang === 'fr' ? 'Beaucoup de vues, peu d\'intérêt : améliorez les photos ou baissez le prix.' : 'Lots of views but low interest, improve photos or lower the price.' }}</li>
                 @endif
                 @if ($s['offers'] > 0 && $s['accepted'] === 0)
-                    <li>{{ $lang === 'fr' ? 'Vous avez des offres en attente — répondez vite !' : 'You have offers waiting — respond quickly!' }}</li>
+                    <li>{{ $lang === 'fr' ? 'Vous avez des offres en attente, répondez vite !' : 'You have offers waiting, respond quickly!' }}</li>
                 @endif
                 @if (empty($listing->attributes))
                     <li>{{ $lang === 'fr' ? 'Ajoutez les détails de catégorie pour apparaître dans plus de filtres.' : 'Add category details to appear in more filters.' }}</li>

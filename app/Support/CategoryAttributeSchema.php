@@ -114,7 +114,7 @@ class CategoryAttributeSchema
                         ['value'=>'mid',    'label'=>'Mid-level',  'labelFr'=>'Intermédiaire'],
                         ['value'=>'senior', 'label'=>'Senior',     'labelFr'=>'Sénior'],
                     ]],
-                ['key'=>'salary_range','label'=>'Salary range', 'labelFr'=>'Salaire',       'type'=>'text', 'icon'=>'💰', 'help'=>'200,000 – 350,000 XAF / month'],
+                ['key'=>'salary_range','label'=>'Salary range', 'labelFr'=>'Salaire',       'type'=>'text', 'icon'=>'💰', 'help'=>'200,000 - 350,000 XAF / month'],
             ],
 
             'electronics' => [

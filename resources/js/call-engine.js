@@ -505,7 +505,7 @@ document.addEventListener('alpine:init', () => {
                     setTimeout(() => {
                         const stillPc = this.peers[peerId];
                         if (stillPc && (!stillPc.remoteDescription || !stillPc.remoteDescription.type)) {
-                            console.warn('[CallEngine] Dropping ICE buffer for peer ' + peerId + ' — no remote description after 15s');
+                            console.warn('[CallEngine] Dropping ICE buffer for peer ' + peerId + ', no remote description after 15s');
                             delete this._pendingCandidates[peerId];
                         }
                     }, 15000);
@@ -561,7 +561,7 @@ document.addEventListener('alpine:init', () => {
         async acquireMedia(type) {
             // Check if we're in a secure context (HTTPS or localhost)
             if (!window.isSecureContext) {
-                console.warn('[CallEngine] Not a secure context — microphone/camera unavailable. Call will proceed without local media.');
+                console.warn('[CallEngine] Not a secure context, microphone/camera unavailable. Call will proceed without local media.');
                 this.showError('Microphone/camera requires HTTPS. Audio may not work on this connection.');
                 return;
             }

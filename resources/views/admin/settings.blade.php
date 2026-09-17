@@ -182,7 +182,7 @@
                 @if($locMode === 'ip')
                 <div class="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
                     <span>⚠️</span>
-                    <span>IP mode is active — connect a VPN to simulate different countries. Location will be detected from your public IP address.</span>
+                    <span>IP mode is active, connect a VPN to simulate different countries. Location will be detected from your public IP address.</span>
                 </div>
                 @endif
             </div>

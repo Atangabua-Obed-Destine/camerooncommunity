@@ -19,8 +19,8 @@ return [
 
     // Hero
     'hero_title' => 'Your Cameroon Network. Wherever You Are.',
-    'hero_subtitle' => 'Connect with Cameroonians in your city and country. Find housing, send packages home, get help — all in one place built just for you.',
-    'gps_detected' => 'We detected you\'re in :country — your community is here',
+    'hero_subtitle' => 'Connect with Cameroonians in your city and country. Find housing, send packages home, get help, all in one place built just for you.',
+    'gps_detected' => 'We detected you\'re in :country, your community is here',
     'members_connected' => ':count Cameroonians already connected',
     'see_how_it_works' => 'See How It Works',
 
@@ -40,7 +40,7 @@ return [
     'coming_soon' => 'Coming Soon',
 
     // Yard highlight
-    'yard_title' => 'The Yard — Where your community gathers.',
+    'yard_title' => 'The Yard: where your community gathers.',
     'yard_description' => 'Only Cameroonians physically in your country can join your Yard. Real people. Real proximity. Real community.',
 
     // Solidarity highlight
@@ -49,8 +49,8 @@ return [
 
     // How it works
     'how_title' => 'How It Works',
-    'how_step_1' => 'Create your profile — tell us where you\'re from',
-    'how_step_2' => 'We detect where you are — your Yard opens instantly',
+    'how_step_1' => 'Create your profile, tell us where you\'re from',
+    'how_step_2' => 'We detect where you are, your Yard opens instantly',
     'how_step_3' => 'Connect with Cameroonians in your city and country',
     'how_step_4' => 'Access every feature built for your life abroad',
 
@@ -65,11 +65,11 @@ return [
 
     // Vision
     'vision_title' => 'Built for Cameroon. Designed for Africa.',
-    'vision_description' => 'Nigeria, Ghana, Senegal — coming soon. Bringing this to your community? Let\'s talk.',
+    'vision_description' => 'Nigeria, Ghana, Senegal: coming soon. Bringing this to your community? Let\'s talk.',
 
     // CTA
     'cta_title' => 'Your community is already waiting for you.',
-    'cta_button' => 'Join Cameroon Network — It\'s Free',
+    'cta_button' => 'Join Cameroon Network. It\'s Free',
     'cta_subtext' => 'No credit card. No fees. Just your community.',
 
     // Footer
@@ -109,14 +109,14 @@ return [
     'where_are_you' => 'Where are you right now?',
     'gps_explanation' => 'We use your location to connect you with Cameroonians in the same country. We never share your exact location with other users.',
     'gps_detected_at' => 'We detected you\'re in :city, :country ✓',
-    'gps_denied' => 'No GPS? No problem — tell us where you are.',
+    'gps_denied' => 'No GPS? No problem, tell us where you are.',
     'select_country' => 'Select your country',
     'enter_city' => 'Enter your city',
 
     // Onboarding
     'welcome_to_yard' => 'Welcome to the :country Yard, :name! 🎉',
     'founding_member' => 'You\'re one of our first 20 members! You\'ve earned the Founding Member badge.',
-    'first_in_city' => 'You\'re the first Cameroonian we\'ve found in :city! Your city room is ready — invite others to join you.',
+    'first_in_city' => 'You\'re the first Cameroonian we\'ve found in :city! Your city room is ready, invite others to join you.',
     'city_room_prompt' => ':count Cameroonians are already in the :city Room. Want to join?',
     'join' => 'Join',
     'maybe_later' => 'Maybe Later',

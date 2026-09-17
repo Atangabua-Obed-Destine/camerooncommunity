@@ -56,7 +56,7 @@
                                         <pre>{{ json_encode($log->properties->toArray(), JSON_PRETTY_PRINT) }}</pre>
                                     </div>
                                 @else
-                                    <span class="text-xs text-slate-400">—</span>
+                                    <span class="text-xs text-slate-400">-</span>
                                 @endif
                             </td>
                         </tr>

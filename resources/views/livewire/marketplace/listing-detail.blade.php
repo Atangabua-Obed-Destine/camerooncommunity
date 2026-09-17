@@ -589,8 +589,8 @@
                         <div class="mt-3 p-2.5 rounded-lg bg-amber-50 ring-1 ring-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
                             <span aria-hidden="true">⚠️</span>
                             <span>{{ $lang === 'fr'
-                                ? 'Nouveau vendeur — payez de préférence à la livraison ou rencontrez-vous dans un lieu public.'
-                                : 'New seller — prefer paying on delivery or meeting in a public place.' }}</span>
+                                ? 'Nouveau vendeur, payez de préférence à la livraison ou rencontrez-vous dans un lieu public.'
+                                : 'New seller, prefer paying on delivery or meeting in a public place.' }}</span>
                         </div>
                     @endif
 

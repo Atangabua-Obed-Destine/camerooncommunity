@@ -89,9 +89,9 @@
                             'ID' => $user->id,
                             'Email' => $user->email,
                             'Email Verified' => $user->email_verified_at ? $user->email_verified_at->format('M d, Y · H:i') : 'No',
-                            'Phone' => $user->phone ?? '—',
+                            'Phone' => $user->phone ?? '-',
                             'Joined' => $user->created_at->format('M d, Y · H:i'),
-                            'Last Updated' => $user->updated_at?->format('M d, Y · H:i') ?? '—',
+                            'Last Updated' => $user->updated_at?->format('M d, Y · H:i') ?? '-',
                             'Roles' => $stats['roles']->isEmpty() ? 'Member' : $stats['roles']->implode(', '),
                         ];
                     @endphp
@@ -112,13 +112,13 @@
                 <dl class="divide-y divide-slate-50">
                     @php
                         $rows2 = [
-                            'Country' => $user->current_country ?? '—',
-                            'Region' => $user->current_region ?? '—',
-                            'City' => $user->current_city ?? '—',
-                            'Origin Country' => $user->origin_country ?? '—',
-                            'Origin Region' => $user->origin_region ?? '—',
-                            'Language' => $user->language ?? '—',
-                            'Account Type' => $user->account_type?->value ?? '—',
+                            'Country' => $user->current_country ?? '-',
+                            'Region' => $user->current_region ?? '-',
+                            'City' => $user->current_city ?? '-',
+                            'Origin Country' => $user->origin_country ?? '-',
+                            'Origin Region' => $user->origin_region ?? '-',
+                            'Language' => $user->language ?? '-',
+                            'Account Type' => $user->account_type?->value ?? '-',
                         ];
                     @endphp
                     @foreach($rows2 as $label => $value)
