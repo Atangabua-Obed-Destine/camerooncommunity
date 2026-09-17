@@ -96,7 +96,7 @@
                     @include('livewire.yard.partials.connection-row', ['u' => $u, 'state' => 'none'])
                 @empty
                     <div class="comm-empty">
-                        <p class="text-sm text-slate-400" x-text="$store.lang.t('No suggestions yet — join more rooms!', 'Aucune suggestion — rejoignez plus de salons !')"></p>
+                        <p class="text-sm text-slate-400" x-text="$store.lang.t('No suggestions yet, join more rooms!', 'Aucune suggestion, rejoignez plus de salons !')"></p>
                     </div>
                 @endforelse
             @endif
@@ -164,7 +164,7 @@
                         <div class="flex flex-col items-center justify-center py-8">
                             <div class="text-4xl mb-2">✌️</div>
                             <p class="text-sm text-slate-600 font-medium" x-text="$store.lang.t('No blocked connections', 'Aucune connexion bloquée')"></p>
-                            <p class="text-xs text-slate-400 mt-1" x-text="$store.lang.t('Your blocked list is empty — stay friendly!', 'Votre liste bloquée est vide — restez courtois !')"></p>
+                            <p class="text-xs text-slate-400 mt-1" x-text="$store.lang.t('Your blocked list is empty, stay friendly!', 'Votre liste bloquée est vide, restez courtois !')"></p>
                         </div>
                     </div>
                 @endforelse

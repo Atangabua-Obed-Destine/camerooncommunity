@@ -202,8 +202,8 @@
                     <div class="text-4xl mb-3">🏠</div>
                     <h2 class="text-2xl font-bold mb-1" x-text="$store.lang.t('Your Communities', 'Vos Communautés')"></h2>
                     <p class="text-white/70 text-sm" x-text="$store.lang.t(
-                        'You\'ve been added to your national and regional rooms automatically — discover others below.',
-                        'Vous avez été automatiquement ajouté à vos salons national et régional — découvrez les autres ci-dessous.'
+                        'You\'ve been added to your national and regional rooms automatically, discover others below.',
+                        'Vous avez été automatiquement ajouté à vos salons national et régional, découvrez les autres ci-dessous.'
                     )"></p>
                 </div>
             </div>
@@ -269,7 +269,7 @@
                         <div class="shrink-0">
                             <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-300
                                  {{ in_array($room->id, $selectedRoomIds) ? 'border-cm-green bg-cm-green' : 'border-slate-300 group-hover:border-slate-400' }}"
-                                 @if($isDefault) title="{{ auth()->user()->language_pref?->value === 'fr' ? 'Salon par défaut — déjà ajouté' : 'Default room — already joined' }}" @endif>
+                                 @if($isDefault) title="{{ auth()->user()->language_pref?->value === 'fr' ? 'Salon par défaut, déjà ajouté' : 'Default room, already joined' }}" @endif>
                                 @if($isDefault)
                                 <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                                 @elseif(in_array($room->id, $selectedRoomIds))
@@ -294,8 +294,8 @@
                 <div class="flex items-start gap-2 bg-blue-50 rounded-xl p-3 border border-blue-100">
                     <span class="text-base shrink-0">💡</span>
                     <p class="text-[11px] text-blue-700 leading-relaxed" x-text="$store.lang.t(
-                        'Your national and regional rooms are joined for you. Tap any other card to opt in — you can always discover more in the GoConnect sidebar.',
-                        'Vos salons national et régional sont déjà rejoints. Appuyez sur une autre carte pour la rejoindre — vous pourrez en découvrir plus dans la barre latérale GoConnect.'
+                        'Your national and regional rooms are joined for you. Tap any other card to opt in, you can always discover more in the GoConnect sidebar.',
+                        'Vos salons national et régional sont déjà rejoints. Appuyez sur une autre carte pour la rejoindre, vous pourrez en découvrir plus dans la barre latérale GoConnect.'
                     )"></p>
                 </div>
                 @endif
@@ -308,7 +308,7 @@
                         class="rounded-xl bg-cm-green px-6 py-2.5 text-sm font-bold text-white hover:bg-cm-green/90 transition-all duration-200 flex items-center gap-2 shadow-lg shadow-cm-green/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
                     @php $extraRooms = count($selectedRoomIds) - count($defaultRoomIds); @endphp
                     @if($extraRooms > 0)
-                        <span x-text="$store.lang.t('Continue — Join {{ $extraRooms }} more Room{{ $extraRooms > 1 ? 's' : '' }}', 'Continuer — Rejoindre {{ $extraRooms }} salle{{ $extraRooms > 1 ? 's' : '' }} de plus')"></span>
+                        <span x-text="$store.lang.t('Continue: Join {{ $extraRooms }} more Room{{ $extraRooms > 1 ? 's' : '' }}', 'Continuer : Rejoindre {{ $extraRooms }} salle{{ $extraRooms > 1 ? 's' : '' }} de plus')"></span>
                     @else
                         <span x-text="$store.lang.t('Continue', 'Continuer')"></span>
                     @endif
@@ -396,7 +396,7 @@
                               class="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:ring-cm-green focus:border-cm-green resize-none placeholder:text-slate-400"
                               placeholder="{{ auth()->user()->language_pref?->value === 'fr' ? 'Ex: Camerounais de Douala, je vis à Londres depuis 2020...' : 'E.g: From Douala, living in London since 2020...' }}"></textarea>
                     <div class="flex justify-between mt-1">
-                        <p class="text-[10px] text-slate-400" x-text="$store.lang.t('Optional — you can always add this later', 'Optionnel — vous pouvez l\'ajouter plus tard')"></p>
+                        <p class="text-[10px] text-slate-400" x-text="$store.lang.t('Optional, you can always add this later', 'Optionnel, vous pouvez l\'ajouter plus tard')"></p>
                         <p class="text-[10px] text-slate-400">{{ strlen($bio) }}/500</p>
                     </div>
                 </div>

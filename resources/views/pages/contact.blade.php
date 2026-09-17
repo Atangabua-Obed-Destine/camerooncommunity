@@ -1,5 +1,5 @@
 <x-layouts.guest>
-    <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Nous contacter' : 'Contact Us' }} — Cameroon Network</x-slot>
+    <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Nous contacter' : 'Contact Us' }} | Cameroon Network</x-slot>
 
     {{-- Sticky navbar (white state, like the legal pages) --}}
     @php($forceScrolled = true)
@@ -16,8 +16,8 @@
                     x-text="$store.lang.t('We\'d love to hear from you.', 'Nous serions ravis de vous entendre.')"></h1>
                 <p class="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed"
                    x-text="$store.lang.t(
-                       'Questions, partnerships, press, or just a story to share — pick the route that suits you.',
-                       'Questions, partenariats, presse, ou simplement une histoire à partager — choisissez le moyen qui vous convient.'
+                       'Questions, partnerships, press, or just a story to share? Pick the route that suits you.',
+                       'Questions, partenariats, presse, ou simplement une histoire à partager ? Choisissez le moyen qui vous convient.'
                    )"></p>
             </div>
         </section>
@@ -117,7 +117,7 @@
                         const lines = [
                             this.body || '',
                             '',
-                            '— ' + (this.name || 'Anonymous'),
+                            (this.name || 'Anonymous'),
                             this.email ? '(' + this.email + ')' : '',
                         ].join('\n');
                         const subject = this.subject || ($store.lang.isEn ? 'Hello from the website' : 'Bonjour depuis le site');
@@ -130,8 +130,8 @@
                     x-text="$store.lang.t('Send a quick message', 'Envoyer un message rapide')"></h2>
                 <p class="mt-1 text-sm text-slate-500"
                    x-text="$store.lang.t(
-                       'This opens your email app pre-filled — no account needed.',
-                       'Ceci ouvre votre application e-mail pré-remplie — aucun compte requis.'
+                       'This opens your email app pre-filled, no account needed.',
+                       'Ceci ouvre votre application e-mail pré-remplie, aucun compte requis.'
                    )"></p>
 
                 <div class="mt-5 grid sm:grid-cols-2 gap-4">

@@ -1,12 +1,12 @@
 <x-layouts.guest>
-    <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Politique de Confidentialité' : 'Privacy Policy' }} — Cameroon Network</x-slot>
+    <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Politique de Confidentialité' : 'Privacy Policy' }} | Cameroon Network</x-slot>
 
     @php
         $sections = [
             [
                 'icon' => '🛡️',
-                'en' => ['title' => 'Your trust is our currency', 'body' => "We built Cameroon Network so Cameroonians, wherever they are, can find each other safely. We collect only what we need to make that connection possible — your name, email, language, and approximate location."],
-                'fr' => ['title' => 'Votre confiance est notre monnaie', 'body' => "Nous avons créé Cameroon Network pour que les Camerounais, où qu'ils soient, puissent se retrouver en toute sécurité. Nous ne collectons que le strict nécessaire — nom, e-mail, langue et localisation approximative."],
+                'en' => ['title' => 'Your trust is our currency', 'body' => "We built Cameroon Network so Cameroonians, wherever they are, can find each other safely. We collect only what we need to make that connection possible, your name, email, language, and approximate location."],
+                'fr' => ['title' => 'Votre confiance est notre monnaie', 'body' => "Nous avons créé Cameroon Network pour que les Camerounais, où qu'ils soient, puissent se retrouver en toute sécurité. Nous ne collectons que le strict nécessaire, nom, e-mail, langue et localisation approximative."],
             ],
             [
                 'icon' => '📍',
@@ -20,8 +20,8 @@
             ],
             [
                 'icon' => '🍪',
-                'en' => ['title' => 'Cookies — only the necessary ones', 'body' => "Session cookies keep you logged in. Preference cookies remember your language. That's it. No third-party advertising trackers, no behavioural fingerprinting."],
-                'fr' => ['title' => 'Cookies — uniquement le nécessaire', 'body' => "Les cookies de session vous gardent connecté. Les cookies de préférences mémorisent votre langue. C'est tout. Aucun traceur publicitaire tiers, aucun profilage comportemental."],
+                'en' => ['title' => 'Cookies, only the necessary ones', 'body' => "Session cookies keep you logged in. Preference cookies remember your language. That's it. No third-party advertising trackers, no behavioural fingerprinting."],
+                'fr' => ['title' => 'Cookies, uniquement le nécessaire', 'body' => "Les cookies de session vous gardent connecté. Les cookies de préférences mémorisent votre langue. C'est tout. Aucun traceur publicitaire tiers, aucun profilage comportemental."],
             ],
             [
                 'icon' => '🔐',
@@ -34,7 +34,7 @@
     <x-legal.shell
         :badge="['en' => 'Privacy Policy', 'fr' => 'Politique de Confidentialité']"
         :title="['en' => 'Built on respect.', 'fr' => 'Bâti sur le respect.']"
-        :subtitle="['en' => 'A clear, plain-English commitment to how we treat your data — because trust is what binds a community together.', 'fr' => 'Un engagement clair et sans jargon sur la façon dont nous traitons vos données — parce que la confiance est le ciment d\'une communauté.']"
+        :subtitle="['en' => 'A clear, plain-English commitment to how we treat your data, because trust is what binds a community together.', 'fr' => 'Un engagement clair et sans jargon sur la façon dont nous traitons vos données, parce que la confiance est le ciment d\'une communauté.']"
         :sections="$sections"
         :updated="'May 2026'"
         accent="green"

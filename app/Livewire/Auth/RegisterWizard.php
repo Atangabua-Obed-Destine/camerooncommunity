@@ -276,8 +276,8 @@ class RegisterWizard extends Component
         }
 
         return $fr
-            ? "Trouvé ! 📍 {$loc}. Vous serez parmi les premiers — un vrai pionnier ! 🚀"
-            : "Found you! 📍 {$loc}. You'll be among the first here — a true pioneer! 🚀";
+            ? "Trouvé ! 📍 {$loc}. Vous serez parmi les premiers, un vrai pionnier ! 🚀"
+            : "Found you! 📍 {$loc}. You'll be among the first here, a true pioneer! 🚀";
     }
 
     private function aiAccountMessage(): string
@@ -302,9 +302,9 @@ class RegisterWizard extends Component
         $regionFacts = [
             'Northwest' => ['en' => "Northwest! Where the hills whisper and fufu is the law 🌄", 'fr' => "Nord-Ouest ! Les collines murmurent et le fufu est roi 🌄"],
             'Southwest' => ['en' => "Southwest! Beach, bush and the best jollof debates 🏖️", 'fr' => "Sud-Ouest ! Plage, brousse et débats sur le jollof 🏖️"],
-            'Centre'    => ['en' => "Centre! Yaoundé vibes — the heartbeat of Cameroon 💚", 'fr' => "Le Centre ! Ambiance Yaoundé — le cœur du Cameroun 💚"],
+            'Centre'    => ['en' => "Centre! Yaoundé vibes, the heartbeat of Cameroon 💚", 'fr' => "Le Centre ! Ambiance Yaoundé, le cœur du Cameroun 💚"],
             'Littoral'  => ['en' => "Littoral! Douala hustle and the sweet smell of soya 🔥", 'fr' => "Le Littoral ! L'effervescence de Douala et l'odeur du soya 🔥"],
-            'West'      => ['en' => "West! The Bamiléké spirit — business in the blood 💪", 'fr' => "L'Ouest ! L'esprit Bamiléké — le business dans le sang 💪"],
+            'West'      => ['en' => "West! The Bamiléké spirit, business in the blood 💪", 'fr' => "L'Ouest ! L'esprit Bamiléké, le business dans le sang 💪"],
             'East'      => ['en' => "East! Land of forests and untold beauty 🌿", 'fr' => "L'Est ! Terre de forêts et de beauté cachée 🌿"],
             'Adamawa'   => ['en' => "Adamawa! Where savanna meets pure serenity 🌅", 'fr' => "L'Adamaoua ! La savane rencontre la sérénité 🌅"],
             'North'     => ['en' => "The North! Warmth of people that matches the sun ☀️", 'fr' => "Le Nord ! La chaleur des gens rivalise avec le soleil ☀️"],
@@ -317,8 +317,8 @@ class RegisterWizard extends Component
         }
 
         return $fr
-            ? "Dites-moi d'où vous venez au Cameroun — je suis curieux ! 🇨🇲"
-            : "Tell me where you're from in Cameroon — I'm curious! 🇨🇲";
+            ? "Dites-moi d'où vous venez au Cameroun, je suis curieux ! 🇨🇲"
+            : "Tell me where you're from in Cameroon, I'm curious! 🇨🇲";
     }
 
     private function aiSummaryMessage(): string

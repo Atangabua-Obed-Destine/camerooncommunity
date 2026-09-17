@@ -675,7 +675,7 @@ class RoomInfo extends Component
             'status' => \App\Enums\ReportStatus::Pending,
         ]);
 
-        $this->dispatch('toast', type: 'success', message: __('Thanks — our team will review this group.'));
+        $this->dispatch('toast', type: 'success', message: __('Thanks, our team will review this group.'));
     }
 
     /**

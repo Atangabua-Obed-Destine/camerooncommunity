@@ -110,7 +110,7 @@ class LeaveReview extends Component
             );
         }
 
-        $this->dispatch('toast', type: 'success', message: $isNew ? __('Review posted — thanks!') : __('Review updated'));
+        $this->dispatch('toast', type: 'success', message: $isNew ? __('Review posted, thanks!') : __('Review updated'));
         $this->redirectRoute('marketplace.show', ['slug' => $this->listing->slug], navigate: true);
     }
 

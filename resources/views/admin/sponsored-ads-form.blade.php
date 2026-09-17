@@ -39,7 +39,7 @@
                            x-text="$store.lang.t('Title *', 'Titre *')"></label>
                     <input type="text" name="title" value="{{ old('title', $ad?->title) }}" required maxlength="255"
                            class="w-full rounded-lg border-slate-300 focus:ring-cm-green focus:border-cm-green"
-                           placeholder="e.g. Cameroon Business Hub – Grand Opening">
+                           placeholder="e.g. Cameroon Business Hub: Grand Opening">
                 </div>
 
                 <div>

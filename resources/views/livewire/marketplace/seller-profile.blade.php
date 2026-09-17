@@ -103,7 +103,7 @@
         {{-- ── Listings ── --}}
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
             <h2 class="text-lg font-extrabold text-slate-900">
-                {{ $isSelf ? ($lang === 'fr' ? 'Mes annonces' : 'Your listings') : ($name . ($lang === 'fr' ? ' — annonces' : "'s listings")) }}
+                {{ $isSelf ? ($lang === 'fr' ? 'Mes annonces' : 'Your listings') : ($lang === 'fr' ? 'Annonces de ' . $name : $name . "'s listings") }}
             </h2>
             <div class="flex items-center gap-2">
                 <div class="relative">

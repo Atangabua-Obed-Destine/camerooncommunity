@@ -1,5 +1,5 @@
 <x-layouts.guest>
-    <x-slot:title>Verify Email — Cameroon Network</x-slot:title>
+    <x-slot:title>Verify Email | Cameroon Network</x-slot:title>
 
     <div class="min-h-screen bg-slate-50 flex items-center justify-center py-12 px-4">
         <div class="w-full max-w-md">

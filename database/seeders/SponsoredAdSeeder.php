@@ -16,7 +16,7 @@ class SponsoredAdSeeder extends Seeder
         $tenant = Tenant::first();
 
         if (! $tenant) {
-            $this->command->warn('No tenant found — skipping ad seeder.');
+            $this->command->warn('No tenant found, skipping ad seeder.');
             return;
         }
 
@@ -30,7 +30,7 @@ class SponsoredAdSeeder extends Seeder
 
         $ads = [
             [
-                'title' => 'MTN MoMo — Send Money Instantly',
+                'title' => 'MTN MoMo - Send Money Instantly',
                 'description' => 'Transfer money to family back home in Cameroon. Fast, secure & low fees with MTN Mobile Money.',
                 'image_url' => 'https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&h=400&fit=crop',
                 'link_url' => 'https://mtn.cm',
@@ -44,7 +44,7 @@ class SponsoredAdSeeder extends Seeder
                 'expires_at' => now()->addMonths(3),
             ],
             [
-                'title' => 'Jumia Cameroon — Mega Sale!',
+                'title' => 'Jumia Cameroon - Mega Sale!',
                 'description' => 'Up to 70% off electronics, fashion & home. Free delivery in Douala & Yaoundé.',
                 'image_url' => 'https://images.unsplash.com/photo-1607082349566-187342175e2f?w=600&h=400&fit=crop',
                 'link_url' => 'https://jumia.cm',
@@ -58,7 +58,7 @@ class SponsoredAdSeeder extends Seeder
                 'expires_at' => now()->addMonths(2),
             ],
             [
-                'title' => 'Learn French Online — CamerLearn',
+                'title' => 'Learn French Online - CamerLearn',
                 'description' => 'Master French or English with certified Cameroonian tutors. First lesson free!',
                 'image_url' => 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?w=600&h=400&fit=crop',
                 'link_url' => 'https://example.com/camerlearn',
@@ -72,7 +72,7 @@ class SponsoredAdSeeder extends Seeder
                 'expires_at' => now()->addMonths(6),
             ],
             [
-                'title' => 'Cameroon Airlines — Fly Home',
+                'title' => 'Cameroon Airlines - Fly Home',
                 'description' => 'Direct flights Douala ↔ Paris, Brussels, London. Book early & save up to 30%.',
                 'image_url' => 'https://images.unsplash.com/photo-1436491865332-7a61a109db05?w=600&h=400&fit=crop',
                 'link_url' => 'https://example.com/camair',
@@ -100,7 +100,7 @@ class SponsoredAdSeeder extends Seeder
                 'expires_at' => now()->addMonths(5),
             ],
             [
-                'title' => 'Diaspora Banking — UBA Cameroon',
+                'title' => 'Diaspora Banking - UBA Cameroon',
                 'description' => 'Open a diaspora account online. Send, save & invest from anywhere in the world.',
                 'image_url' => 'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=600&h=400&fit=crop',
                 'link_url' => 'https://example.com/uba',

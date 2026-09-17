@@ -567,7 +567,7 @@ class ListingDetail extends Component
         $this->showReportModal = false;
         unset($this->hasReported);
         $this->dispatch('toast', type: 'success',
-            message: __('Thanks — our team will review this listing.'));
+            message: __('Thanks, our team will review this listing.'));
     }
 
     // ─── Block seller ─────────────────────────────────────────────

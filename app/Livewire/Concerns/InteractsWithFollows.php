@@ -59,7 +59,7 @@ trait InteractsWithFollows
                 'follower_id'  => $me->id,
                 'following_id' => $userId,
             ]);
-            $this->dispatch('toast', type: 'success', message: __('Following — you\'ll see their new listings'));
+            $this->dispatch('toast', type: 'success', message: __('Following! You\'ll see their new listings'));
         }
     }
 }

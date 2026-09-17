@@ -1,5 +1,5 @@
 <x-layouts.app>
-    <x-slot:title>{{ __('Welcome') }} — Cameroon Network</x-slot:title>
+    <x-slot:title>{{ __('Welcome') }} | Cameroon Network</x-slot:title>
 
     {{-- Confetti canvas for founding members --}}
     @if(auth()->user()->is_founding_member)
@@ -112,8 +112,8 @@
                                         'Vous êtes le premier Camerounais que nous trouvons à ' + region + ' !'
                                     )"></p>
                                     <p class="text-sm text-slate-600 mt-1" x-text="$store.lang.t(
-                                        'Your regional room is ready — invite others to join you.',
-                                        'Votre salle régionale est prête — invitez d\'autres à vous rejoindre.'
+                                        'Your regional room is ready, invite others to join you.',
+                                        'Votre salle régionale est prête, invitez d\'autres à vous rejoindre.'
                                     )"></p>
                                 </div>
                             </div>
@@ -201,8 +201,8 @@
                     <div class="w-20 h-20 mx-auto rounded-2xl bg-cm-red/10 flex items-center justify-center text-4xl mb-4">🤲</div>
                     <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('Solidarity & More', 'Solidarité et Plus')"></h2>
                     <p class="text-slate-600 max-w-md mx-auto" x-text="$store.lang.t(
-                        'Support fellow Cameroonians through community fundraising. Plus, discover GoMarket, events, housing and more — coming soon!',
-                        'Soutenez vos compatriotes camerounais par le financement communautaire. En plus, découvrez le marché, les événements, le logement et plus encore — bientôt disponible !'
+                        'Support fellow Cameroonians through community fundraising. Plus, discover GoMarket, events, housing and more, coming soon!',
+                        'Soutenez vos compatriotes camerounais par le financement communautaire. En plus, découvrez le marché, les événements, le logement et plus encore, bientôt disponible !'
                     )"></p>
                 </div>
 
@@ -262,8 +262,8 @@
                     <div class="w-20 h-20 mx-auto rounded-2xl bg-cm-yellow/20 flex items-center justify-center text-4xl mb-4">🤖</div>
                     <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('Meet Kamer AI', 'Découvrez Kamer AI')"></h2>
                     <p class="text-slate-600 max-w-md mx-auto" x-text="$store.lang.t(
-                        'Your personal guide to everything Cameroon Network. Ask Kamer anything — from navigating the platform to understanding UK immigration rules.',
-                        'Votre guide personnel pour tout ce qui concerne Cameroon Network. Demandez n\\'importe quoi à Kamer — de la navigation sur la plateforme aux règles d\\'immigration.'
+                        'Your personal guide to everything Cameroon Network. Ask Kamer anything, from navigating the platform to understanding UK immigration rules.',
+                        'Votre guide personnel pour tout ce qui concerne Cameroon Network. Demandez n\\'importe quoi à Kamer, de la navigation sur la plateforme aux règles d\\'immigration.'
                     )"></p>
                 </div>
 

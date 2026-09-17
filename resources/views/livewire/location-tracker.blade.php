@@ -288,7 +288,7 @@
                       // we just resolved them to "London"). Reload so Livewire
                       // computed properties (suggested rooms, etc.) refresh.
                       if (data.autoAdoptedRegion) {
-                          console.log('[LocationTracker] Auto-adopted region:', data.autoAdoptedRegion, '— reloading');
+                          console.log('[LocationTracker] Auto-adopted region:', data.autoAdoptedRegion, 'reloading');
                           window.location.reload();
                       }
                   })

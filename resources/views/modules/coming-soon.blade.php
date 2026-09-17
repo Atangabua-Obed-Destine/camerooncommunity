@@ -1,5 +1,5 @@
 <x-layouts.app>
-    <x-slot:title>{{ $moduleName }} — Cameroon Network</x-slot:title>
+    <x-slot:title>{{ $moduleName }} | Cameroon Network</x-slot:title>
 
     <div class="min-h-[calc(100vh-8rem)] flex items-center justify-center py-12 px-4">
         <div class="max-w-lg w-full text-center" x-data="{ email: '', submitted: false, loading: false }">

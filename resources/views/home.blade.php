@@ -1,5 +1,5 @@
 <x-layouts.guest>
-    <x-slot:title>Cameroon Network — Connecting Cameroonians. Wherever They Are.</x-slot:title>
+    <x-slot:title>Cameroon Network | Connecting Cameroonians. Wherever They Are.</x-slot:title>
 
     <div class="fixed inset-0 flex flex-col overflow-hidden md:static md:block md:overflow-visible md:h-auto md:min-h-0">
     @include('partials.site-nav', ['staysTransparent' => true])
@@ -104,8 +104,8 @@
                                 <span class="relative inline-flex rounded-full h-2 w-2 bg-cm-yellow"></span>
                             </span>
                             <span class="truncate" x-text="$store.lang.t(
-                                'Welcome — your ' + country + ' community is right here',
-                                'Bienvenue — votre communauté ' + country + ' est juste ici'
+                                'Welcome, your ' + country + ' community is right here',
+                                'Bienvenue, votre communauté ' + country + ' est juste ici'
                             )"></span>
                         </div>
                     </div>
@@ -142,7 +142,7 @@
 
                     {{-- Mobile-only Partner With Us blurb (flows in column instead of overlapping) --}}
                     <div class="md:hidden max-w-[55vw] text-white mt-20">
-                        <p class="font-semibold text-sm leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat — Une Meilleure Voie')"></p>
+                        <p class="font-semibold text-sm leading-snug" x-text="$store.lang.t('Partner With Us for a Better Way', 'Partenariat : Une Meilleure Voie')"></p>
                         <p class="text-xs font-bold text-white/80 mt-0.5" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
                     </div>
 
@@ -156,7 +156,7 @@
                             <a href="#"
                                @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('iOS app coming soon!', 'App iOS bientôt disponible !') } }))"
                                class="group relative inline-flex flex-1 sm:flex-none min-w-0 items-center gap-2 sm:gap-3 rounded-xl bg-black px-3 sm:px-4 py-2 sm:py-2.5 text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:ring-white/25"
-                               :title="$store.lang.t('Download on the App Store — Coming soon', 'Télécharger sur l’App Store — Bientôt')">
+                               :title="$store.lang.t('Download on the App Store (Coming soon)', 'Télécharger sur l’App Store (Bientôt)')">
                                 <svg class="h-7 w-7 sm:h-8 sm:w-8 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                     <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
                                 </svg>
@@ -172,7 +172,7 @@
                             <a href="#"
                                @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('Android app coming soon!', 'App Android bientôt disponible !') } }))"
                                class="group relative inline-flex flex-1 sm:flex-none min-w-0 items-center gap-2 sm:gap-3 rounded-xl bg-black px-3 sm:px-4 py-2 sm:py-2.5 text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:ring-white/25"
-                               :title="$store.lang.t('Get it on Google Play — Coming soon', 'Disponible sur Google Play — Bientôt')">
+                               :title="$store.lang.t('Get it on Google Play (Coming soon)', 'Disponible sur Google Play (Bientôt)')">
                                 <svg class="h-7 w-7 sm:h-8 sm:w-8 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
                                     <path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#34a853"/>
                                     <path d="m13.792 12 2.92-2.92 4.06 2.34a1 1 0 0 1 0 1.74l-4.06 2.34L13.792 12z" fill="#fbbc04"/>
@@ -198,7 +198,7 @@
                         </div>
                         <p class="text-xs sm:text-sm min-w-0">
                             <span class="font-bold text-cm-yellow" x-text="$store.lang.t('Cameroonians worldwide', 'Camerounais dans le monde')"></span>
-                            <span class="text-slate-300" x-text="$store.lang.t(' — join your community!', ' — rejoignez votre communauté !')"></span>
+                            <span class="text-slate-300" x-text="$store.lang.t(', join your community!', ', rejoignez votre communauté !')"></span>
                         </p>
                     </div>
                 </div>
@@ -492,7 +492,7 @@
                 </div>
                 <p class="text-xs font-bold min-w-0">
                     <span class="font-bold text-cm-yellow" x-text="$store.lang.t('Cameroonians worldwide', 'Camerounais dans le monde')"></span>
-                    <span x-text="$store.lang.t(' — join your community!', ' — rejoignez votre communauté !')"></span>
+                    <span x-text="$store.lang.t(', join your community!', ', rejoignez votre communauté !')"></span>
                 </p>
             </div>
         </div>
@@ -650,7 +650,7 @@
                             <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cm-green text-white">
                                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
                             </div>
-                            <p class="text-slate-600" x-text="$store.lang.t('GPS auto-detection — join your country room instantly', 'Détection GPS automatique — rejoignez votre salon pays instantanément')"></p>
+                            <p class="text-slate-600" x-text="$store.lang.t('GPS auto-detection, join your country room instantly', 'Détection GPS automatique, rejoignez votre salon pays instantanément')"></p>
                         </div>
                         <div class="flex items-start gap-3">
                             <div class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cm-green text-white">
@@ -824,9 +824,9 @@
                 @php
                     $steps = [
                         ['num' => '01', 'icon' => '👤', 'title' => 'Create your profile', 'titleFr' => 'Créez votre profil', 'desc' => 'Tell us where you\'re from and choose your language', 'descFr' => 'Dites-nous d\'où vous venez et choisissez votre langue'],
-                        ['num' => '02', 'icon' => '📍', 'title' => 'We detect where you are', 'titleFr' => 'Nous détectons où vous êtes', 'desc' => 'GPS connects you to your country — your Yard opens instantly', 'descFr' => 'Le GPS vous connecte à votre pays — votre Yard s\'ouvre instantanément'],
+                        ['num' => '02', 'icon' => '📍', 'title' => 'We detect where you are', 'titleFr' => 'Nous détectons où vous êtes', 'desc' => 'GPS connects you to your country, your Yard opens instantly', 'descFr' => 'Le GPS vous connecte à votre pays, votre Yard s\'ouvre instantanément'],
                         ['num' => '03', 'icon' => '🤝', 'title' => 'Connect with community', 'titleFr' => 'Connectez-vous', 'desc' => 'Chat with Cameroonians in your city and country', 'descFr' => 'Discutez avec des Camerounais dans votre ville et pays'],
-                        ['num' => '04', 'icon' => '🚀', 'title' => 'Access everything', 'titleFr' => 'Accédez à tout', 'desc' => 'Housing, parcels, events, jobs — built for your life abroad', 'descFr' => 'Logement, colis, événements, emplois — conçu pour votre vie à l\'étranger'],
+                        ['num' => '04', 'icon' => '🚀', 'title' => 'Access everything', 'titleFr' => 'Accédez à tout', 'desc' => 'Housing, parcels, events, jobs: built for your life abroad', 'descFr' => 'Logement, colis, événements, emplois : conçu pour votre vie à l\'étranger'],
                     ];
                 @endphp
 
@@ -950,8 +950,8 @@
                         x-text="$store.lang.t('Built for Cameroon. Designed for Africa.', 'Construit pour le Cameroun. Conçu pour l\'Afrique.')"></h2>
                     <p class="text-lg text-slate-300 leading-relaxed"
                        x-text="$store.lang.t(
-                           'Cameroon Network is just the beginning. Our vision is to connect every African diaspora community with the tools they need to thrive abroad — while staying connected to home.',
-                           'Cameroon Network n\'est que le début. Notre vision est de connecter chaque communauté de la diaspora africaine avec les outils nécessaires pour prospérer à l\'étranger — tout en restant connecté au pays.'
+                           'Cameroon Network is just the beginning. Our vision is to connect every African diaspora community with the tools they need to thrive abroad, while staying connected to home.',
+                           'Cameroon Network n\'est que le début. Notre vision est de connecter chaque communauté de la diaspora africaine avec les outils nécessaires pour prospérer à l\'étranger, tout en restant connecté au pays.'
                        )"></p>
 
                     <div class="flex flex-wrap gap-3">
@@ -1013,7 +1013,7 @@
                 x-text="$store.lang.t('Your community is already waiting for you.', 'Votre communauté vous attend déjà.')"></h2>
             <div class="mt-8">
                 <a href="{{ route('register') }}" class="inline-flex items-center gap-2 rounded-xl bg-cm-yellow px-10 py-5 text-lg font-bold text-cm-green-dark shadow-lg shadow-cm-yellow/25 transition-all hover:bg-cm-yellow-light hover:shadow-xl hover:-translate-y-0.5">
-                    <span x-text="$store.lang.t('Join Cameroon Network — It\'s Free', 'Rejoignez Cameroon Network — C\'est Gratuit')"></span>
+                    <span x-text="$store.lang.t('Join Cameroon Network. It\'s Free', 'Rejoignez Cameroon Network. C\'est Gratuit')"></span>
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
                 </a>
             </div>
@@ -1031,10 +1031,12 @@
     {{-- ═══════════════════════════════════════════════════════════════
          MOBILE-ONLY: "Download Our App" bar (directly below hero)
          ═══════════════════════════════════════════════════════════════ --}}
-    {{-- Hidden inside the installed app — see partials/pwa-head. Sign In stays
-         reachable from the site-nav mobile menu. --}}
-    <div class="md:hidden relative z-40 bg-cm-green/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-2 shadow-[0_-4px_18px_rgba(0,0,0,0.25)]"
-         data-pwa-hide-when-installed>
+    {{-- The bar and its login icon always show; only the download part is hidden
+         inside the installed app — see partials/pwa-head. min-height keeps the bar's height
+         when that part is hidden, since the login icon is absolutely positioned (inline, not a
+         new Tailwind class, because public/build is committed). --}}
+    <div style="min-height: calc(3rem + env(safe-area-inset-bottom));"
+         class="md:hidden relative z-40 bg-cm-green/95 backdrop-blur border-t border-white/10 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-center gap-2 shadow-[0_-4px_18px_rgba(0,0,0,0.25)]">
         {{-- Profile / Login (pinned to extreme left) --}}
         <a href="{{ route('login') }}"
            aria-label="{{ __('Login') }}"
@@ -1043,7 +1045,13 @@
                 <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
             </svg>
         </a>
-        <span class="text-white font-semibold text-sm tracking-wide" x-text="$store.lang.t('Download Our App', 'Téléchargez notre app')"></span>
+        <div class="flex items-center justify-center gap-2" data-pwa-hide-when-installed>
+        {{-- Opens the install flow in partials/pwa-install --}}
+        <button type="button"
+                @click="window.dispatchEvent(new CustomEvent('pwa-open-install'))"
+                style="text-decoration: underline; text-underline-offset: 3px;"
+                class="text-white font-semibold text-sm tracking-wide"
+                x-text="$store.lang.t('Download Our App', 'Téléchargez notre app')"></button>
         {{-- Vertical separator --}}
         <span class="h-5 w-px bg-white" aria-hidden="true"></span>
         {{-- Google Play icon --}}
@@ -1067,6 +1075,7 @@
                 <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
             </svg>
         </a>
+        </div>{{-- /download part --}}
     </div>
     </div>
 

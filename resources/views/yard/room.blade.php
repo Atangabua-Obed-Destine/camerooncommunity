@@ -1,5 +1,5 @@
 <x-layouts.app>
-    <x-slot:title>{{ $room->name }} — GoConnect</x-slot:title>
+    <x-slot:title>{{ $room->name }} | GoConnect</x-slot:title>
 
     <div class="h-[calc(100vh-96px)] lg:h-[calc(100vh-92px)] flex overflow-hidden" x-data="{ showInfo: false }">
         {{-- LEFT SIDEBAR: Room List (desktop only) --}}

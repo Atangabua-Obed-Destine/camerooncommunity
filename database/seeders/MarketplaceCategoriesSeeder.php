@@ -20,7 +20,7 @@ class MarketplaceCategoriesSeeder extends Seeder
             ?? Tenant::query()->first();
 
         if (! $tenant) {
-            $this->command?->warn('No tenant found — skipping marketplace categories seed.');
+            $this->command?->warn('No tenant found, skipping marketplace categories seed.');
             return;
         }
 

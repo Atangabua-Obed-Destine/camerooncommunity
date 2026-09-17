@@ -311,7 +311,7 @@ class FeedBrowse extends Component
             'last_notified_at' => now(),
         ]);
 
-        $this->dispatch('toast', type: 'success', message: __('Search saved — we\u2019ll alert you when new matches arrive'));
+        $this->dispatch('toast', type: 'success', message: __('Search saved, we\u2019ll alert you when new matches arrive'));
         $this->dispatch('savedSearchesUpdated');
     }
 

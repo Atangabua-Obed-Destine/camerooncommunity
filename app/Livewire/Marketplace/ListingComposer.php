@@ -601,7 +601,7 @@ class ListingComposer extends Component
         session()->flash('marketplace_flash',
             $status === ListingStatus::Active
                 ? 'Your listing is live ✓'
-                : 'Submitted for review — you’ll be notified shortly.'
+                : 'Submitted for review, you’ll be notified shortly.'
         );
 
         $this->redirectRoute('marketplace.show', ['slug' => $this->listing->slug]);

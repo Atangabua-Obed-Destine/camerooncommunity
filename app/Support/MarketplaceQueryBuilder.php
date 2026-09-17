@@ -219,8 +219,8 @@ class MarketplaceQueryBuilder
         $max = $filters['priceMax'] ?? null;
         if ($min !== null || $max !== null) {
             $parts[] = ($fr ? 'Prix: ' : 'Price: ')
-                . ($min !== null ? number_format((int) $min) : '–')
-                . ' – '
+                . ($min !== null ? number_format((int) $min) : '-')
+                . ' - '
                 . ($max !== null ? number_format((int) $max) : '∞');
         }
 

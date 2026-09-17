@@ -1,5 +1,5 @@
 <x-layouts.app :yardMode="true">
-    <x-slot:title>GoConnect — Cameroon Network</x-slot:title>
+    <x-slot:title>GoConnect | Cameroon Network</x-slot:title>
 
     <div class="yard-container" x-data="yardApp()" @room-selected.window="onRoomSelected($event.detail)" @yard-back.window="goBack()" @yard-open-new-chat.window="openNewChat()" @toggle-room-info.window="toggleInfo()" @open-room-info.window="openInfo($event.detail?.roomId)" @room-type-changed.window="activeRoomType = $event.detail.roomType"
          @open-dm.window="startDmWith($event.detail.userId)"
@@ -833,7 +833,7 @@
                             console.error('[connectUser] window.Livewire not loaded yet');
                             user.connection_state = 'none';
                             user.busy = false;
-                            alert('Livewire not loaded — please refresh the page.');
+                            alert('Livewire not loaded, please refresh the page.');
                             return;
                         }
                         console.log('[connectUser] dispatching Livewire event connect-user', { userId: user.id });

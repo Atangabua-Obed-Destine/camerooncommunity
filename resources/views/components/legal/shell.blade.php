@@ -71,7 +71,7 @@
                 <div>
                     <h3 class="text-base font-bold" x-text="$store.lang.t('Questions? We\'re listening.', 'Des questions ? Nous écoutons.')"></h3>
                     <p class="mt-1 text-sm text-slate-300"
-                       x-text="$store.lang.t('Reach our team directly — we reply within 7 days.', 'Contactez notre équipe — nous répondons sous 7 jours.')"></p>
+                       x-text="$store.lang.t('Reach our team directly, we reply within 7 days.', 'Contactez notre équipe, nous répondons sous 7 jours.')"></p>
                 </div>
                 <a href="mailto:hello@cameroonnetwork.org"
                    class="shrink-0 rounded-full px-5 py-2 text-sm font-bold text-slate-900 hover:brightness-110 transition-all"

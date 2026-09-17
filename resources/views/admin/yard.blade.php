@@ -51,7 +51,7 @@
                             <td class="px-4 py-3 text-slate-600">{{ number_format($room->members_count) }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ number_format($room->messages_count) }}</td>
                             <td class="px-4 py-3 text-slate-500 text-xs">
-                                {{ $room->last_message_at ? $room->last_message_at->diffForHumans() : '—' }}
+                                {{ $room->last_message_at ? $room->last_message_at->diffForHumans() : '-' }}
                             </td>
                             <td class="px-4 py-3">
                                 @if($room->is_system_room)

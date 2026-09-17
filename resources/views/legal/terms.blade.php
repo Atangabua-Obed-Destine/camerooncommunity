@@ -1,17 +1,17 @@
 <x-layouts.guest>
-    <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Conditions d\'Utilisation' : 'Terms of Service' }} — Cameroon Network</x-slot>
+    <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Conditions d\'Utilisation' : 'Terms of Service' }} | Cameroon Network</x-slot>
 
     @php
         $sections = [
             [
                 'icon' => '🤝',
-                'en' => ['title' => 'A community, not a billboard', 'body' => "Cameroon Network is a free space for Cameroonians to chat, organise, help one another, and stay connected. By creating an account, you agree to use it in good faith — to build, not to break."],
-                'fr' => ['title' => 'Une communauté, pas un panneau publicitaire', 'body' => "Cameroon Network est un espace libre pour que les Camerounais discutent, s'organisent, s'entraident et restent connectés. En créant un compte, vous vous engagez à l'utiliser de bonne foi — pour bâtir, pas pour briser."],
+                'en' => ['title' => 'A community, not a billboard', 'body' => "Cameroon Network is a free space for Cameroonians to chat, organise, help one another, and stay connected. By creating an account, you agree to use it in good faith, to build, not to break."],
+                'fr' => ['title' => 'Une communauté, pas un panneau publicitaire', 'body' => "Cameroon Network est un espace libre pour que les Camerounais discutent, s'organisent, s'entraident et restent connectés. En créant un compte, vous vous engagez à l'utiliser de bonne foi, pour bâtir, pas pour briser."],
             ],
             [
                 'icon' => '✋',
-                'en' => ['title' => 'What is not allowed', 'body' => "Hate speech, harassment, scams, impersonation, illegal activity, and spam will result in immediate suspension. We do not negotiate on these — our community deserves better."],
-                'fr' => ['title' => 'Ce qui n\'est pas autorisé', 'body' => "Discours haineux, harcèlement, arnaques, usurpation d'identité, activités illégales et spam entraîneront une suspension immédiate. Aucune négociation — notre communauté mérite mieux."],
+                'en' => ['title' => 'What is not allowed', 'body' => "Hate speech, harassment, scams, impersonation, illegal activity, and spam will result in immediate suspension. We do not negotiate on these, our community deserves better."],
+                'fr' => ['title' => 'Ce qui n\'est pas autorisé', 'body' => "Discours haineux, harcèlement, arnaques, usurpation d'identité, activités illégales et spam entraîneront une suspension immédiate. Aucune négociation, notre communauté mérite mieux."],
             ],
             [
                 'icon' => '🎁',
@@ -25,8 +25,8 @@
             ],
             [
                 'icon' => '🔄',
-                'en' => ['title' => 'Changes & ending the agreement', 'body' => "We may update these terms as the platform evolves. Major changes will be announced in GoConnect. You can leave at any time by deleting your account — no questions asked, no strings attached."],
-                'fr' => ['title' => 'Modifications & fin de l\'accord', 'body' => "Nous pouvons mettre à jour ces conditions au fur et à mesure de l'évolution de la plateforme. Les changements majeurs seront annoncés dans GoConnect. Vous pouvez partir à tout moment en supprimant votre compte — sans questions, sans conditions."],
+                'en' => ['title' => 'Changes & ending the agreement', 'body' => "We may update these terms as the platform evolves. Major changes will be announced in GoConnect. You can leave at any time by deleting your account, no questions asked, no strings attached."],
+                'fr' => ['title' => 'Modifications & fin de l\'accord', 'body' => "Nous pouvons mettre à jour ces conditions au fur et à mesure de l'évolution de la plateforme. Les changements majeurs seront annoncés dans GoConnect. Vous pouvez partir à tout moment en supprimant votre compte, sans questions, sans conditions."],
             ],
         ];
     @endphp
@@ -34,7 +34,7 @@
     <x-legal.shell
         :badge="['en' => 'Terms of Service', 'fr' => 'Conditions d\'Utilisation']"
         :title="['en' => 'Simple rules. Strong community.', 'fr' => 'Règles simples. Communauté forte.']"
-        :subtitle="['en' => 'The agreement between you and Cameroon Network — written in plain language, because legalese has no place between neighbours.', 'fr' => 'L\'accord entre vous et Cameroon Network — écrit en langage clair, car le jargon juridique n\'a pas sa place entre voisins.']"
+        :subtitle="['en' => 'The agreement between you and Cameroon Network, written in plain language, because legalese has no place between neighbours.', 'fr' => 'L\'accord entre vous et Cameroon Network, écrit en langage clair, car le jargon juridique n\'a pas sa place entre voisins.']"
         :sections="$sections"
         :updated="'May 2026'"
         accent="yellow"

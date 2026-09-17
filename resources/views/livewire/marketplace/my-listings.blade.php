@@ -226,7 +226,7 @@
                                 @empty
                                     <div class="text-[12px] text-slate-500 italic px-2 py-2">
                                         @if (trim($sellBuyerSearch) === '')
-                                            <span x-data x-text="$store.lang.t('No prior offers — search above to attribute a buyer (optional).','Aucune offre précédente — recherchez ci-dessus pour attribuer un acheteur (optionnel).')"></span>
+                                            <span x-data x-text="$store.lang.t('No prior offers, search above to attribute a buyer (optional).','Aucune offre précédente, recherchez ci-dessus pour attribuer un acheteur (optionnel).')"></span>
                                         @else
                                             <span x-data x-text="$store.lang.t('No match found.','Aucun résultat.')"></span>
                                         @endif

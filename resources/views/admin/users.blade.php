@@ -78,12 +78,12 @@
                                 @if($user->username)
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono">{{ '@' . $user->username }}</span>
                                 @else
-                                    <span class="text-slate-400">—</span>
+                                    <span class="text-slate-400">-</span>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ $user->current_country ?? '—' }}</td>
-                            <td class="px-4 py-3 text-slate-600">{{ $user->current_region ?? '—' }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ $user->current_country ?? '-' }}</td>
+                            <td class="px-4 py-3 text-slate-600">{{ $user->current_region ?? '-' }}</td>
                             <td class="px-4 py-3">
                                 @if($user->is_banned)
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Banned</span>

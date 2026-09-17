@@ -51,7 +51,7 @@
                             $features = [
                                 ['icon' => '💬', 'en' => 'GoConnect', 'fr' => 'GoConnect', 'desc_en' => 'Real-time chat rooms grouped by country, region, and city.', 'desc_fr' => 'Salons de discussion en temps réel par pays, région et ville.', 'live' => true, 'color' => 'from-emerald-500 to-emerald-600'],
                                 ['icon' => '🤝', 'en' => 'Solidarity', 'fr' => 'Solidarité', 'desc_en' => 'Community-powered fundraising for those who need it most.', 'desc_fr' => 'Collectes communautaires pour ceux qui en ont le plus besoin.', 'live' => false, 'color' => 'from-rose-500 to-pink-600'],
-                                ['icon' => '✨', 'en' => 'Kamer AI', 'fr' => 'Kamer AI', 'desc_en' => 'Your personal guide — answers in English, French, or Pidgin.', 'desc_fr' => 'Votre guide personnel — réponses en anglais, français ou pidgin.', 'live' => true, 'color' => 'from-indigo-500 to-purple-600'],
+                                ['icon' => '✨', 'en' => 'Kamer AI', 'fr' => 'Kamer AI', 'desc_en' => 'Your personal guide: answers in English, French, or Pidgin.', 'desc_fr' => 'Votre guide personnel : réponses en anglais, français ou pidgin.', 'live' => true, 'color' => 'from-indigo-500 to-purple-600'],
                                 ['icon' => '🛒', 'en' => 'GoMarket', 'fr' => 'GoMarket', 'desc_en' => 'Buy and sell within your trusted local community.', 'desc_fr' => 'Achetez et vendez au sein de votre communauté locale.', 'live' => false, 'color' => 'from-amber-500 to-orange-600'],
                                 ['icon' => '📦', 'en' => 'GoParcel', 'fr' => 'GoParcel', 'desc_en' => 'Send parcels home with verified Cameroonian travellers.', 'desc_fr' => 'Envoyez des colis avec des voyageurs camerounais vérifiés.', 'live' => false, 'color' => 'from-sky-500 to-cyan-600'],
                                 ['icon' => '🚗', 'en' => 'GoRide', 'fr' => 'GoRide', 'desc_en' => 'Carpool to events, family visits, and weekend getaways.', 'desc_fr' => 'Covoiturage pour événements, visites familiales et escapades.', 'live' => false, 'color' => 'from-fuchsia-500 to-pink-600'],
@@ -125,9 +125,9 @@
                         @php
                             $steps = [
                                 ['icon' => '👤', 'en' => 'Create your free account', 'fr' => 'Créez votre compte gratuit', 'desc_en' => 'Just your name, email and a password. No phone numbers, no ID upload.', 'desc_fr' => 'Juste votre nom, e-mail et un mot de passe. Pas de numéro, pas de pièce d\'identité.'],
-                                ['icon' => '📍', 'en' => 'Tell us where you are', 'fr' => 'Dites-nous où vous êtes', 'desc_en' => 'GPS or city pick — we use it to suggest the right rooms for you.', 'desc_fr' => 'GPS ou choix de ville — on l\'utilise pour vous suggérer les bons salons.'],
+                                ['icon' => '📍', 'en' => 'Tell us where you are', 'fr' => 'Dites-nous où vous êtes', 'desc_en' => 'GPS or city pick, we use it to suggest the right rooms for you.', 'desc_fr' => 'GPS ou choix de ville, on l\'utilise pour vous suggérer les bons salons.'],
                                 ['icon' => '🏠', 'en' => 'Step into GoConnect', 'fr' => 'Entrez dans GoConnect', 'desc_en' => 'Join your country, region, and city rooms instantly. Say "ashia" 👋', 'desc_fr' => 'Rejoignez vos salons pays, région et ville instantanément. Dites « ashia » 👋'],
-                                ['icon' => '🚀', 'en' => 'Build, share, support', 'fr' => 'Construisez, partagez, soutenez', 'desc_en' => 'Help a neighbour, raise funds, find friends — that\'s the Cameroonian way.', 'desc_fr' => 'Aidez un voisin, levez des fonds, trouvez des amis — c\'est la voie camerounaise.'],
+                                ['icon' => '🚀', 'en' => 'Build, share, support', 'fr' => 'Construisez, partagez, soutenez', 'desc_en' => 'Help a neighbour, raise funds, find friends. That\'s the Cameroonian way.', 'desc_fr' => 'Aidez un voisin, levez des fonds, trouvez des amis. C\'est la voie camerounaise.'],
                             ];
                         @endphp
                         <ol class="relative space-y-6 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-indigo-200 before:via-violet-200 before:to-transparent">
@@ -148,7 +148,7 @@
                         </ol>
                         <div class="mt-8 flex justify-center">
                             <a href="{{ route('register') }}" class="rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-6 py-3 text-sm font-bold text-white hover:brightness-110 transition-all"
-                               x-text="$store.lang.t('Start now — it\'s free', 'Commencer — c\'est gratuit')"></a>
+                               x-text="$store.lang.t('Start now, it\'s free', 'Commencer, c\'est gratuit')"></a>
                         </div>
                     </div>
                 </div>
@@ -193,7 +193,7 @@
                     </div>
                     <div class="p-6 sm:p-8">
                         <p class="text-sm text-slate-600 leading-relaxed text-center max-w-md mx-auto"
-                           x-text="$store.lang.t('Solidarity turns the Cameroonian tradition of njangi into a transparent, modern way to support each other — funerals, medical bills, school fees, business launches.', 'Solidarité transforme la tradition camerounaise du njangi en une manière transparente et moderne de se soutenir — funérailles, soins médicaux, frais de scolarité, lancements d\'entreprise.')"></p>
+                           x-text="$store.lang.t('Solidarity turns the Cameroonian tradition of njangi into a transparent, modern way to support each other: funerals, medical bills, school fees, business launches.', 'Solidarité transforme la tradition camerounaise du njangi en une manière transparente et moderne de se soutenir, funérailles, soins médicaux, frais de scolarité, lancements d\'entreprise.')"></p>
                         <div class="mt-6 grid grid-cols-3 gap-3">
                             <div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center">
                                 <div class="text-2xl font-extrabold text-rose-600">£12k+</div>
@@ -216,7 +216,7 @@
                                 x-text="$store.lang.t('Three simple steps', 'Trois étapes simples')"></h3>
                             <ul class="space-y-2 text-sm text-slate-700">
                                 <li class="flex items-start gap-2"><span class="text-rose-500 font-bold">1.</span> <span x-text="$store.lang.t('Start a campaign or browse open ones in your community.', 'Lancez une campagne ou parcourez celles ouvertes dans votre communauté.')"></span></li>
-                                <li class="flex items-start gap-2"><span class="text-rose-500 font-bold">2.</span> <span x-text="$store.lang.t('Contribute any amount — every penny is tracked publicly.', 'Contribuez le montant que vous voulez — chaque centime est suivi publiquement.')"></span></li>
+                                <li class="flex items-start gap-2"><span class="text-rose-500 font-bold">2.</span> <span x-text="$store.lang.t('Contribute any amount, every penny is tracked publicly.', 'Contribuez le montant que vous voulez, chaque centime est suivi publiquement.')"></span></li>
                                 <li class="flex items-start gap-2"><span class="text-rose-500 font-bold">3.</span> <span x-text="$store.lang.t('Funds reach the family directly. We take 5% to keep the lights on.', 'Les fonds vont directement à la famille. Nous prenons 5% pour faire tourner la plateforme.')"></span></li>
                             </ul>
                         </div>
@@ -267,7 +267,7 @@
                     </div>
                     <div class="p-6 sm:p-8">
                         <p class="text-sm text-slate-600 leading-relaxed text-center max-w-lg mx-auto"
-                           x-text="$store.lang.t('Cameroon Network is for every Cameroonian, every kontri pikin — back home, in the diaspora, English-speaking, French-speaking, Pidgin-speaking, all the tribes, all the regions.', 'Cameroon Network est pour chaque Camerounais, chaque kontri pikin — au pays, dans la diaspora, anglophone, francophone, pidgin, toutes les tribus, toutes les régions.')"></p>
+                           x-text="$store.lang.t('Cameroon Network is for every Cameroonian, every kontri pikin: back home, in the diaspora, English-speaking, French-speaking, Pidgin-speaking, all the tribes, all the regions.', 'Cameroon Network est pour chaque Camerounais, chaque kontri pikin, au pays, dans la diaspora, anglophone, francophone, pidgin, toutes les tribus, toutes les régions.')"></p>
                         <div class="mt-6 grid sm:grid-cols-2 gap-4">
                             <div class="rounded-2xl bg-emerald-50 border border-emerald-100 p-5">
                                 <div class="flex items-center gap-2 mb-2">

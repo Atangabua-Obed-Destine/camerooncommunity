@@ -96,7 +96,7 @@
             @mouseleave="show = false"
             @click.prevent="show = true; clearTimeout(_t); _t = setTimeout(() => show = false, 1600)"
             class="{{ $tabBase }} group transition-colors cursor-default text-white"
-            :title="$store.lang.t(@js($tab['en'] . ' — Coming Soon'), @js($tab['fr'] . ' — Bientôt'))"
+            :title="$store.lang.t(@js($tab['en'] . ' (Coming Soon)'), @js($tab['fr'] . ' (Bientôt)'))"
             aria-label="{{ $tab['en'] }}">
         @switch($tab['key'])
             @case('easygoparcel')
@@ -122,6 +122,6 @@
         <span x-show="show" x-transition.opacity.duration.150ms x-cloak
               class="absolute top-full mt-1 z-[60] whitespace-nowrap rounded-md bg-cm-yellow px-2 py-1 text-[11px] font-bold text-slate-900 shadow-lg ring-1 ring-black/10
                      @if($loop->last) right-1 @else left-1/2 -translate-x-1/2 @endif"
-              x-text="$store.lang.t(@js($tab['en'] . ' — Coming Soon'), @js($tab['fr'] . ' — Bientôt'))"></span>
+              x-text="$store.lang.t(@js($tab['en'] . ' (Coming Soon)'), @js($tab['fr'] . ' (Bientôt)'))"></span>
     </button>
 @endforeach

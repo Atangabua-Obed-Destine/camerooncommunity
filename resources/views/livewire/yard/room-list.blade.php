@@ -369,7 +369,7 @@
                  class="yard-room yard-room--archived yard-room--locked"
                  role="group"
                  aria-disabled="true"
-                 :title="$store.lang.t('Locked — switch back to this location to reopen', 'Verrouillé — revenez à ce lieu pour rouvrir')">
+                 :title="$store.lang.t('Locked, switch back to this location to reopen', 'Verrouillé, revenez à ce lieu pour rouvrir')">
                 <div class="yard-room__avatar {{ $room->avatar ? ($roomColors[$room->room_type->value] ?? 'bg-slate-400') : \App\Support\AvatarPalette::colorClass('room:' . $room->id) }} relative opacity-60">
                     @if($room->avatar)
                         <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
@@ -393,7 +393,7 @@
                     </div>
                     <div class="yard-room__row">
                         <span class="yard-room__preview text-slate-400 italic">
-                            <span x-text="$store.lang.t('Locked — return to this location to reopen', 'Verrouillé — revenez ici pour rouvrir')"></span>
+                            <span x-text="$store.lang.t('Locked, return to this location to reopen', 'Verrouillé, revenez ici pour rouvrir')"></span>
                         </span>
                     </div>
                 </div>

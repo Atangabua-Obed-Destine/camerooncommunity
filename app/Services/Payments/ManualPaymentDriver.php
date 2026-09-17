@@ -53,16 +53,16 @@ class ManualPaymentDriver implements PaymentDriver
             'reference' => $order->reference,
             'steps' => $fr ? [
                 'Ouvrez votre application Mobile Money ou composez le code USSD.',
-                'Envoyez ' . $order->formattedAmount() . ' au numéro ' . ($seller?->momo_number ?: '—') . '.',
+                'Envoyez ' . $order->formattedAmount() . ' au numéro ' . ($seller?->momo_number ?: '-') . '.',
                 'Saisissez la référence ' . $order->reference . ' dans le motif/message.',
                 'Copiez l\'identifiant de transaction reçu par SMS.',
-                'Collez-le ci-dessous et envoyez — le vendeur sera notifié.',
+                'Collez-le ci-dessous et envoyez, le vendeur sera notifié.',
             ] : [
                 'Open your Mobile Money app or dial the USSD shortcode.',
-                'Send ' . $order->formattedAmount() . ' to ' . ($seller?->momo_number ?: '—') . '.',
+                'Send ' . $order->formattedAmount() . ' to ' . ($seller?->momo_number ?: '-') . '.',
                 'Use ' . $order->reference . ' as the message / reference.',
                 'Copy the transaction ID from the operator SMS.',
-                'Paste it below and submit — the seller will be notified.',
+                'Paste it below and submit, the seller will be notified.',
             ],
             'fields' => [
                 [
@@ -100,6 +100,6 @@ class ManualPaymentDriver implements PaymentDriver
             'status'       => OrderStatus::AwaitingPayment,
         ])->save();
 
-        return ['ok' => true, 'message' => 'Payment evidence sent — waiting for seller confirmation.'];
+        return ['ok' => true, 'message' => 'Payment evidence sent, waiting for seller confirmation.'];
     }
 }
