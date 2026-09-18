@@ -210,4 +210,18 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return UserContactName::displayName($this->id, $other);
     }
+
+    /**
+     * Where this user's profile page lives.
+     *
+     * The public profile is the GoMarket-style page keyed by username. A handful
+     * of accounts have no username yet, so those fall back to the account page,
+     * which is also where avatar and cover uploads live.
+     */
+    public function profileUrl(): string
+    {
+        return $this->username
+            ? route('marketplace.seller', ['username' => $this->username])
+            : route('profile');
+    }
 }

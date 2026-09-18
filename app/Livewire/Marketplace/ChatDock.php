@@ -67,11 +67,6 @@ class ChatDock extends Component
         $this->open      = true;
         $this->minimized = false;
 
-        // FB-style prefill on a brand-new conversation.
-        if ($this->newMessage === '' && ! $this->hasOwnText()) {
-            $this->newMessage = __('Is this still available?');
-        }
-
         $this->reset('replyToId', 'replyToPreview');
         unset($this->room, $this->messages, $this->partner, $this->listing);
         $this->markRead();
@@ -199,17 +194,6 @@ class ChatDock extends Component
         unset($this->messages);
         $this->markRead();
         $this->dispatch('gomarket-scroll');
-    }
-
-    protected function hasOwnText(): bool
-    {
-        if (! $this->room) {
-            return false;
-        }
-        return YardMessage::where('room_id', $this->room->id)
-            ->where('user_id', auth()->id())
-            ->where('message_type', MessageType::Text->value)
-            ->exists();
     }
 
     protected function markRead(): void

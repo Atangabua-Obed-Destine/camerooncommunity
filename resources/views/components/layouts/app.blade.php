@@ -163,8 +163,12 @@
                             </div>
                             <svg class="hidden sm:block h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
-                        <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-                            <a href="{{ route('profile') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" x-text="$store.lang.t('Profile', 'Profil')"></a>
+                        {{-- z-50 matters: the nav tab links below are positioned and come
+                             later in the DOM, so without it they sit above this menu and
+                             swallow taps meant for Profile / Logout on mobile. --}}
+                        <div x-show="open" @click.away="open = false" x-transition x-cloak
+                             class="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 bg-white py-1 shadow-lg z-50">
+                            <a href="{{ auth()->user()?->profileUrl() ?? route('profile') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" x-text="$store.lang.t('Profile', 'Profil')"></a>
                             @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('admin'))
                             <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50" x-text="$store.lang.t('Admin Panel', 'Panneau admin')"></a>
                             @endif

@@ -36,7 +36,7 @@
                 </div>
                 <span class="text-sm font-semibold text-slate-700" x-text="$store.lang.t('People', 'Personnes')"></span>
             </a>
-            <a href="{{ route('profile') }}" class="group rounded-xl bg-white border border-slate-200 p-4 hover:border-cm-green hover:shadow-md transition flex flex-col items-center gap-2">
+            <a href="{{ auth()->user()?->profileUrl() ?? route('profile') }}" class="group rounded-xl bg-white border border-slate-200 p-4 hover:border-cm-green hover:shadow-md transition flex flex-col items-center gap-2">
                 <div class="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
                     <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                 </div>

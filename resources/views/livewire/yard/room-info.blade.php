@@ -211,7 +211,7 @@
             @if($isDm && $dmPartner)
                 @php $dmDisplayName = auth()->user()->displayNameFor($dmPartner); @endphp
                 @if($dmPartner->username)
-                    <a href="{{ route('user.profile', $dmPartner->username) }}" class="hover:text-cm-green hover:underline transition">{{ $dmDisplayName }}</a>
+                    <a href="{{ route('marketplace.seller', $dmPartner->username) }}" class="hover:text-cm-green hover:underline transition">{{ $dmDisplayName }}</a>
                 @else
                     {{ $dmDisplayName }}
                 @endif
@@ -272,7 +272,7 @@
         <div class="wa-info-hero__actions">
             @if($isDm)
                 @if($dmPartner && $dmPartner->username)
-                    <a class="wa-info-action" href="{{ route('user.profile', $dmPartner->username) }}" title="{{ __('View profile') }}">
+                    <a class="wa-info-action" href="{{ route('marketplace.seller', $dmPartner->username) }}" title="{{ __('View profile') }}">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
                         <span x-text="$store.lang.t('Profile', 'Profil')"></span>
                     </a>

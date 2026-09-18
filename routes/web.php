@@ -165,8 +165,11 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::post('/profile/cover', [\App\Http\Controllers\ProfileController::class, 'updateCover'])->name('profile.cover');
     Route::delete('/profile/cover', [\App\Http\Controllers\ProfileController::class, 'removeCover'])->name('profile.cover.remove');
 
-    // Public user profile (Facebook-style)
-    Route::get('/u/{username}', [\App\Http\Controllers\ProfileController::class, 'showPublic'])
+    // The public profile now lives at /marketplace/seller/{username}. This kept
+    // route redirects so old links and bookmarks still resolve; the name is kept
+    // so any stray route('user.profile') call also lands in the right place.
+    Route::get('/u/{username}', fn (string $username) => redirect()
+        ->route('marketplace.seller', ['username' => $username]))
         ->name('user.profile');
 
     // People (Facebook /friends-style directory)
