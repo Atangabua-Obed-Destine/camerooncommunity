@@ -138,8 +138,11 @@
                         <div class="flex items-center gap-2 justify-center sm:justify-end shrink-0">
                             <button type="button" @click="settingsOpen = true"
                                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-cm-green text-white text-sm font-semibold hover:bg-cm-green/90 shadow transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l11.932-11.93z"/></svg>
-                                <span x-text="$store.lang.t('Edit profile', 'Modifier le profil')"></span>
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                                <span x-text="$store.lang.t('Settings', 'Paramètres')"></span>
                             </button>
                         </div>
                     @endunless
@@ -332,6 +335,67 @@
                         </div>
                     @endif
 
+                    {{-- Photos. Separate multipart forms (one per endpoint), each
+                         redirecting back here with a success flash, which reopens
+                         this dialog. --}}
+                    <div class="rounded-xl border border-slate-200 p-4 mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-16 h-16 rounded-full overflow-hidden bg-cm-green/10 grid place-items-center text-xl font-bold text-cm-green shrink-0">
+                                @if($user->avatar)
+                                    <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
+                                @else
+                                    {{ strtoupper(mb_substr($name, 0, 1)) }}
+                                @endif
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <p class="text-sm font-medium text-slate-700" x-text="$store.lang.t('Profile photo', 'Photo de profil')"></p>
+                                <div class="mt-1 flex items-center gap-3">
+                                    <form method="POST" action="{{ route('profile.avatar') }}" enctype="multipart/form-data">
+                                        @csrf
+                                        <label class="text-[13px] font-semibold text-cm-green hover:underline cursor-pointer">
+                                            <span x-text="$store.lang.t('Change', 'Modifier')"></span>
+                                            <input type="file" name="avatar" accept="image/jpeg,image/png,image/webp"
+                                                   class="hidden" onchange="this.form.submit()">
+                                        </label>
+                                    </form>
+                                    @if($user->avatar)
+                                        <form method="POST" action="{{ route('profile.avatar.remove') }}">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="text-[13px] font-semibold text-cm-red hover:underline"
+                                                    x-text="$store.lang.t('Remove', 'Supprimer')"></button>
+                                        </form>
+                                    @endif
+                                </div>
+                                @error('avatar') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100">
+                            <p class="text-sm font-medium text-slate-700" x-text="$store.lang.t('Cover photo', 'Photo de couverture')"></p>
+                            <div class="mt-1 flex items-center gap-3">
+                                <form method="POST" action="{{ route('profile.cover') }}" enctype="multipart/form-data">
+                                    @csrf
+                                    <label class="text-[13px] font-semibold text-cm-green hover:underline cursor-pointer">
+                                        <span x-text="$store.lang.t('Change', 'Modifier')"></span>
+                                        <input type="file" name="cover_photo" accept="image/jpeg,image/png,image/webp"
+                                               class="hidden" onchange="this.form.submit()">
+                                    </label>
+                                </form>
+                                @if($user->cover_photo)
+                                    <form method="POST" action="{{ route('profile.cover.remove') }}">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-[13px] font-semibold text-cm-red hover:underline"
+                                                x-text="$store.lang.t('Remove', 'Supprimer')"></button>
+                                    </form>
+                                @endif
+                            </div>
+                            @error('cover_photo') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
+                        </div>
+                    </div>
+
                     <form method="POST" action="{{ route('profile.update') }}" class="space-y-4">
                         @csrf
                         @method('PUT')
@@ -401,11 +465,6 @@
                         </button>
                     </form>
 
-                    {{-- Photo uploads still live on the full profile page. --}}
-                    <a href="{{ route('profile') }}"
-                       class="mt-4 block text-center text-[13px] font-semibold text-cm-green hover:underline">
-                        {{ $lang === 'fr' ? 'Photo de profil et couverture' : 'Profile photo & cover' }}
-                    </a>
                 </div>
             </div>
         </div>

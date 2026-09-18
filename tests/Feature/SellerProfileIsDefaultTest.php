@@ -89,7 +89,10 @@ class SellerProfileIsDefaultTest extends TestCase
         $response = $this->actingAs($user)->get('/marketplace/seller/' . $user->username);
 
         $response->assertStatus(200);
-        $response->assertSee('Edit profile');
+        // Own profile gets a Settings button that opens the popup.
+        $response->assertSee('Settings');
+        $response->assertSee(route('profile.avatar'), false);   // photo controls
+        $response->assertSee(route('profile.cover'), false);
         // Settings live in a popup on this page now, not only on /profile.
         // Assert on form fields, not the action URL: that URL is just /profile,
         // which the header account menu also links to on every page.
@@ -106,7 +109,8 @@ class SellerProfileIsDefaultTest extends TestCase
         $this->actingAs($viewer)
             ->get('/marketplace/seller/' . $target->username)
             ->assertDontSee('Show away chats in GoConnect')
-            ->assertDontSee('Save Changes');
+            ->assertDontSee('Save Changes')
+            ->assertDontSee(route('profile.avatar'), false);
     }
 
     public function test_own_profile_shows_draft_listings_but_others_do_not(): void

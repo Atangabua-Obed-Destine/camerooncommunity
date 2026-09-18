@@ -1042,6 +1042,37 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     pointer-events: none;
 }
+
+/* Mobile only: the chat list header is white, so it reads as part of the phone's
+   own chrome. Tablet and desktop keep the brand-blue bar. Placed after the rules
+   it overrides (including the badge ring just above) because they share the same
+   specificity, so source order decides the winner. */
+@media (max-width: 767px) {
+    .yard-header {
+        background: #ffffff;
+        border-bottom: 1px solid var(--color-slate-200);
+    }
+    .yard-header__title {
+        color: var(--color-slate-900);
+    }
+    .yard-header__btn {
+        color: var(--color-slate-500);
+    }
+    .yard-header__btn:hover {
+        background: var(--color-slate-100);
+        color: var(--color-slate-800);
+    }
+    /* New-group steps use utility text colours that were forced light for the blue bar. */
+    .yard-header h2 {
+        color: var(--color-slate-900);
+    }
+    .yard-header p {
+        color: var(--color-slate-500);
+    }
+    .yard-header__btn-badge {
+        border-color: #ffffff;
+    }
+}
 .yard-menu-count {
     display: inline-flex;
     align-items: center;
