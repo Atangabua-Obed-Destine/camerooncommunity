@@ -10,7 +10,7 @@
     // Match Yard's logic: saved nickname → username → name. Falls back gracefully.
     $name = $viewer ? $viewer->displayNameFor($user) : ($user->username ?? $user->name ?? '-');
     $username = $user->username ?? null;
-    $profileUrl = $username ? route('user.profile', ['username' => $username]) : null;
+    $profileUrl = $username ? route('marketplace.seller', ['username' => $username]) : null;
     $location = trim(collect([$user->current_region ?? null, $user->current_country ?? null])->filter()->join(', '));
 @endphp
 

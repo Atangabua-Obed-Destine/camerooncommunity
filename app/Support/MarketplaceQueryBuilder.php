@@ -124,7 +124,9 @@ class MarketplaceQueryBuilder
             'relevance'  => $q->orderByDesc('_relevance')->orderByDesc('published_at'),
             default      => $q
                 // Active bumps (last 24h) float above everything; ties broken by recency.
-                ->orderByRaw('CASE WHEN bumped_at IS NOT NULL AND bumped_at >= (NOW() - INTERVAL 24 HOUR) THEN bumped_at ELSE NULL END DESC')
+                // The cutoff is bound from PHP rather than written as NOW() - INTERVAL
+                // 24 HOUR, which is MySQL-only syntax and is a parse error on SQLite.
+                ->orderByRaw('CASE WHEN bumped_at IS NOT NULL AND bumped_at >= ? THEN bumped_at ELSE NULL END DESC', [now()->subDay()])
                 ->orderByDesc('published_at')
                 ->orderByDesc('created_at'),
         };

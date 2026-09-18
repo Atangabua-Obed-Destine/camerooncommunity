@@ -122,7 +122,7 @@
                     <p class="text-sm font-bold text-slate-900 truncate">{{ auth()->user()->username ?? auth()->user()->name }}</p>
                     <p class="text-[11px] text-slate-500 truncate">{{ auth()->user()->email }}</p>
                 </div>
-                <a href="{{ route('profile') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                <a href="{{ auth()->user()?->profileUrl() ?? route('profile') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                    x-text="$store.lang.t('Profile', 'Profil')"></a>
                 @if(auth()->user()?->hasRole('super_admin') || auth()->user()?->hasRole('admin'))
                 <a href="{{ route('admin.dashboard') }}" class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
