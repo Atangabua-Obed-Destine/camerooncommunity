@@ -6,7 +6,11 @@
 
      iOS Safari never fires beforeinstallprompt, so it gets an instruction sheet
      instead of a working button. --}}
-<div x-data="pwaInstall()" x-show="show" x-cloak x-transition.opacity
+{{-- isMobile gates this to phones: installing is a phone action, and the desktop
+     landing page already has the App Store / Google Play badges. It is checked in
+     JS rather than with md:hidden because the inline display:flex below would beat
+     a Tailwind class. --}}
+<div x-data="pwaInstall()" x-show="show && isMobile" x-cloak x-transition.opacity
      style="position:fixed; left:0; right:0; bottom:0; z-index:70; display:flex; justify-content:center; padding:12px; pointer-events:none;">
 
     <div style="pointer-events:auto; width:100%; max-width:460px; background:#ffffff; border-radius:16px;
@@ -70,6 +74,8 @@
             ios: false,
             howTo: false,
             canPrompt: false,
+            // Phones only. 767px is the same breakpoint the Yard uses for mobile.
+            isMobile: window.matchMedia('(max-width: 767px)').matches,
             // 14-day snooze, only set when the user closes the banner. New storage key: the old
             // one was also set on install, which kept the banner hidden after an uninstall.
             snoozedAt: window.Alpine.$persist(0).as('cc_pwa_snoozed_at'),
@@ -84,6 +90,16 @@
             },
 
             init() {
+                // Keep the phone check live, so rotating or resizing shows/hides it
+                // without a reload.
+                const mq = window.matchMedia('(max-width: 767px)');
+                this.isMobile = mq.matches;
+                if (mq.addEventListener) {
+                    mq.addEventListener('change', (e) => { this.isMobile = e.matches; });
+                } else if (mq.addListener) {
+                    mq.addListener((e) => { this.isMobile = e.matches; });
+                }
+
                 if (this.installed) return;
 
                 const ua = navigator.userAgent;
