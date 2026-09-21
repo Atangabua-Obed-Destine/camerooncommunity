@@ -22,6 +22,10 @@
             </div>
         </div>
 
+        {{-- Sponsored ads as stories. Shows below 1280px only, where the
+             right-hand ads sidebar is hidden. --}}
+        @include('partials.home-stories')
+
         {{-- Quick shortcuts grid --}}
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <a href="{{ route('yard') }}" class="group rounded-xl bg-white border border-slate-200 p-4 hover:border-cm-green hover:shadow-md transition flex flex-col items-center gap-2">

@@ -197,6 +197,50 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
         return response()->json($ads);
     })->name('ads.yard');
 
+    // Feed for the home "stories" strip. Deliberately separate from ads.yard:
+    // that one is the sidebar's contract (locked to the yard_sidebar placement and
+    // shared with the marketplace carousel), so widening it would silently change
+    // what those surfaces show. This one takes any active ad.
+    //
+    // It does NOT record impressions: rendering a strip is not a view. Impressions
+    // are recorded by ads.impression below, when a story is actually opened.
+    Route::get('/ads/home', function () {
+        $ads = \App\Models\SponsoredAd::active()
+            ->orderByDesc('priority')
+            // priority defaults to 0 for every ad, so without a tie-breaker the
+            // order is whatever the database feels like and reshuffles per load.
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get()
+            ->map(fn ($ad) => [
+                'id'          => $ad->id,
+                'title'       => $ad->title,
+                'description' => $ad->description,
+                'image'       => $ad->imageUrl(),
+                'video'       => $ad->youtubeEmbedUrl(),
+                'advertiser'  => $ad->advertiser_name,
+                'cta'         => $ad->link_label,
+                // The raw link is never exposed; clicks go through ads.click so they
+                // stay counted. This just says whether a CTA is worth rendering.
+                'has_link'    => (bool) $ad->link_url,
+            ]);
+
+        return response()->json($ads);
+    })->name('ads.home');
+
+    // One impression per ad per session, recorded only when a story is actually
+    // viewed. POST because it writes, and so prefetchers cannot trigger it.
+    Route::post('/ad/{ad}/impression', function (\App\Models\SponsoredAd $ad, \Illuminate\Http\Request $request) {
+        $seen = $request->session()->get('ads_seen', []);
+
+        if (! in_array($ad->id, $seen, true)) {
+            $ad->recordImpression();
+            $request->session()->put('ads_seen', [...$seen, $ad->id]);
+        }
+
+        return response()->noContent();
+    })->name('ads.impression');
+
     Route::get('/ad/{ad}/click', function (\App\Models\SponsoredAd $ad) {
         $ad->recordClick();
         if ($ad->link_url) {
