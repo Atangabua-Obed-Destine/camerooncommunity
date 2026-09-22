@@ -25,7 +25,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-screen bg-slate-50 text-slate-900 antialiased" x-data="{ sidebarOpen: false }">
+{{-- cn-app marks the signed-in app shell. resources/css/app.css uses it to scale
+     text up on phones; the guest landing page has no such class, so it is untouched. --}}
+<body class="cn-app min-h-screen bg-slate-50 text-slate-900 antialiased" x-data="{ sidebarOpen: false }">
     {{-- Fixed Header Wrapper --}}
     <div class="fixed top-0 left-0 right-0 z-50" style="position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: linear-gradient(to right, #1b2d4a 0%, #243a5c 30%, #2e4a6e 60%, #3a5a80 100%)">
         {{-- Location strip (seamless, no border) --}}
