@@ -19,7 +19,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="bg-slate-100 text-slate-900 font-[Inter] antialiased">
+<body class="cn-app bg-slate-100 text-slate-900 font-[Inter] antialiased">
     <div class="flex h-screen overflow-hidden" x-data="adminShell()">
         {{-- Sidebar --}}
         <aside class="w-64 shrink-0 bg-slate-900 text-white flex flex-col transition-all duration-300
