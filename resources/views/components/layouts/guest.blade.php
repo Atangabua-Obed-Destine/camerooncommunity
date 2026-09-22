@@ -21,7 +21,10 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
-<body class="min-h-[100dvh] bg-slate-900 text-slate-900 antialiased overflow-x-hidden">
+{{-- Every guest page gets the larger mobile type scale EXCEPT the landing
+     page, which keeps its own marketing typography. Scoped by route rather
+     than by layout, because both share this shell. --}}
+<body @class(['cn-app' => ! request()->routeIs('home'), 'min-h-[100dvh] bg-slate-900 text-slate-900 antialiased overflow-x-hidden'])>
     {{ $slot }}
 
     {{-- Kamer AI Assistant for visitors (only on non-auth pages) --}}
