@@ -80,11 +80,17 @@
             </template>
         </div>
 
-        {{-- ─── Fullscreen viewer ─── --}}
+        {{-- ─── Fullscreen viewer ───
+             Teleported to <body> on purpose. .yard-container is position:fixed,
+             which creates a stacking context, so z-[100] inside it is trapped and
+             the app header (z-50, at the root) paints over the top of the screen,
+             hiding the progress bars and the close button. --}}
+        <template x-teleport="body">
         <div x-show="viewing" x-cloak
              class="fixed inset-0 z-[100] flex flex-col overscroll-contain"
-             style="background:#000;"
-             @pointerdown="paused = true" @pointerup="paused = false" @pointercancel="paused = false"
+             {{-- Translucent rather than solid black, so the page stays visible
+                  behind the ad. Blurred so white overlay text stays readable. --}}
+             style="background:rgba(0,0,0,.62); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);"
              @touchstart="touchY = $event.changedTouches[0].clientY"
              @touchend="if ($event.changedTouches[0].clientY - touchY > 70) close()"
              @keydown.escape.window="if (viewing) close()"
@@ -95,7 +101,7 @@
             <div class="absolute flex" style="top:10px; left:10px; right:10px; gap:4px; z-index:3;">
                 <template x-for="(ad, n) in ads" :key="'bar-' + ad.id">
                     <div style="flex:1; height:2.5px; border-radius:2px; background:rgba(255,255,255,.35); overflow:hidden;">
-                        <div :style="`width:${n < i ? 100 : (n > i ? 0 : progress)}%; height:100%; background:#fff;`"></div>
+                        <div :style="`width:${n <= i ? 100 : 0}%; height:100%; background:#fff;`"></div>
                     </div>
                 </template>
             </div>
@@ -106,31 +112,49 @@
                      x-text="(current?.advertiser || current?.title || '?').charAt(0).toUpperCase()"></div>
                 <span style="color:#fff; font-size:13px; font-weight:600; flex:1; min-width:0;"
                       class="truncate" x-text="current?.advertiser || ''"></span>
+                {{-- The only way out now that stories do not time out, so it gets a
+                     solid hit area and a backing circle to stay visible on any image. --}}
                 <button type="button" @click.stop="close()"
-                        style="color:#fff; font-size:22px; line-height:1; padding:4px 8px;"
+                        style="flex-shrink:0; width:38px; height:38px; border-radius:9999px; background:rgba(0,0,0,.45); color:#fff; font-size:24px; line-height:1; display:grid; place-items:center;"
                         :aria-label="$store.lang.t('Close', 'Fermer')">&times;</button>
             </div>
 
-            {{-- Media --}}
-            <div class="absolute inset-0 flex items-center justify-center" style="z-index:1;">
+            {{-- Media.
+                 @click.self closes: a click that lands on this container rather than
+                 on a child is a click on the empty space around the ad. The previous
+                 and next tap zones live INSIDE the media box below, not across the
+                 full screen, so the empty space stays free to dismiss. --}}
+            <div class="absolute inset-0 flex items-center justify-center" style="z-index:1;"
+                 @click.self="close()">
+
                 <template x-if="current?.video">
-                    {{-- Created on open and destroyed on close, so nothing keeps
-                         playing behind a hidden overlay. --}}
-                    <iframe :src="videoSrc(current)" frameborder="0" allow="autoplay; encrypted-media"
-                            class="absolute inset-0 w-full h-full"
-                            style="pointer-events:none;"></iframe>
+                    <div class="relative" style="width:100%; max-width:900px;">
+                        {{-- Created on open and destroyed on close, so nothing keeps
+                             playing behind a hidden overlay.
+                             Sized to the video's own 16:9 box rather than inset-0, so the
+                             translucent backdrop still shows around it. Full-bleed made
+                             the overlay look solid black, because YouTube paints its own
+                             black behind the picture. --}}
+                        <iframe :src="videoSrc(current)" frameborder="0" allow="autoplay; encrypted-media"
+                                style="width:100%; aspect-ratio:16/9; max-height:78vh; border:0; pointer-events:none; display:block;"></iframe>
+                        <div class="absolute inset-y-0 left-0" style="width:50%;" @click.stop="prev()"></div>
+                        <div class="absolute inset-y-0 right-0" style="width:50%;" @click.stop="next()"></div>
+                    </div>
                 </template>
+
                 <template x-if="!current?.video && current?.image">
-                    <img :src="current.image" :alt="current.title" class="max-w-full max-h-full object-contain">
+                    <div class="relative" style="max-width:100%; max-height:100%;">
+                        <img :src="current.image" :alt="current.title"
+                             class="max-w-full max-h-full object-contain" style="display:block;">
+                        <div class="absolute inset-y-0 left-0" style="width:50%;" @click.stop="prev()"></div>
+                        <div class="absolute inset-y-0 right-0" style="width:50%;" @click.stop="next()"></div>
+                    </div>
                 </template>
+
                 <template x-if="!current?.video && !current?.image">
-                    <div style="color:#fff; font-size:48px;">📢</div>
+                    <div style="color:#fff; font-size:48px;" @click.stop="next()">📢</div>
                 </template>
             </div>
-
-            {{-- Tap zones: below the CTA so the button stays clickable --}}
-            <div class="absolute inset-y-0" style="left:0; width:33%; z-index:2;" @click="prev()"></div>
-            <div class="absolute inset-y-0" style="right:0; width:33%; z-index:2;" @click="next()"></div>
 
             {{-- Title, description and CTA --}}
             <div class="absolute" style="left:16px; right:16px; bottom:28px; z-index:3; text-align:center;">
@@ -146,6 +170,7 @@
                 </template>
             </div>
         </div>
+        </template>
     </div>
 </div>
 
@@ -159,12 +184,7 @@ if (typeof window.homeStories !== 'function') {
             seen: new Set(),
             viewing: false,
             i: 0,
-            progress: 0,
-            paused: false,
             touchY: 0,
-            _raf: null,
-            _last: 0,
-            _elapsed: 0,
             _dwell: null,
 
             get current() { return this.ads[this.i] || null; },
@@ -197,13 +217,13 @@ if (typeof window.homeStories !== 'function') {
                 return `${ad.video}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&playsinline=1&rel=0`;
             },
 
-            duration() { return this.current?.video ? 15000 : 5000; },
-
+            // A story stays put until the viewer closes it: no timer, no
+            // auto-advance, and reaching the last one does not close anything.
             open(index) {
                 this.i = index;
                 this.viewing = true;
                 this.lockScroll(true);
-                this.start();
+                this.show();
             },
 
             close() {
@@ -212,44 +232,25 @@ if (typeof window.homeStories !== 'function') {
                 this.lockScroll(false);
             },
 
-            start() {
+            show() {
                 this.stop();
-                this.progress = 0;
-                this._elapsed = 0;
-                this._last = 0;
                 this.markSeen();
-                this._raf = requestAnimationFrame((t) => this.tick(t));
-            },
-
-            tick(ts) {
-                if (!this.viewing) return;
-                if (!this._last) this._last = ts;
-                const delta = ts - this._last;
-                this._last = ts;
-
-                if (!this.paused) {
-                    this._elapsed += delta;
-                    this.progress = Math.min(100, (this._elapsed / this.duration()) * 100);
-                    if (this._elapsed >= this.duration()) { this.next(); return; }
-                }
-                this._raf = requestAnimationFrame((t) => this.tick(t));
             },
 
             stop() {
-                if (this._raf) { cancelAnimationFrame(this._raf); this._raf = null; }
                 if (this._dwell) { clearTimeout(this._dwell); this._dwell = null; }
             },
 
             next() {
-                if (this.i >= this.ads.length - 1) { this.close(); return; }
+                if (this.i >= this.ads.length - 1) return;   // stop at the last one
                 this.i++;
-                this.start();
+                this.show();
             },
 
             prev() {
-                if (this.i === 0) { this.start(); return; }   // restart, like Facebook
+                if (this.i === 0) return;                    // stop at the first one
                 this.i--;
-                this.start();
+                this.show();
             },
 
             // An impression means a human actually looked at this story: it needs a

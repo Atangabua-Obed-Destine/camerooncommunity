@@ -473,7 +473,7 @@
                         $msgRealUsername = $msg->user?->username ?? $msg->user?->name ?? '?';
                         $msgNickname = $msg->user ? auth()->user()->nicknameFor($msg->user->id) : null;
                     @endphp
-                    <button class="yard-msg__avatar {{ $msg->user?->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . ($msg->user_id ?? $msg->user?->name ?? '?')) }}" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msgDisplayName) }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}', '{{ e($msgRealUsername) }}', {{ $msgNickname ? "'" . e($msgNickname) . "'" : 'null' }})">
+                    <button class="yard-msg__avatar {{ $msg->user?->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . ($msg->user_id ?? $msg->user?->name ?? '?')) }}" @click="$dispatch('open-user-preview', { id: {{ $msg->user_id }} })">
                         @if($msg->user?->avatar)
                             <img src="{{ asset('storage/' . $msg->user->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
@@ -485,7 +485,7 @@
                     <div class="yard-msg__content {{ $isOwn ? 'items-end' : 'items-start' }}">
                         {{-- Sender name --}}
                         @unless($isOwn)
-                        <button class="yard-msg__sender" @click="showUserProfile({{ $msg->user_id }}, '{{ e($msgDisplayName) }}', '{{ e($msg->user?->avatar ? asset('storage/' . $msg->user->avatar) : '') }}', '{{ e($msgRealUsername) }}', {{ $msgNickname ? "'" . e($msgNickname) . "'" : 'null' }})">{{ $msgDisplayName }}</button>
+                        <button class="yard-msg__sender" @click="$dispatch('open-user-preview', { id: {{ $msg->user_id }} })">{{ $msgDisplayName }}</button>
                         @endunless
 
                         {{-- Reply preview --}}
@@ -1540,122 +1540,8 @@
         </div>
     </div>
 
-    {{-- ── User Profile Popup ── --}}
-    <div x-show="profileOpen" x-transition.opacity @click.self="profileOpen = false"
-         class="yard-user-profile-overlay" x-cloak>
-        <div class="yard-user-profile" x-transition.scale.95 @click.stop>
-            <div class="yard-user-profile__avatar">
-                <template x-if="profileUser.avatar">
-                    <img :src="profileUser.avatar" class="w-full h-full rounded-full object-cover">
-                </template>
-                <template x-if="!profileUser.avatar">
-                    <span class="text-3xl font-bold text-white" x-text="profileUser.name?.charAt(0)?.toUpperCase()"></span>
-                </template>
-            </div>
-            <h3 class="text-lg font-bold text-slate-900 mt-3" x-text="profileUser.name"></h3>
-            {{-- Real username shown subtly when a nickname is in effect --}}
-            <template x-if="profileUser.nickname && profileUser.username && profileUser.username !== profileUser.name">
-                <p class="text-xs text-slate-400 mt-0.5">@<span x-text="profileUser.username"></span></p>
-            </template>
-
-            {{-- Nickname editor (WhatsApp-style "Save as...") --}}
-            <div class="w-full mt-3 px-1">
-                <template x-if="!nicknameEditing">
-                    <button type="button"
-                            @click="nicknameEditing = true; nicknameDraft = profileUser.nickname || ''; $nextTick(() => $refs.nickInput?.focus())"
-                            class="yard-nickname-trigger">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l11.932-11.93z"/>
-                        </svg>
-                        <span x-text="profileUser.nickname
-                            ? $store.lang.t('Edit saved name', 'Modifier le nom enregistré')
-                            : $store.lang.t('Save as a contact', 'Enregistrer comme contact')"></span>
-                    </button>
-                </template>
-                <template x-if="nicknameEditing">
-                    <div class="yard-nickname-edit">
-                        <input x-ref="nickInput" type="text" maxlength="60"
-                               x-model="nicknameDraft"
-                               @keydown.enter.prevent="saveNickname()"
-                               @keydown.escape="nicknameEditing = false"
-                               :placeholder="$store.lang.t('Enter a name you\'ll recognize', 'Entrez un nom familier')"
-                               class="yard-nickname-input">
-                        <div class="flex items-center gap-2 mt-2">
-                            <button type="button" @click="saveNickname()" :disabled="nicknameSaving"
-                                    class="yard-nickname-save"
-                                    x-text="nicknameSaving
-                                        ? $store.lang.t('Saving...', 'Enregistrement...')
-                                        : $store.lang.t('Save', 'Enregistrer')"></button>
-                            <template x-if="profileUser.nickname">
-                                <button type="button" @click="nicknameDraft = ''; saveNickname()" :disabled="nicknameSaving"
-                                        class="yard-nickname-clear"
-                                        x-text="$store.lang.t('Remove', 'Supprimer')"></button>
-                            </template>
-                            <button type="button" @click="nicknameEditing = false" class="yard-nickname-cancel"
-                                    x-text="$store.lang.t('Cancel', 'Annuler')"></button>
-                        </div>
-                    </div>
-                </template>
-            </div>
-
-            <button x-show="profileConnState === 'connected'"
-                    @click="startDm(profileUser.id); profileOpen = false"
-                    class="yard-user-profile__dm-btn">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                <span x-text="$store.lang.t('Send Message', 'Envoyer un message')"></span>
-            </button>
-
-            {{-- Not connected yet → Connect (sends a request) --}}
-            <button x-show="profileConnState === 'none'"
-                    :disabled="profileConnLoading || profileConnBusy"
-                    @click="connectFromProfile()"
-                    class="yard-user-profile__dm-btn">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v6m3-3h-6M5.25 21v-1.5a6 6 0 0 1 6-6h2.25a6 6 0 0 1 4.215 1.737M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0z"/>
-                </svg>
-                <span x-text="profileConnBusy
-                    ? $store.lang.t('Sending...', 'Envoi...')
-                    : $store.lang.t('Connect', 'Se connecter')"></span>
-            </button>
-
-            {{-- Outgoing pending request --}}
-            <div x-show="profileConnState === 'outgoing'"
-                 class="yard-user-profile__dm-btn yard-user-profile__dm-btn--muted pointer-events-none">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                <span x-text="$store.lang.t('Request sent', 'Demande envoyée')"></span>
-            </div>
-
-            {{-- Incoming request waiting for me to accept --}}
-            <button x-show="profileConnState === 'incoming'"
-                    :disabled="profileConnBusy"
-                    @click="acceptFromProfile()"
-                    class="yard-user-profile__dm-btn">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>
-                <span x-text="profileConnBusy
-                    ? $store.lang.t('Accepting...', 'Acceptation...')
-                    : $store.lang.t('Accept connection', 'Accepter la connexion')"></span>
-            </button>
-
-            {{-- Either side blocked → no CTA, brief notice --}}
-            <div x-show="profileConnState === 'blocked-by-me' || profileConnState === 'blocked-by-them'"
-                 class="mt-2 text-xs text-rose-600 font-medium">
-                <span x-show="profileConnState === 'blocked-by-me'"
-                      x-text="$store.lang.t('You blocked this user', 'Vous avez bloqué cet utilisateur')"></span>
-                <span x-show="profileConnState === 'blocked-by-them'"
-                      x-text="$store.lang.t('You can\'t message this user', 'Vous ne pouvez pas envoyer de message')"></span>
-            </div>
-            <template x-if="profileUser.username">
-                <a :href="'{{ url('/marketplace/seller') }}/' + profileUser.username"
-                   class="mt-2 inline-flex items-center justify-center gap-1.5 text-sm font-medium text-cm-green hover:underline">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
-                    <span x-text="$store.lang.t('View full profile', 'Voir le profil complet')"></span>
-                </a>
-            </template>
-            <button @click="profileOpen = false" class="mt-2 text-xs text-slate-400 hover:text-slate-600">
-                <span x-text="$store.lang.t('Close', 'Fermer')"></span>
-            </button>
-        </div>
-    </div>
+    {{-- The profile popup now lives in partials/user-preview.blade.php, mounted
+         globally, and is opened with $dispatch('open-user-preview', { id }). --}}
 
     {{-- ── Image Lightbox ── --}}
     <div x-show="lightboxOpen" x-transition.opacity @click="lightboxOpen = false"
@@ -1752,14 +1638,6 @@
         function chatUi() {
             return {
                 typingUsers: [],
-                profileOpen: false,
-                profileUser: {},
-                profileConnState: 'none',
-                profileConnLoading: false,
-                profileConnBusy: false,
-                nicknameDraft: '',
-                nicknameEditing: false,
-                nicknameSaving: false,
                 lightboxOpen: false,
                 lightboxSrc: '',
                 _typingTimers: {},
@@ -2102,161 +1980,10 @@
                     return this.typingUsers.length + ' people are typing...';
                 },
 
-                showUserProfile(id, name, avatar, username, savedNickname) {
-                    this.profileUser = {
-                        id,
-                        name,
-                        avatar: avatar || null,
-                        username: username || name,
-                        nickname: savedNickname || '',
-                    };
-                    this.nicknameDraft = savedNickname || '';
-                    this.nicknameSaving = false;
-                    this.nicknameEditing = false;
-                    this.profileConnState = 'none';
-                    this.profileConnLoading = true;
-                    this.profileConnBusy = false;
-                    this.profileOpen = true;
-                    // Look up the real connection state so the popup can show
-                    // either "Connect" or "Send Message" instead of a Send
-                    // button that silently fails behind the DM gate.
-                    fetch('{{ url('/yard/connections/state') }}/' + id, {
-                        headers: { 'Accept': 'application/json' },
-                        credentials: 'same-origin',
-                    })
-                    .then(r => r.ok ? r.json() : { state: 'none' })
-                    .then(data => { this.profileConnState = data.state || 'none'; })
-                    .catch(() => { this.profileConnState = 'none'; })
-                    .finally(() => { this.profileConnLoading = false; });
-                },
 
-                connectFromProfile() {
-                    if (!this.profileUser.id || this.profileConnBusy) return;
-                    this.profileConnBusy = true;
-                    fetch('{{ route("yard.connections.request") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
-                        },
-                        body: JSON.stringify({ user_id: this.profileUser.id }),
-                    })
-                    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
-                    .then(({ ok, data }) => {
-                        if (ok) {
-                            this.profileConnState = 'outgoing';
-                            window.dispatchEvent(new CustomEvent('toast', { detail: {
-                                type: 'success',
-                                message: this.$store.lang.t('Connection request sent', 'Demande de connexion envoyée'),
-                            }}));
-                        } else {
-                            window.dispatchEvent(new CustomEvent('toast', { detail: {
-                                type: 'error',
-                                message: data?.message || this.$store.lang.t('Could not send request', "Impossible d'envoyer la demande"),
-                            }}));
-                        }
-                    })
-                    .catch(() => {
-                        window.dispatchEvent(new CustomEvent('toast', { detail: {
-                            type: 'error',
-                            message: this.$store.lang.t('Network error', 'Erreur réseau'),
-                        }}));
-                    })
-                    .finally(() => { this.profileConnBusy = false; });
-                },
 
-                acceptFromProfile() {
-                    if (!this.profileUser.id || this.profileConnBusy) return;
-                    this.profileConnBusy = true;
-                    fetch('{{ route("yard.connections.accept") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
-                        },
-                        body: JSON.stringify({ user_id: this.profileUser.id }),
-                    })
-                    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
-                    .then(({ ok, data }) => {
-                        if (ok) {
-                            this.profileConnState = 'connected';
-                            window.dispatchEvent(new CustomEvent('toast', { detail: {
-                                type: 'success',
-                                message: this.$store.lang.t('Connection accepted', 'Connexion acceptée'),
-                            }}));
-                        } else {
-                            window.dispatchEvent(new CustomEvent('toast', { detail: {
-                                type: 'error',
-                                message: data?.message || this.$store.lang.t('Could not accept', "Impossible d'accepter"),
-                            }}));
-                        }
-                    })
-                    .catch(() => {
-                        window.dispatchEvent(new CustomEvent('toast', { detail: {
-                            type: 'error',
-                            message: this.$store.lang.t('Network error', 'Erreur réseau'),
-                        }}));
-                    })
-                    .finally(() => { this.profileConnBusy = false; });
-                },
 
-                async saveNickname() {
-                    if (!this.profileUser.id) return;
-                    this.nicknameSaving = true;
-                    try {
-                        const res = await fetch('{{ route("yard.contacts.nickname") }}', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Accept': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}',
-                            },
-                            body: JSON.stringify({
-                                user_id: this.profileUser.id,
-                                nickname: this.nicknameDraft || '',
-                            }),
-                        });
-                        if (!res.ok) throw new Error('save failed');
-                        const data = await res.json();
-                        this.profileUser.nickname = data.nickname || '';
-                        this.profileUser.name = data.nickname || this.profileUser.username;
-                        this.nicknameEditing = false;
-                        window.dispatchEvent(new CustomEvent('toast', { detail: {
-                            type: 'success',
-                            message: data.nickname
-                                ? this.$store.lang.t('Saved as ' + data.nickname, 'Enregistré sous ' + data.nickname)
-                                : this.$store.lang.t('Custom name removed', 'Nom personnalisé supprimé'),
-                        }}));
-                        // Force the chat room to refresh so message sender chips update.
-                        if (window.Livewire) window.Livewire.dispatch('refreshChat');
-                    } catch (e) {
-                        window.dispatchEvent(new CustomEvent('toast', { detail: {
-                            type: 'error',
-                            message: this.$store.lang.t('Could not save name', "Impossible d'enregistrer"),
-                        }}));
-                    } finally {
-                        this.nicknameSaving = false;
-                    }
-                },
 
-                startDm(userId) {
-                    fetch('{{ route("yard.dm.create") }}', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({ user_id: userId })
-                    })
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.room_id) {
-                            window.dispatchEvent(new CustomEvent('room-selected', { detail: { roomId: data.room_id } }));
-                        }
-                    });
-                },
 
                 openLightbox(src) {
                     this.lightboxSrc = src;

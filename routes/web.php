@@ -127,6 +127,10 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::get('/yard/connections/state/{userId}', [YardController::class, 'connectionState'])
         ->whereNumber('userId')
         ->name('yard.connections.state');
+    // Everything the profile preview card needs, by id or by username (@mentions
+    // carry a username). See partials/user-preview.blade.php.
+    Route::get('/yard/user-preview/{identifier}', [YardController::class, 'userPreview'])
+        ->name('yard.user-preview');
     Route::post('/yard/contacts/nickname', [YardController::class, 'saveNickname'])->name('yard.contacts.nickname');
     Route::get('/yard/contacts/nickname/{userId}', [YardController::class, 'getNickname'])
         ->whereNumber('userId')

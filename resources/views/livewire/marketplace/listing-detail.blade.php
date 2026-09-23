@@ -516,7 +516,9 @@
                 <div class="border-t border-slate-200 pt-4">
                     <h2 class="text-lg font-bold text-slate-900 mb-2.5">{{ $lang === 'fr' ? 'Vendeur' : 'Seller details' }}</h2>
                     <div class="flex items-center gap-3">
-                        <a href="{{ $seller->username ? route('marketplace.seller', ['username' => $seller->username]) : '#' }}" wire:navigate
+                        {{-- Opens the preview card; href kept for middle-click. --}}
+                        <a href="{{ $seller->username ? route('marketplace.seller', ['username' => $seller->username]) : '#' }}"
+                           x-data @click.prevent="$dispatch('open-user-preview', { id: {{ $seller->id }} })"
                            class="relative w-12 h-12 rounded-full bg-cm-green/15 flex items-center justify-center text-cm-green font-bold uppercase overflow-hidden shrink-0">
                             @if ($seller->avatar)
                                 <img src="{{ asset('storage/' . $seller->avatar) }}" alt="" class="w-full h-full object-cover">

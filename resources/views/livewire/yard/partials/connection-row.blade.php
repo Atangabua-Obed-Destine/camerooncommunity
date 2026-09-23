@@ -7,8 +7,11 @@
     $avatarColor = $colors[$colorIdx];
 @endphp
 <div class="flex items-center gap-3 px-3 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors"
-     wire:key="conn-row-{{ $u->id }}-{{ $state }}">
-    <div class="w-10 h-10 rounded-full {{ $avatarColor }} flex items-center justify-center shrink-0 overflow-hidden">
+     x-data wire:key="conn-row-{{ $u->id }}-{{ $state }}">
+    <div class="w-10 h-10 rounded-full {{ $avatarColor }} flex items-center justify-center shrink-0 overflow-hidden"
+         role="button" tabindex="0" style="cursor:pointer;"
+         @click="$dispatch('open-user-preview', { id: {{ $u->id }} })"
+         @keydown.enter="$dispatch('open-user-preview', { id: {{ $u->id }} })">
         @if($u->avatar)
             <img src="{{ asset('storage/' . $u->avatar) }}" alt="" class="w-full h-full object-cover">
         @else
@@ -16,7 +19,9 @@
         @endif
     </div>
 
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0" role="button" tabindex="0" style="cursor:pointer;"
+         @click="$dispatch('open-user-preview', { id: {{ $u->id }} })"
+         @keydown.enter="$dispatch('open-user-preview', { id: {{ $u->id }} })">
         <p class="text-sm font-semibold text-slate-800 truncate">{{ $u->name }}</p>
         <p class="text-xs text-slate-500 truncate">
             &#64;{{ $u->username }}

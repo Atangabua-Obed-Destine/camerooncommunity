@@ -17,7 +17,8 @@
 <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
     {{-- Avatar area (clickable when a profile URL is available) --}}
     @if($profileUrl)
-        <a href="{{ $profileUrl }}" class="block aspect-square bg-slate-100 relative group">
+        <a href="{{ $profileUrl }}" class="block aspect-square bg-slate-100 relative group"
+           x-data @click.prevent="$dispatch('open-user-preview', { id: {{ $user->id }} })">
     @else
         <div class="block aspect-square bg-slate-100 relative group">
     @endif
@@ -38,7 +39,8 @@
     {{-- Body --}}
     <div class="p-3 flex-1 flex flex-col">
         @if($profileUrl)
-            <a href="{{ $profileUrl }}" class="block">
+            <a href="{{ $profileUrl }}" class="block"
+               x-data @click.prevent="$dispatch('open-user-preview', { id: {{ $user->id }} })">
                 <h3 class="font-bold text-slate-900 truncate hover:underline" title="{{ $name }}">{{ $name }}</h3>
             </a>
         @else

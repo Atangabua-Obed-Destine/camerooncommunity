@@ -112,7 +112,13 @@
                                 </div>
                                 <div class="mt-1 text-xs text-slate-500">
                                     {{ $tab === 'sent' ? ($lang === 'fr' ? 'À' : 'To') : ($lang === 'fr' ? 'De' : 'From') }}
-                                    <span class="font-semibold text-slate-700">{{ $otherParty?->name ?? '-' }}</span>
+                                    @if($otherParty)
+                                        <span class="font-semibold text-slate-700" x-data role="button" tabindex="0" style="cursor:pointer;"
+                                              @click="$dispatch('open-user-preview', { id: {{ $otherParty->id }} })"
+                                              @keydown.enter="$dispatch('open-user-preview', { id: {{ $otherParty->id }} })">{{ $otherParty->name }}</span>
+                                    @else
+                                        <span class="font-semibold text-slate-700">-</span>
+                                    @endif
                                     · {{ $offer->created_at->diffForHumans() }}
                                 </div>
                                 @if ($offer->message)
