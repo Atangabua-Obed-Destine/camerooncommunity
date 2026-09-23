@@ -36,13 +36,14 @@
                  style="border-top-left-radius:1rem;border-top-right-radius:1rem;@if($user->cover_photo)background-image:url('{{ asset('storage/' . $user->cover_photo) }}')@endif"></div>
 
             <div class="px-4 sm:px-6 pb-5">
-                <div class="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
+                {{-- Facebook's arrangement: the avatar hangs off the bottom of the cover
+                     on the left, the name sits beside it, and the details and buttons
+                     stack underneath at full width. Left-aligned at every size. --}}
+                <div class="flex items-end gap-4">
                     {{-- Avatar --}}
-                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-cm-green/10 grid place-items-center text-3xl font-bold text-cm-green shrink-0 mx-auto sm:mx-0"
-                         @if($user->avatar)
-                             x-data style="cursor:zoom-in"
-                             @click="$dispatch('open-user-photo', { url: '{{ asset('storage/' . $user->avatar) }}', name: @js($name) })"
-                         @endif>
+                    <div class="-mt-14 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-cm-green/10 grid place-items-center text-3xl font-bold text-cm-green shrink-0"
+                         x-data style="cursor:zoom-in"
+                         @click="$dispatch('open-user-photo', { url: @js($user->avatar ? asset('storage/' . $user->avatar) : null), name: @js($name), bg: @js(\App\Support\AvatarPalette::colorClass('user:' . $user->id)) })">
                         @if($user->avatar)
                             <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
                         @else
@@ -50,9 +51,9 @@
                         @endif
                     </div>
 
-                    <div class="flex-1 min-w-0 text-center sm:text-left">
+                    <div class="flex-1 min-w-0 pb-1">
                         <h1 class="text-2xl font-extrabold text-slate-900 truncate">{{ $name }}</h1>
-                        <div class="mt-0.5 flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-0.5 text-[13px] text-slate-500">
+                        <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-slate-500">
                             <span>{{ $lang === 'fr' ? 'Inscrit' : 'Joined' }} {{ $user->created_at?->translatedFormat('M Y') }}</span>
                             <span class="text-slate-300">·</span>
                             <span class="font-semibold text-slate-700">{{ $stats['active'] }} {{ $lang === 'fr' ? 'annonces actives' : 'active listings' }}</span>
@@ -65,14 +66,19 @@
                                 <span>{{ $stats['followers'] }} {{ $lang === 'fr' ? 'abonnés' : 'followers' }}</span>
                             @endif
                         </div>
+                    </div>
+                </div>
+
+                {{-- Details and actions: below the avatar row, full width --}}
+                <div>
                         @if($loc)
-                            <div class="mt-1 text-[13px] text-slate-500 inline-flex items-center gap-1 justify-center sm:justify-start">
+                            <div class="mt-2 text-[13px] text-slate-500 inline-flex items-center gap-1">
                                 <svg class="w-3.5 h-3.5 text-cm-red" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
                                 {{ $loc }}
                             </div>
                         @endif
                         @if(!empty($badges))
-                            <div class="mt-2 flex flex-wrap gap-1.5 justify-center sm:justify-start">
+                            <div class="mt-2 flex flex-wrap gap-1.5">
                                 @foreach($badges as $b)
                                     <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 {{ \App\Support\TrustBadges::chipClasses($b['tone']) }}">
                                         <span aria-hidden="true">{{ $b['icon'] }}</span>{{ $lang === 'fr' ? $b['labelFr'] : $b['label'] }}
@@ -80,11 +86,10 @@
                                 @endforeach
                             </div>
                         @endif
-                    </div>
 
                     {{-- Actions --}}
                     @unless($isSelf)
-                        <div class="flex items-center gap-2 justify-center sm:justify-end shrink-0">
+                        <div class="mt-4 flex items-center gap-2">
                             <button type="button" wire:click="toggleFollow({{ $user->id }})"
                                     @class([
                                         'inline-flex items-center gap-1.5 font-bold text-sm rounded-full px-4 py-2 transition',
@@ -139,7 +144,7 @@
                             </div>
                         </div>
                     @else
-                        <div class="flex items-center gap-2 justify-center sm:justify-end shrink-0">
+                        <div class="mt-4 flex items-center gap-2">
                             <button type="button" @click="settingsOpen = true"
                                     class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-cm-green text-white text-sm font-semibold hover:bg-cm-green/90 shadow transition">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -153,7 +158,7 @@
                 </div>
 
                 @if($user->bio)
-                    <p class="mt-5 text-[15px] leading-relaxed text-slate-700 whitespace-pre-line text-center sm:text-left">{{ $user->bio }}</p>
+                    <p class="mt-4 text-[15px] leading-relaxed text-slate-700 whitespace-pre-line">{{ $user->bio }}</p>
                 @endif
             </div>
         </div>

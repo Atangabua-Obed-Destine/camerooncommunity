@@ -47,9 +47,11 @@ class UserPreviewTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonStructure([
-            'id', 'name', 'username', 'avatar', 'bio', 'location',
+            'id', 'name', 'username', 'avatar', 'avatar_bg', 'bio', 'location',
             'nickname', 'state', 'is_self', 'dm_room_id', 'dm_room_slug', 'profile_url',
         ]);
+        // The enlarged initial must match the colour of the avatar that was tapped.
+        $response->assertJsonPath('avatar_bg', \App\Support\AvatarPalette::colorClass('user:' . $other->id));
         $response->assertJsonPath('id', $other->id);
         $response->assertJsonPath('username', 'ngwa');
         $response->assertJsonPath('bio', 'Bamenda born, London based.');
