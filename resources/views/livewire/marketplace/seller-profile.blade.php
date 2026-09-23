@@ -38,7 +38,11 @@
             <div class="px-4 sm:px-6 pb-5">
                 <div class="flex flex-col sm:flex-row sm:items-end gap-4 -mt-12">
                     {{-- Avatar --}}
-                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-cm-green/10 grid place-items-center text-3xl font-bold text-cm-green shrink-0 mx-auto sm:mx-0">
+                    <div class="w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-cm-green/10 grid place-items-center text-3xl font-bold text-cm-green shrink-0 mx-auto sm:mx-0"
+                         @if($user->avatar)
+                             x-data style="cursor:zoom-in"
+                             @click="$dispatch('open-user-photo', { url: '{{ asset('storage/' . $user->avatar) }}', name: @js($name) })"
+                         @endif>
                         @if($user->avatar)
                             <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
                         @else

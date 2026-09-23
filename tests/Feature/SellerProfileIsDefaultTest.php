@@ -204,6 +204,29 @@ class SellerProfileIsDefaultTest extends TestCase
         $this->assertSame(route('profile'), $noName->profileUrl());
     }
 
+    public function test_profile_page_does_not_highlight_the_gomarket_tab(): void
+    {
+        $viewer = $this->createUser(['username' => 'tabviewer']);
+        $target = $this->createUser(['username' => 'tabtest']);
+
+        // The active tab is marked with a yellow underline bar. A profile is not a
+        // section of the app, so no tab should claim it — not even your own profile.
+        // Match the underline element itself, not just its colour: bg-cm-yellow is
+        // also the header avatar circle, which is on every page.
+        $bar = 'rounded-t-full bg-cm-yellow';
+
+        $this->actingAs($viewer)
+            ->get('/marketplace/seller/' . $target->username)
+            ->assertOk()->assertDontSee($bar, false);
+
+        $this->actingAs($viewer)
+            ->get('/marketplace/seller/' . $viewer->username)
+            ->assertOk()->assertDontSee($bar, false);
+
+        // ...while the actual shop still highlights it.
+        $this->actingAs($viewer)->get('/marketplace')->assertSee($bar, false);
+    }
+
     public function test_guest_is_sent_to_login(): void
     {
         $this->get('/marketplace/seller/anyone')->assertRedirect('/login');
