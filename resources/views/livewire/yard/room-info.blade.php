@@ -157,7 +157,24 @@
         @endif
 
         {{-- Avatar --}}
-        <div class="wa-info-hero__avatar relative group {{ $heroBgClass }}">
+        @php
+            // Block form, not @php(...): the short form fails to parse this
+            // expression and silently emits an unterminated <?php tag.
+            $heroPhoto = null;
+            if ($isDm && $dmPartner?->avatar) {
+                $heroPhoto = asset('storage/' . $dmPartner->avatar);
+            } elseif (! $isDm && $room->avatar) {
+                $heroPhoto = asset('storage/' . $room->avatar);
+            }
+            $heroPhotoName = $isDm && $dmPartner
+                ? auth()->user()->displayNameFor($dmPartner)
+                : $room->name;
+        @endphp
+        <div class="wa-info-hero__avatar relative group {{ $heroBgClass }}"
+             @if($heroPhoto)
+                 x-data style="cursor:zoom-in"
+                 @click="$dispatch('open-user-photo', { url: @js($heroPhoto), name: @js($heroPhotoName) })"
+             @endif>
             @if($isDm && $dmPartner?->avatar)
                 <img src="{{ asset('storage/' . $dmPartner->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
             @elseif($isDm && $dmPartner)

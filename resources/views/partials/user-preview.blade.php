@@ -16,7 +16,9 @@
     inside the chat panel is therefore confined to that panel and cannot dim the
     page or paint above the z-50 header. Teleporting escapes both.
 --}}
-<div x-data="userPreview()" @open-user-preview.window="open($event.detail)">
+<div x-data="userPreview()"
+     @open-user-preview.window="open($event.detail)"
+     @open-user-photo.window="viewPhoto($event.detail?.url, $event.detail?.name)">
     <template x-teleport="body">
         <div x-show="isOpen" x-cloak x-transition.opacity
              class="yard-user-profile-overlay"
@@ -35,8 +37,10 @@
 
                 <template x-if="!loading && user">
                     <div>
-                        {{-- Avatar --}}
-                        <div class="yard-user-profile__avatar">
+                        {{-- Avatar. Tapping a real photo opens it full size, like WhatsApp. --}}
+                        <div class="yard-user-profile__avatar"
+                             :style="user.avatar ? 'cursor:zoom-in' : ''"
+                             @click="user.avatar && viewPhoto(user.avatar, user.name)">
                             <template x-if="user.avatar">
                                 <img :src="user.avatar" alt="" class="w-full h-full rounded-full object-cover">
                             </template>
@@ -176,6 +180,30 @@
                 </template>
             </div>
         </div>
+
+        {{-- ── Full-size profile photo ──
+             Sits above the card (z 130 vs 120) so it can be opened from the card
+             and closed back onto it. Also openable on its own from anywhere:
+             $dispatch('open-user-photo', { url, name }) --}}
+        <div x-show="photo.url" x-cloak x-transition.opacity
+             style="position:fixed; inset:0; z-index:130; background:rgba(0,0,0,.92); display:flex; flex-direction:column;"
+             @click.self="closePhoto()"
+             @keydown.escape.window="if (photo.url) closePhoto()">
+
+            <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; color:#fff; flex-shrink:0;">
+                <span style="font-size:16px; font-weight:600; flex:1; min-width:0;"
+                      class="truncate" x-text="photo.name"></span>
+                <button type="button" @click="closePhoto()"
+                        style="width:38px; height:38px; border-radius:9999px; background:rgba(255,255,255,.12); color:#fff; font-size:24px; line-height:1; display:grid; place-items:center;"
+                        :aria-label="$store.lang.t('Close', 'Fermer')">&times;</button>
+            </div>
+
+            <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:0 12px 28px;"
+                 @click.self="closePhoto()">
+                <img :src="photo.url" :alt="photo.name"
+                     style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px;">
+            </div>
+        </div>
     </template>
 </div>
 
@@ -187,6 +215,7 @@ if (typeof window.userPreview !== 'function') {
         return {
             isOpen: false,
             loading: false,
+            photo: { url: null, name: '' },
             busy: false,
             user: null,
             nicknameEditing: false,
@@ -224,6 +253,18 @@ if (typeof window.userPreview !== 'function') {
             close() {
                 this.isOpen = false;
                 this.nicknameEditing = false;
+                this.photo = { url: null, name: '' };
+            },
+
+            // Full-size profile photo. Openable from the card's avatar or directly
+            // from any page via the open-user-photo event.
+            viewPhoto(url, name) {
+                if (!url) return;
+                this.photo = { url, name: name || '' };
+            },
+
+            closePhoto() {
+                this.photo = { url: null, name: '' };
             },
 
             toast(type, message) {

@@ -30,7 +30,7 @@ use Livewire\WithPagination;
  * sidebar + ads sidebar) rather than the GoMarket chrome, because a profile
  * opened from a chat should not drop the viewer into the shop.
  */
-#[Layout('components.layouts.rails', ['active' => 'yard'])]
+#[Layout('components.layouts.rails', ['active' => 'profile'])]
 class SellerProfile extends Component
 {
     use InteractsWithFollows, WithPagination;

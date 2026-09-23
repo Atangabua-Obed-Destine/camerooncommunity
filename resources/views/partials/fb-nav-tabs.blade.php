@@ -18,7 +18,9 @@
     $isMobile  = ($mode ?? 'desktop') === 'mobile';
     $yardMode  = $yardMode ?? false;
     $isHome        = request()->routeIs('home');
-    $isMarketplace = request()->routeIs('marketplace.*');
+    // marketplace.seller is the app-wide profile page, not a GoMarket section:
+    // viewing someone's profile (or your own) must not light up the shop tab.
+    $isMarketplace = request()->routeIs('marketplace.*') && ! request()->routeIs('marketplace.seller');
     // Highlight GoConnect only on actual yard routes. `$yardMode` indicates the
     // page uses the rails/yard chrome (e.g. Marketplace) — not that it IS the
     // Yard — so don't let it force this tab active.
