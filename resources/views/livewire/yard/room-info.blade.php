@@ -211,7 +211,9 @@
             @if($isDm && $dmPartner)
                 @php $dmDisplayName = auth()->user()->displayNameFor($dmPartner); @endphp
                 @if($dmPartner->username)
-                    <a href="{{ route('marketplace.seller', $dmPartner->username) }}" class="hover:text-cm-green hover:underline transition">{{ $dmDisplayName }}</a>
+                    <a href="{{ route('marketplace.seller', $dmPartner->username) }}"
+                       x-data @click.prevent="$dispatch('open-user-preview', { id: {{ $dmPartner->id }} })"
+                       class="hover:text-cm-green hover:underline transition">{{ $dmDisplayName }}</a>
                 @else
                     {{ $dmDisplayName }}
                 @endif
@@ -545,8 +547,11 @@
             @forelse($members as $membership)
                 @php $member = $membership->user; @endphp
                 @if($member)
-                <div class="wa-info-member">
-                    <div class="wa-info-member__avatar {{ $member->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . $member->id) }}">
+                <div class="wa-info-member" x-data>
+                    <div class="wa-info-member__avatar {{ $member->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . $member->id) }}"
+                         role="button" tabindex="0" style="cursor:pointer;"
+                         @click="$dispatch('open-user-preview', { id: {{ $member->id }} })"
+                         @keydown.enter="$dispatch('open-user-preview', { id: {{ $member->id }} })">
                         @if($member->avatar)
                             <img src="{{ asset('storage/' . $member->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
@@ -554,7 +559,9 @@
                         @endif
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="wa-info-member__name">
+                        <p class="wa-info-member__name" role="button" tabindex="0" style="cursor:pointer;"
+                           @click="$dispatch('open-user-preview', { id: {{ $member->id }} })"
+                           @keydown.enter="$dispatch('open-user-preview', { id: {{ $member->id }} })">
                             {{ $member->username ?? $member->name }}
                             @if($member->id === $room->created_by)
                                 <span class="wa-info-member__badge" x-text="$store.lang.t('Admin', 'Admin')"></span>
@@ -619,7 +626,9 @@
                         @endif
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="wa-info-member__name text-slate-600">
+                        <p class="wa-info-member__name text-slate-600" role="button" tabindex="0" style="cursor:pointer;"
+                           @click="$dispatch('open-user-preview', { id: {{ $past->id }} })"
+                           @keydown.enter="$dispatch('open-user-preview', { id: {{ $past->id }} })">
                             {{ $past->username ?? $past->name }}
                         </p>
                         <p class="wa-info-member__meta">

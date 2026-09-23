@@ -19,7 +19,11 @@
      @mouseleave="t = setTimeout(() => pop = false, 220)">
 
     {{-- Trigger (the seller name/avatar passed in as the slot) --}}
-    <a href="{{ $sellerUrl }}" wire:navigate class="inline-flex items-center gap-2 group/seller">{{ $slot }}</a>
+    {{-- Click opens the preview card; hover still shows the card below. On touch,
+         where hover never fires, the preview is the whole interaction. --}}
+    <a href="{{ $sellerUrl }}"
+       @click.prevent="$dispatch('open-user-preview', { id: {{ $seller->id }} })"
+       class="inline-flex items-center gap-2 group/seller">{{ $slot }}</a>
 
     {{-- Hovercard --}}
     <div x-show="pop" x-cloak

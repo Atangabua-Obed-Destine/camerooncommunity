@@ -54,7 +54,10 @@ class SellerProfileIsDefaultTest extends TestCase
         $response->assertSee('North West');          // Intro card
         $response->assertSee('Points', false);        // stats strip
         $response->assertSee('Message');              // action button
-        $response->assertDontSee('View full profile');// link to the retired page is gone
+        // The retired /u/ page is not linked from here. Assert the URL, not the
+        // button label: "View full profile" now appears on every page, because the
+        // global profile preview card lives in the layout.
+        $response->assertDontSee('/u/' . $target->username, false);
     }
 
     public function test_profile_carries_points_and_badges(): void

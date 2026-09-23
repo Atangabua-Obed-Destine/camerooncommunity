@@ -94,7 +94,9 @@ class YardController extends Controller
             ->first();
 
         if ($existingRoom) {
-            return response()->json(['room_id' => $existingRoom->id]);
+            // slug lets callers outside the Yard navigate straight to the room:
+            // /yard only understands ?open=connections, not ?room=.
+            return response()->json(['room_id' => $existingRoom->id, 'slug' => $existingRoom->slug]);
         }
 
         $target = User::findOrFail($targetId);
@@ -119,7 +121,7 @@ class YardController extends Controller
             ]);
         }
 
-        return response()->json(['room_id' => $room->id]);
+        return response()->json(['room_id' => $room->id, 'slug' => $room->slug]);
     }
 
     /**
@@ -286,19 +288,89 @@ class YardController extends Controller
             return response()->json(['state' => 'self']);
         }
 
-        $c = \App\Models\UserConnection::between($user->id, $userId);
-        $state = 'none';
-        if ($c) {
-            if ($c->status === \App\Models\UserConnection::STATUS_ACCEPTED) {
-                $state = 'connected';
-            } elseif ($c->status === \App\Models\UserConnection::STATUS_PENDING) {
-                $state = $c->requested_by === $user->id ? 'outgoing' : 'incoming';
-            } elseif ($c->status === \App\Models\UserConnection::STATUS_BLOCKED) {
-                $state = $c->requested_by === $user->id ? 'blocked-by-me' : 'blocked-by-them';
-            }
+        return response()->json(['state' => $this->connectionStateFor($user, $userId)]);
+    }
+
+    /**
+     * Connection state between the viewer and another user, from the viewer's side.
+     * Shared by the connection-state endpoint and the profile preview card so the
+     * two can never disagree about what to show.
+     */
+    private function connectionStateFor(User $viewer, int $otherId): string
+    {
+        if ($otherId === $viewer->id) {
+            return 'self';
         }
 
-        return response()->json(['state' => $state]);
+        $c = \App\Models\UserConnection::between($viewer->id, $otherId);
+
+        if (! $c) {
+            return 'none';
+        }
+
+        if ($c->status === \App\Models\UserConnection::STATUS_ACCEPTED) {
+            return 'connected';
+        }
+
+        if ($c->status === \App\Models\UserConnection::STATUS_PENDING) {
+            return $c->requested_by === $viewer->id ? 'outgoing' : 'incoming';
+        }
+
+        if ($c->status === \App\Models\UserConnection::STATUS_BLOCKED) {
+            return $c->requested_by === $viewer->id ? 'blocked-by-me' : 'blocked-by-them';
+        }
+
+        return 'none';
+    }
+
+    /**
+     * Everything the WhatsApp-style profile preview card needs, in one call.
+     *
+     * Accepts an id or a username, because @mentions in chat carry a username
+     * while every other caller has an id to hand.
+     */
+    public function userPreview(Request $request, string $identifier)
+    {
+        $viewer = $request->user();
+
+        $other = ctype_digit($identifier)
+            ? User::find((int) $identifier)          // tenant scope applies automatically
+            : User::where('username', $identifier)->first();
+
+        if (! $other) {
+            abort(404);
+        }
+
+        $state = $this->connectionStateFor($viewer, $other->id);
+        $isSelf = $other->id === $viewer->id;
+        $blocked = in_array($state, ['blocked-by-me', 'blocked-by-them'], true);
+
+        $location = trim(implode(', ', array_filter([
+            $other->current_city,
+            config("cameroon.countries.{$other->current_country}", $other->current_country),
+        ])));
+
+        // Message should open the conversation that already exists, not start a new one.
+        $dmRoom = $isSelf ? null : YardRoom::where('room_type', RoomType::DirectMessage)
+            ->whereHas('members', fn ($q) => $q->where('user_id', $viewer->id))
+            ->whereHas('members', fn ($q) => $q->where('user_id', $other->id))
+            ->first(['id', 'slug']);
+
+        return response()->json([
+            'id'          => $other->id,
+            'name'        => $viewer->displayNameFor($other),   // a saved nickname wins
+            'username'    => $other->username,
+            'avatar'      => $other->avatar ? asset('storage/' . $other->avatar) : null,
+            // Withheld when either side has blocked: the card shows only the notice.
+            'bio'         => $blocked ? null : $other->bio,
+            'location'    => $blocked ? null : ($location ?: null),
+            'nickname'    => $isSelf ? null : $viewer->nicknameFor($other->id),
+            'state'       => $state,
+            'is_self'     => $isSelf,
+            'dm_room_id'   => $dmRoom?->id,
+            'dm_room_slug' => $dmRoom?->slug,
+            'profile_url' => $other->profileUrl(),
+        ]);
     }
 
     /**

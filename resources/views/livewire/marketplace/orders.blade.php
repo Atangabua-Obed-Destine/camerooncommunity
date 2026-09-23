@@ -81,7 +81,13 @@
                                     <span>•</span>
                                     <span class="font-bold text-cm-green">{{ $o->formattedAmount() }}</span>
                                     <span>•</span>
-                                    <span>{{ $tab === 'buying' ? __('seller:') : __('buyer:') }} <span class="font-semibold text-slate-800">{{ $mine?->name ?: $mine?->username ?: '-' }}</span></span>
+                                    <span>{{ $tab === 'buying' ? __('seller:') : __('buyer:') }} @if($mine)
+                                            <span class="font-semibold text-slate-800" x-data role="button" tabindex="0" style="cursor:pointer;"
+                                                  @click="$dispatch('open-user-preview', { id: {{ $mine->id }} })"
+                                                  @keydown.enter="$dispatch('open-user-preview', { id: {{ $mine->id }} })">{{ $mine->name ?: $mine->username }}</span>
+                                        @else
+                                            <span class="font-semibold text-slate-800">-</span>
+                                        @endif</span>
                                     <span>•</span>
                                     <span>{{ $o->created_at->diffForHumans() }}</span>
                                 </div>

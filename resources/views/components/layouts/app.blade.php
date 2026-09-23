@@ -227,6 +227,12 @@
     @endauth
 
     {{-- Real-time connection request / accept notifier (toast + chime + confetti) --}}
+    {{-- WhatsApp-style profile preview. Mounted once here so any page can open it
+         with $dispatch('open-user-preview', { id }) or { username }. --}}
+    @auth
+        @include('partials.user-preview')
+    @endauth
+
     <x-connection-notifier />
 
     {{-- PWA install banner --}}

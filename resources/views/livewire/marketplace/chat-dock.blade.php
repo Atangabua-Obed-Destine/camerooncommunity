@@ -43,7 +43,8 @@
                 </div>
                 <div class="flex-1 min-w-0">
                     @if ($partner && $partner->username)
-                        <a href="{{ route('marketplace.seller', ['username' => $partner->username]) }}" wire:navigate
+                        <a href="{{ route('marketplace.seller', ['username' => $partner->username]) }}"
+                           x-data @click.prevent="$dispatch('open-user-preview', { id: {{ $partner->id }} })"
                            class="block font-bold text-sm truncate hover:underline">{{ $pName }}</a>
                     @else
                         <div class="font-bold text-sm truncate">{{ $pName }}</div>
