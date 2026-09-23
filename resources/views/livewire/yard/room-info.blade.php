@@ -170,11 +170,11 @@
                 ? auth()->user()->displayNameFor($dmPartner)
                 : $room->name;
         @endphp
+        {{-- Always opens the photo viewer, even with no photo: it then shows the
+             initial large, the same way WhatsApp still opens the placeholder. --}}
         <div class="wa-info-hero__avatar relative group {{ $heroBgClass }}"
-             @if($heroPhoto)
-                 x-data style="cursor:zoom-in"
-                 @click="$dispatch('open-user-photo', { url: @js($heroPhoto), name: @js($heroPhotoName) })"
-             @endif>
+             x-data style="cursor:zoom-in"
+             @click="$dispatch('open-user-photo', { url: @js($heroPhoto), name: @js($heroPhotoName), bg: @js($heroBgClass) })">
             @if($isDm && $dmPartner?->avatar)
                 <img src="{{ asset('storage/' . $dmPartner->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
             @elseif($isDm && $dmPartner)

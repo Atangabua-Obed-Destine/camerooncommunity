@@ -18,7 +18,7 @@
 --}}
 <div x-data="userPreview()"
      @open-user-preview.window="open($event.detail)"
-     @open-user-photo.window="viewPhoto($event.detail?.url, $event.detail?.name)">
+     @open-user-photo.window="viewPhoto($event.detail?.url, $event.detail?.name, $event.detail?.bg)">
     <template x-teleport="body">
         <div x-show="isOpen" x-cloak x-transition.opacity
              class="yard-user-profile-overlay"
@@ -38,9 +38,8 @@
                 <template x-if="!loading && user">
                     <div>
                         {{-- Avatar. Tapping a real photo opens it full size, like WhatsApp. --}}
-                        <div class="yard-user-profile__avatar"
-                             :style="user.avatar ? 'cursor:zoom-in' : ''"
-                             @click="user.avatar && viewPhoto(user.avatar, user.name)">
+                        <div class="yard-user-profile__avatar" style="cursor:zoom-in"
+                             @click="viewPhoto(user.avatar, user.name, user.avatar_bg)">
                             <template x-if="user.avatar">
                                 <img :src="user.avatar" alt="" class="w-full h-full rounded-full object-cover">
                             </template>
@@ -181,14 +180,25 @@
             </div>
         </div>
 
-        {{-- ── Full-size profile photo ──
-             Sits above the card (z 130 vs 120) so it can be opened from the card
-             and closed back onto it. Also openable on its own from anywhere:
-             $dispatch('open-user-photo', { url, name }) --}}
-        <div x-show="photo.url" x-cloak x-transition.opacity
-             style="position:fixed; inset:0; z-index:130; background:rgba(0,0,0,.92); display:flex; flex-direction:column;"
-             @click.self="closePhoto()"
-             @keydown.escape.window="if (photo.url) closePhoto()">
+    </template>
+
+    {{-- ── Full-size profile photo ──
+         Its OWN teleport on purpose: Alpine's x-teleport moves only the
+         template's first element child, so a second sibling in the template
+         above would silently never reach the DOM.
+
+         Sits above the card (z 130 vs 120) so it can be opened from the card and
+         closed back onto it. Also openable on its own from anywhere:
+         $dispatch('open-user-photo', { url, name }) --}}
+    <template x-teleport="body">
+        <div x-show="photo.open" x-cloak x-transition.opacity
+             style="position:fixed; inset:0; z-index:130; background:rgba(0,0,0,.92);"
+             @keydown.escape.window="if (photo.open) closePhoto()">
+
+            {{-- Layout lives here, not on the x-show element above: x-show toggles
+                 that element's inline `display`, which would wipe out display:flex
+                 the moment it is shown, collapsing this column. --}}
+            <div style="height:100%; display:flex; flex-direction:column;" @click.self="closePhoto()">
 
             <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; color:#fff; flex-shrink:0;">
                 <span style="font-size:16px; font-weight:600; flex:1; min-width:0;"
@@ -200,8 +210,18 @@
 
             <div style="flex:1; min-height:0; display:flex; align-items:center; justify-content:center; padding:0 12px 28px;"
                  @click.self="closePhoto()">
-                <img :src="photo.url" :alt="photo.name"
-                     style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px;">
+                <template x-if="photo.url">
+                    <img :src="photo.url" :alt="photo.name"
+                         style="max-width:100%; max-height:100%; object-fit:contain; border-radius:8px;">
+                </template>
+                {{-- No photo: the initial, in the same colour as the avatar that was
+                     tapped, so it reads as the same object getting bigger. --}}
+                <template x-if="!photo.url">
+                    <div :class="photo.bg"
+                         style="width:min(62vw, 260px); height:min(62vw, 260px); border-radius:9999px; color:#fff; display:grid; place-items:center; font-size:min(26vw, 110px); font-weight:700; line-height:1;"
+                         x-text="photo.initial"></div>
+                </template>
+            </div>
             </div>
         </div>
     </template>
@@ -215,7 +235,7 @@ if (typeof window.userPreview !== 'function') {
         return {
             isOpen: false,
             loading: false,
-            photo: { url: null, name: '' },
+            photo: { open: false, url: null, name: '', initial: '?', bg: '' },
             busy: false,
             user: null,
             nicknameEditing: false,
@@ -253,18 +273,24 @@ if (typeof window.userPreview !== 'function') {
             close() {
                 this.isOpen = false;
                 this.nicknameEditing = false;
-                this.photo = { url: null, name: '' };
+                this.closePhoto();
             },
 
             // Full-size profile photo. Openable from the card's avatar or directly
-            // from any page via the open-user-photo event.
-            viewPhoto(url, name) {
-                if (!url) return;
-                this.photo = { url, name: name || '' };
+            // from any page via the open-user-photo event. Opens even without a
+            // photo, showing the initial, so the tap is never a dead end.
+            viewPhoto(url, name, bg) {
+                this.photo = {
+                    open: true,
+                    url: url || null,
+                    name: name || '',
+                    initial: (name || '?').charAt(0).toUpperCase(),
+                    bg: bg || 'bg-gradient-to-br from-slate-500 to-slate-700',
+                };
             },
 
             closePhoto() {
-                this.photo = { url: null, name: '' };
+                this.photo = { open: false, url: null, name: '', initial: '?', bg: '' };
             },
 
             toast(type, message) {

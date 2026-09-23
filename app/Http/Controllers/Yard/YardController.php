@@ -361,6 +361,9 @@ class YardController extends Controller
             'name'        => $viewer->displayNameFor($other),   // a saved nickname wins
             'username'    => $other->username,
             'avatar'      => $other->avatar ? asset('storage/' . $other->avatar) : null,
+            // Same seed the chat and member lists use, so the enlarged initial is
+            // the colour the viewer just tapped.
+            'avatar_bg'   => \App\Support\AvatarPalette::colorClass('user:' . $other->id),
             // Withheld when either side has blocked: the card shows only the notice.
             'bio'         => $blocked ? null : $other->bio,
             'location'    => $blocked ? null : ($location ?: null),
