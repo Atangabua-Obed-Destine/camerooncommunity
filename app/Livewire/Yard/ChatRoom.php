@@ -1183,9 +1183,23 @@ class ChatRoom extends Component
     public function onMessageReceived($data)
     {
         unset($this->roomMessages);
+
+        // Record delivery here rather than making the browser fire a second
+        // request for it: every incoming message used to cost three Livewire
+        // round-trips (receive, delivered, read), each re-rendering the chat.
+        $id = is_array($data) ? ($data['id'] ?? null) : null;
+        $senderId = is_array($data) ? ($data['user_id'] ?? null) : null;
+
+        if ($id && $senderId && (int) $senderId !== (int) auth()->id() && isset($this->room) && $this->room->exists) {
+            $message = YardMessage::where('id', $id)->where('room_id', $this->room->id)->first();
+            if ($message) {
+                app(ReceiptService::class)->markDelivered($message, auth()->id());
+            }
+        }
+
         $this->dispatch('message-sent');
-        // Note: markAsRead is called separately via delayedMarkRead
-        // to avoid a race condition with RoomList's unread badge computation.
+        // markAsRead still runs separately via delayedMarkRead, so RoomList has a
+        // moment to show the unread badge first.
     }
 
     /**
@@ -1369,28 +1383,6 @@ class ChatRoom extends Component
 
         // Per-message read receipts (WhatsApp blue ticks).
         app(ReceiptService::class)->markRoomRead($this->room, auth()->id());
-    }
-
-    /**
-     * Called by the recipient's browser when it receives a MessageSent broadcast.
-     * Records that the message was DELIVERED (double grey ticks for the sender).
-     */
-    #[On('mark-message-delivered')]
-    public function markMessageDelivered(int $messageId): void
-    {
-        if (!isset($this->room) || !$this->room->exists) {
-            return;
-        }
-
-        $message = YardMessage::where('id', $messageId)
-            ->where('room_id', $this->room->id)
-            ->first();
-
-        if (!$message) {
-            return;
-        }
-
-        app(ReceiptService::class)->markDelivered($message, auth()->id());
     }
 
     protected function updateRoomMeta(string $preview): void

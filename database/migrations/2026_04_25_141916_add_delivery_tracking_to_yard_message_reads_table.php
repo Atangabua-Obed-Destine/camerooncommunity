@@ -17,8 +17,16 @@ return new class extends Migration
         });
 
         // Make read_at nullable (it used CURRENT_TIMESTAMP default before).
+        // This has to happen on EVERY driver: a row is created at delivery time
+        // with read_at still null. Guarding it behind MySQL left SQLite installs
+        // (including the test database) with NOT NULL, where marking a message
+        // delivered throws.
         if (DB::getDriverName() === 'mysql') {
             DB::statement('ALTER TABLE yard_message_reads MODIFY read_at TIMESTAMP NULL DEFAULT NULL');
+        } else {
+            Schema::table('yard_message_reads', function (Blueprint $table) {
+                $table->timestamp('read_at')->nullable()->change();
+            });
         }
 
         // Backfill: every existing row already represents a "read" event,
