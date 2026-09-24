@@ -527,6 +527,7 @@
                              :class="ctx.open && ctx.msgId === {{ $msg->id }} ? 'yard-msg__bubble--selected' : ''"
                              @mouseenter="hover = true" @mouseleave="if (!emojiPick) hover = false"
                              @click.outside="emojiPick = false; hover = false"
+                             @pointerdown="keepKeyboard($event)"
                              @touchstart.passive="lpStart($event, { msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }} })"
                              @touchmove.passive="lpMove($event)"
                              @touchend.passive="lpCancel()"
@@ -1405,7 +1406,8 @@
 
     {{-- Translucent backdrop --}}
     <div x-show="ctx.open" x-transition.opacity.duration.150ms
-         class="yard-ctx-backdrop" @click.stop="ctxClose()" x-cloak></div>
+         class="yard-ctx-backdrop" @pointerdown="keepKeyboard($event)"
+         @click.stop="ctxClose()" x-cloak></div>
 
     {{-- Context menu container --}}
     <div x-show="ctx.open" x-transition.scale.80.origin.top
@@ -1514,7 +1516,7 @@
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0 scale-90"
          x-transition:enter-end="opacity-100 scale-100"
-         class="yard-sel-react"
+         class="yard-sel-react" @pointerdown="keepKeyboard($event)"
          :style="'top:' + ctx.posY + 'px; left:' + ctx.posX + 'px'"
          @click.stop>
         <template x-for="em in ctx.quickEmojis" :key="em">
@@ -1526,7 +1528,7 @@
 
     {{-- Expanded emoji picker, opened by the + --}}
     <div x-show="ctx.open && ctx.moreEmojis" x-cloak x-transition
-         class="yard-sel-grid"
+         class="yard-sel-grid" @pointerdown="keepKeyboard($event)"
          :style="'top:' + (ctx.posY + 58) + 'px; left:' + ctx.posX + 'px'"
          @click.stop>
         <template x-for="em in ctx.extraEmojis" :key="em">
@@ -1539,7 +1541,7 @@
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
-         class="yard-sel-bar" @click.stop>
+         class="yard-sel-bar" @pointerdown="keepKeyboard($event)" @click.stop>
 
         <button type="button" class="yard-sel-bar__btn" @click="ctxClose()"
                 :aria-label="$store.lang.t('Close', 'Fermer')">
@@ -1914,10 +1916,14 @@
                     this.lpCancel();
                     const t = e.touches ? e.touches[0] : e;
                     this._lpX = t.clientX; this._lpY = t.clientY;
+                    // Was the composer focused? Then the keyboard is up, and it has
+                    // to stay up while the message is selected, like WhatsApp.
+                    this._lpFocused = !!this.$refs.msgInput && document.activeElement === this.$refs.msgInput;
                     this._lpTimer = setTimeout(() => {
                         this._lpTimer = null;
                         if (navigator.vibrate) navigator.vibrate(12);
                         this.ctxOpen({ ...detail, x: this._lpX, y: this._lpY });
+                        this.restoreKeyboard();
                     }, 450);
                 },
 
@@ -1931,6 +1937,27 @@
 
                 lpCancel() {
                     if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null; }
+                },
+
+                // Keeping the on-screen keyboard up while a message is selected.
+                // A touch outside the composer blurs it and the keyboard drops with
+                // it; preventing the touch pointerdown default stops that focus
+                // change. click still fires, and scrolling is untouched (that is
+                // governed by touch-action, not by this). Mouse pointers are left
+                // alone, so selecting message text on desktop still works.
+                keepKeyboard(e) {
+                    if (e.pointerType !== 'touch') return;
+                    const ta = this.$refs.msgInput;
+                    if (ta && document.activeElement === ta) e.preventDefault();
+                },
+
+                // Fallback for browsers that blur regardless: put focus back without
+                // scrolling the thread, and only if the keyboard was already up.
+                restoreKeyboard() {
+                    if (!this._lpFocused) return;
+                    const ta = this.$refs.msgInput;
+                    if (!ta || document.activeElement === ta) return;
+                    try { ta.focus({ preventScroll: true }); } catch (_) { ta.focus(); }
                 },
 
                 ctxReact(emoji) {
@@ -2004,15 +2031,11 @@
 
                     this._echoChannel = window.Echo.channel(channelName)
                         .listen('.MessageSent', (e) => {
+                            // One call: the server marks delivery inside
+                            // onMessageReceived, so we no longer fire a second
+                            // request (and a second full re-render) for it.
                             component.onMessageReceived(e);
                             self.scrollToBottom();
-                            // Tell the server we received it (→ delivered tick on sender side).
-                            if (e && e.id && e.user_id) {
-                                const myId = {{ auth()->id() ?? 'null' }};
-                                if (e.user_id !== myId) {
-                                    component.markMessageDelivered(e.id);
-                                }
-                            }
                             // Delay markAsRead so RoomList has time to show the unread badge first
                             setTimeout(() => component.delayedMarkRead(), 1500);
                         })
