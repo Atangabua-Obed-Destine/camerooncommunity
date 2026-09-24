@@ -169,13 +169,17 @@ class ChatRoom extends Component
             $query->where('content', 'like', '%' . $this->messageSearch . '%');
         }
 
+        // Resolved once here, not once per message: this is a database read and
+        // the list can be 50 messages long.
+        $translateTo = $this->autoTranslateLang;
+
         return $query->orderByDesc('created_at')
             ->limit($this->perPage)
             ->get()
             ->reverse()
             ->values()
-            ->map(function (YardMessage $m) {
-                $m->display_content = $this->resolveDisplayContent($m);
+            ->map(function (YardMessage $m) use ($translateTo) {
+                $m->display_content = $this->resolveDisplayContent($m, $translateTo);
                 return $m;
             });
     }
@@ -186,7 +190,7 @@ class ChatRoom extends Component
      * as `display_content` on the message instance so the view renders it
      * inline. Falls back to the original content otherwise.
      */
-    protected function resolveDisplayContent(YardMessage $m): ?string
+    protected function resolveDisplayContent(YardMessage $m, ?string $translateTo = null): ?string
     {
         $original = $m->content;
 
@@ -197,7 +201,7 @@ class ChatRoom extends Component
             return $original; // never translate the viewer's own messages
         }
 
-        $target = $this->autoTranslateLang;
+        $target = $translateTo;
         if (!$target) {
             return $original;
         }
@@ -1322,6 +1326,7 @@ class ChatRoom extends Component
             ->where('user_id', auth()->id())
             ->update(['auto_translate_lang' => $lang]);
 
+        $this->translateMemoLoaded = false;
         unset($this->roomMessages, $this->autoTranslateLang);
 
         $this->dispatch('toast', type: 'success', message: $lang
@@ -1329,15 +1334,27 @@ class ChatRoom extends Component
             : __('Auto-translate disabled.'));
     }
 
+    /** Per-request memo. Not public, so Livewire never serialises it. */
+    protected ?string $translateMemo = null;
+    protected bool $translateMemoLoaded = false;
+
     #[Computed]
     public function autoTranslateLang(): ?string
     {
         if (!isset($this->room) || !$this->room->exists) {
             return null;
         }
-        return YardRoomMember::where('room_id', $this->room->id)
-            ->where('user_id', auth()->id())
-            ->value('auto_translate_lang');
+
+        // The computed cache is dropped by the many unset($this->roomMessages, ...)
+        // calls in this class, so this memo is what actually stops the repeat reads.
+        if (! $this->translateMemoLoaded) {
+            $this->translateMemo = YardRoomMember::where('room_id', $this->room->id)
+                ->where('user_id', auth()->id())
+                ->value('auto_translate_lang');
+            $this->translateMemoLoaded = true;
+        }
+
+        return $this->translateMemo;
     }
 
     protected function markAsRead()

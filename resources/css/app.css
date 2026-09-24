@@ -6907,3 +6907,111 @@
     .cn-app .yard-share-modal__room-send { font-size: 15px; }
     .cn-app .yard-share-modal__empty { font-size: 18px; }
 }
+/* ===== MOBILE MESSAGE SELECTION =====
+   WhatsApp-style long-press selection, phones only.
+
+   Desktop keeps the existing .yard-ctx-menu dropdown untouched; it is hidden
+   below 768px and everything here is hidden at 768px and up.
+
+   Layout and position MUST live here rather than in inline styles: Alpine's
+   x-show clears an element's inline `display` when it shows it, and :style with
+   a string replaces the entire style attribute. Inline layout on these elements
+   silently collapses — the icons stack and the bar falls out of place. */
+
+/* Desktop dropdown: not on phones. */
+@media (max-width: 767px) {
+    .yard-ctx-menu { display: none !important; }
+}
+
+/* Reaction row, floating beside the selected message. */
+.yard-sel-react { display: none; }
+.yard-sel-grid  { display: none; }
+.yard-sel-bar   { display: none; }
+
+@media (max-width: 767px) {
+    .yard-sel-react {
+        position: fixed;
+        z-index: 1002;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 6px 8px;
+        background: #fff;
+        border-radius: 9999px;
+        box-shadow: 0 8px 28px rgba(2, 25, 45, .28);
+        user-select: none;
+    }
+
+    .yard-sel-grid {
+        position: fixed;
+        z-index: 1002;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        max-width: min(300px, calc(100vw - 32px));
+        padding: 10px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(2, 25, 45, .3);
+    }
+
+    /* Sits over the chat header, like WhatsApp's selection toolbar. */
+    .yard-sel-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px;
+        z-index: 1003;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        padding: 0 4px;
+        background: #fff;
+        border-bottom: 1px solid var(--color-slate-200);
+        box-shadow: 0 2px 10px rgba(2, 25, 45, .08);
+    }
+
+    .yard-sel-bar__btn {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        display: grid;
+        place-items: center;
+        border-radius: 9999px;
+        color: var(--color-slate-700);
+        transition: background .15s;
+    }
+    .yard-sel-bar__btn:active { background: var(--color-slate-100); }
+    .yard-sel-bar__btn--danger { color: #e11d48; }
+
+    .yard-sel-bar__count {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--color-slate-900);
+        min-width: 18px;
+    }
+    .yard-sel-bar__spacer { flex: 1; }
+
+    .yard-sel-bar__more { position: relative; flex-shrink: 0; }
+    .yard-sel-bar__dropdown {
+        position: absolute;
+        right: 0;
+        top: 100%;
+        margin-top: 4px;
+        width: 230px;
+        padding: 4px 0;
+        background: #fff;
+        border: 1px solid var(--color-slate-200);
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(2, 25, 45, .18);
+        z-index: 1004;
+    }
+
+    /* The selected bubble stays bright above the dimmed backdrop. */
+    .yard-msg__bubble--selected {
+        position: relative;
+        z-index: 1001;
+        box-shadow: 0 6px 24px rgba(2, 25, 45, .35);
+    }
+}

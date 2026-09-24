@@ -24,12 +24,24 @@ class UserContactName extends Model
     public static function nickname(int $ownerId, int $contactId): ?string
     {
         $key = "ucn.{$ownerId}.{$contactId}";
+        $store = Cache::driver('array');
 
-        return Cache::driver('array')->remember($key, 60, function () use ($ownerId, $contactId) {
-            return static::where('owner_user_id', $ownerId)
-                ->where('contact_user_id', $contactId)
-                ->value('nickname');
-        });
+        // Cache::remember() treats a cached null as a miss, so the common case —
+        // no saved nickname — re-queried on EVERY call. Rendering 50 chat messages
+        // meant 50 identical queries. An empty string is the "known to be none"
+        // sentinel so a negative result is cached too.
+        $cached = $store->get($key);
+        if ($cached !== null) {
+            return $cached === '' ? null : $cached;
+        }
+
+        $value = static::where('owner_user_id', $ownerId)
+            ->where('contact_user_id', $contactId)
+            ->value('nickname');
+
+        $store->put($key, $value ?? '', 60);
+
+        return $value;
     }
 
     /**

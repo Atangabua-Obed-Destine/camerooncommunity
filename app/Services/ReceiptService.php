@@ -102,35 +102,56 @@ class ReceiptService
         // Group messages by sender for batched broadcasts.
         $bySender = $messages->groupBy('user_id');
 
-        DB::transaction(function () use ($messages, $userId, $now) {
-            foreach ($messages as $msg) {
-                $existing = YardMessageRead::where('message_id', $msg->id)
-                    ->where('user_id', $userId)
-                    ->first();
+        // Bulk, not per message: opening a busy room used to run a SELECT plus an
+        // INSERT/UPDATE for every unread message, then another two queries per
+        // message to work out the tick state. That was the bulk of the delay when
+        // opening a chat.
+        $messageIds = $messages->pluck('id')->all();
 
-                if ($existing) {
-                    $existing->read_at = $now;
-                    if ($existing->delivered_at === null) {
-                        $existing->delivered_at = $now;
-                    }
-                    $existing->save();
-                } else {
-                    YardMessageRead::create([
-                        'tenant_id' => $msg->tenant_id,
-                        'message_id' => $msg->id,
-                        'user_id' => $userId,
-                        'delivered_at' => $now,
+        DB::transaction(function () use ($messages, $messageIds, $userId, $now) {
+            $existingIds = YardMessageRead::whereIn('message_id', $messageIds)
+                ->where('user_id', $userId)
+                ->pluck('message_id')
+                ->all();
+
+            if ($existingIds) {
+                YardMessageRead::whereIn('message_id', $existingIds)
+                    ->where('user_id', $userId)
+                    ->update([
                         'read_at' => $now,
+                        // Keep the original delivery time if we already had one.
+                        'delivered_at' => DB::raw("COALESCE(delivered_at, '" . $now->toDateTimeString() . "')"),
                     ]);
-                }
+            }
+
+            $missing = $messages->whereNotIn('id', $existingIds)->map(fn ($msg) => [
+                'tenant_id'    => $msg->tenant_id,
+                'message_id'   => $msg->id,
+                'user_id'      => $userId,
+                'delivered_at' => $now,
+                'read_at'      => $now,
+            ])->all();
+
+            if ($missing) {
+                // upsert, not insert: (message_id, user_id) is unique and two
+                // tabs can open the same room at the same moment.
+                YardMessageRead::upsert($missing, ['message_id', 'user_id'], ['read_at', 'delivered_at']);
             }
         });
+
+        // Tick state for all of them in two queries rather than two per message.
+        $recipients = $this->recipientCount($room->id);
+        $readCounts = YardMessageRead::whereIn('message_id', $messageIds)
+            ->whereNotNull('read_at')
+            ->selectRaw('message_id, COUNT(*) as c')
+            ->groupBy('message_id')
+            ->pluck('c', 'message_id');
 
         foreach ($bySender as $senderId => $msgs) {
             $messageIds = $msgs->pluck('id')->all();
             $allReadMap = [];
             foreach ($msgs as $m) {
-                $allReadMap[$m->id] = $this->isAllRead($m);
+                $allReadMap[$m->id] = $recipients <= 0 || (int) ($readCounts[$m->id] ?? 0) >= $recipients;
             }
 
             try {

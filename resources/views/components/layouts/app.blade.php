@@ -245,7 +245,12 @@
                 fail(({ status, preventDefault }) => {
                     if (status === 419) {
                         preventDefault?.();
-                        window.location.assign('{{ route('login', ['expired' => 1]) }}');
+                        // A 419 means this page's CSRF token is stale, not that the
+                        // user is signed out. Reload to pick up a fresh token and stay
+                        // where they were; if the session really is gone, the auth
+                        // middleware sends them to login anyway. Bouncing straight to
+                        // login?expired=1 logged people out who were still signed in.
+                        window.location.reload();
                     }
                 });
             });

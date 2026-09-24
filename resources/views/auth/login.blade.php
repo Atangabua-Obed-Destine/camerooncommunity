@@ -224,11 +224,8 @@
                                 @error('password') <p class="mt-1 text-xs text-cm-red">{{ $message }}</p> @enderror
                             </div>
 
-                            {{-- Remember Me --}}
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input name="remember" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-cm-green focus:ring-cm-green">
-                                <span class="text-sm font-bold text-slate-800" x-text="$store.lang.t('Remember me', 'Se souvenir de moi')"></span>
-                            </label>
+                            {{-- No "Remember me" checkbox: signing in always lasts until
+                                 the user signs out, so an unticked box would be misleading. --}}
 
                             <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-cm-green to-blue-700 py-3.5 text-sm font-bold text-white shadow-lg shadow-cm-green/20 transition-all hover:shadow-xl hover:shadow-cm-green/30 hover:-translate-y-0.5">
                                 <span x-text="$store.lang.t('Sign In', 'Se Connecter')"></span>

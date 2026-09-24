@@ -448,7 +448,7 @@ class RegisterWizard extends Component
             session()->forget('google_signup');
         }
 
-        Auth::login($user);
+        Auth::login($user, remember: true);
 
         // Seed Kamer chat with a personalised AI welcome message
         try {

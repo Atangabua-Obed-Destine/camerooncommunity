@@ -519,10 +519,18 @@
                         @else
 
                         {{-- Message bubble --}}
+                        {{-- Long-press (touch) or right-click (desktop) selects the
+                             message, WhatsApp-style. The selected bubble lifts above the
+                             dimming backdrop so it stays legible. --}}
                         <div class="yard-msg__bubble {{ $isOwn ? 'yard-msg__bubble--own' : 'yard-msg__bubble--other' }}"
                              x-data="{ hover: false, emojiPick: false }"
+                             :class="ctx.open && ctx.msgId === {{ $msg->id }} ? 'yard-msg__bubble--selected' : ''"
                              @mouseenter="hover = true" @mouseleave="if (!emojiPick) hover = false"
                              @click.outside="emojiPick = false; hover = false"
+                             @touchstart.passive="lpStart($event, { msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }} })"
+                             @touchmove.passive="lpMove($event)"
+                             @touchend.passive="lpCancel()"
+                             @touchcancel.passive="lpCancel()"
                              @contextmenu.prevent="ctxOpen({ msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }}, x: $event.clientX, y: $event.clientY })">
 
                             {{-- Dropdown arrow on top of bubble (WhatsApp-style) --}}
@@ -1161,8 +1169,11 @@
             {{-- Send button outside pill (only when text) --}}
             {{-- @mousedown.prevent stops the tap from stealing focus from the textarea,
                  so the mobile keyboard stays up after sending, like WhatsApp. --}}
+            {{-- wire:target matters: without it the button was disabled during EVERY
+                 Livewire request on this component (marking read, incoming messages,
+                 typing, refreshes), so it often looked dead when you tried to send. --}}
             <button type="submit" class="yard-chat__send-btn"
-                    wire:loading.attr="disabled"
+                    wire:loading.attr="disabled" wire:target="sendMessage"
                     @mousedown.prevent
                     @click.prevent="if(msgText.trim()){ let t=msgText; msgText=''; if($refs.msgInput){ $refs.msgInput.value=''; $refs.msgInput.style.height='auto'; } window.dispatchEvent(new CustomEvent('optimistic-msg',{detail:{text:t}})); $wire.sendMessage(t) }"
                     x-show="msgText">
@@ -1490,6 +1501,111 @@
     </div>
 
     {{-- ══════════════════════════════════════════════════════════════════
+         MOBILE ONLY — WhatsApp-style selection (phones, < 768px)
+         The desktop dropdown above is hidden below 768px and this is hidden
+         above it, both via media queries in app.css. Layout and position live
+         in those CSS classes, NEVER inline: x-show clears an element's inline
+         `display`, and :style with a string replaces the whole style attribute,
+         so inline layout here silently collapses.
+         ══════════════════════════════════════════════════════════════════ --}}
+
+    {{-- Reaction row only, floating beside the selected message --}}
+    <div x-show="ctx.open" x-cloak
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0 scale-90"
+         x-transition:enter-end="opacity-100 scale-100"
+         class="yard-sel-react"
+         :style="'top:' + ctx.posY + 'px; left:' + ctx.posX + 'px'"
+         @click.stop>
+        <template x-for="em in ctx.quickEmojis" :key="em">
+            <button class="yard-ctx-emoji-btn" @click="ctxReact(em)" x-text="em"></button>
+        </template>
+        <button class="yard-ctx-emoji-btn yard-ctx-emoji-btn--more"
+                @click="ctx.moreEmojis = !ctx.moreEmojis">+</button>
+    </div>
+
+    {{-- Expanded emoji picker, opened by the + --}}
+    <div x-show="ctx.open && ctx.moreEmojis" x-cloak x-transition
+         class="yard-sel-grid"
+         :style="'top:' + (ctx.posY + 58) + 'px; left:' + ctx.posX + 'px'"
+         @click.stop>
+        <template x-for="em in ctx.extraEmojis" :key="em">
+            <button class="yard-ctx-emoji-grid__item" @click="ctxReact(em)" x-text="em"></button>
+        </template>
+    </div>
+
+    {{-- Action bar over the chat header: back, count, then the actions as icons --}}
+    <div x-show="ctx.open" x-cloak
+         x-transition:enter="transition ease-out duration-150"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         class="yard-sel-bar" @click.stop>
+
+        <button type="button" class="yard-sel-bar__btn" @click="ctxClose()"
+                :aria-label="$store.lang.t('Close', 'Fermer')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <span class="yard-sel-bar__count">1</span>
+        <span class="yard-sel-bar__spacer"></span>
+
+        <button type="button" class="yard-sel-bar__btn" @click="ctxAction('reply')"
+                :aria-label="$store.lang.t('Reply', 'Répondre')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 015 5v5m-15-10l5-5m-5 5l5 5"/></svg>
+        </button>
+
+        <button type="button" class="yard-sel-bar__btn yard-sel-bar__btn--danger" x-show="ctx.isOwn"
+                @click="ctxAction('delete')" :aria-label="$store.lang.t('Delete', 'Supprimer')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+
+        <button type="button" class="yard-sel-bar__btn" x-show="ctx.msgType === 'text'" @click="ctxCopy()"
+                :aria-label="$store.lang.t('Copy', 'Copier')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path stroke-linecap="round" d="M5 15V5a2 2 0 012-2h10"/></svg>
+        </button>
+
+        <button type="button" class="yard-sel-bar__btn" @click="ctxAction('forward')"
+                :aria-label="$store.lang.t('Forward', 'Transférer')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a5 5 0 00-5 5v5m15-10l-5-5m5 5l-5 5"/></svg>
+        </button>
+
+        <button type="button" class="yard-sel-bar__btn" @click="ctxAction('pin')"
+                :aria-label="$store.lang.t('Pin', 'Épingler')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 17v5m-5-9.5V4h10v8.5l-5 4-5-4z"/></svg>
+        </button>
+
+        <div class="yard-sel-bar__more">
+            <button type="button" class="yard-sel-bar__btn" @click.stop="ctx.moreMenu = !ctx.moreMenu"
+                    :aria-label="$store.lang.t('More', 'Plus')">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/></svg>
+            </button>
+
+            <div x-show="ctx.moreMenu" x-cloak x-transition @click.away="ctx.moreMenu = false"
+                 class="yard-sel-bar__dropdown">
+                <button class="yard-ctx-item" @click="ctxAction('star')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.5l2.2 4.46 4.92.72-3.56 3.47.84 4.9-4.4-2.31-4.4 2.31.84-4.9L4.36 8.68l4.92-.72 2.2-4.46z"/></svg>
+                    <span x-text="$store.lang.t('Star', 'Favori')"></span>
+                </button>
+                <button class="yard-ctx-item" x-show="ctx.isOwn && ctx.msgType === 'text'" @click="ctxAction('edit')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path stroke-linecap="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <span x-text="$store.lang.t('Edit', 'Modifier')"></span>
+                </button>
+                <button class="yard-ctx-item" x-show="ctx.msgType === 'text'" @click="ctxAction('translate-en')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+                    <span x-text="$store.lang.t('Translate to English', 'Traduire en Anglais')"></span>
+                </button>
+                <button class="yard-ctx-item" x-show="ctx.msgType === 'text'" @click="ctxAction('translate-fr')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+                    <span x-text="$store.lang.t('Translate to French', 'Traduire en Français')"></span>
+                </button>
+                <button class="yard-ctx-item" x-show="!ctx.isOwn" @click="ctxAction('report')">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 9v2m0 4h.01M5.07 19H19a2.12 2.12 0 001.83-3.14L13.83 4.23a2.12 2.12 0 00-3.66 0L3.24 15.86A2.12 2.12 0 005.07 19z"/></svg>
+                    <span x-text="$store.lang.t('Report', 'Signaler')"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {{-- ══════════════════════════════════════════════════════════════════
          Forward Message Modal
          ══════════════════════════════════════════════════════════════════ --}}
     <div x-data="forwardModal()" x-cloak
@@ -1751,6 +1867,7 @@
                     isPinned: false,
                     posX: 0,
                     posY: 0,
+                    moreMenu: false,
                     quickEmojis: ['👍','❤️','😂','😮','😢','🙏'],
                     extraEmojis: ['👎','🔥','🎉','💯','🤩','😍','🥳','🤔','😎','💀','👏','✨','🤝','😈','🥶','🥵','😤','🤡','💎','🌟'],
                 },
@@ -1762,13 +1879,16 @@
                     this.ctx.content = detail.content || '';
                     this.ctx.isPinned = detail.isPinned;
                     this.ctx.moreEmojis = false;
+                    this.ctx.moreMenu = false;
 
                     // will-change:transform on .yard-panel makes position:fixed
                     // relative to that ancestor — offset coords accordingly
                     const container = this.$root.closest('.yard-panel') || this.$root;
                     const cr = container.getBoundingClientRect();
 
-                    const menuW = 220, menuH = 380;
+                    // Only the reaction bar is positioned now; the actions moved to
+                    // the selection bar at the top, WhatsApp-style.
+                    const menuW = 300, menuH = 60;
                     let x = detail.x - cr.left;
                     let y = detail.y - cr.top;
                     const cw = cr.width, ch = cr.height;
@@ -1784,6 +1904,33 @@
                 ctxClose() {
                     this.ctx.open = false;
                     this.ctx.moreEmojis = false;
+                    this.ctx.moreMenu = false;
+                },
+
+                // Long-press to select, the way WhatsApp does on a phone.
+                // 450ms matches the platform feel; any movement cancels it so a
+                // scroll never turns into a selection.
+                lpStart(e, detail) {
+                    this.lpCancel();
+                    const t = e.touches ? e.touches[0] : e;
+                    this._lpX = t.clientX; this._lpY = t.clientY;
+                    this._lpTimer = setTimeout(() => {
+                        this._lpTimer = null;
+                        if (navigator.vibrate) navigator.vibrate(12);
+                        this.ctxOpen({ ...detail, x: this._lpX, y: this._lpY });
+                    }, 450);
+                },
+
+                lpMove(e) {
+                    if (!this._lpTimer) return;
+                    const t = e.touches ? e.touches[0] : e;
+                    if (Math.abs(t.clientX - this._lpX) > 10 || Math.abs(t.clientY - this._lpY) > 10) {
+                        this.lpCancel();
+                    }
+                },
+
+                lpCancel() {
+                    if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null; }
                 },
 
                 ctxReact(emoji) {
