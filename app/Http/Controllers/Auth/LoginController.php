@@ -21,7 +21,9 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
 
-        if (! Auth::attempt($credentials, $request->boolean('remember'))) {
+        // Always remember: signing in is meant to last until the user signs out.
+        // The recaller cookie also re-authenticates silently if the session is lost.
+        if (! Auth::attempt($credentials, true)) {
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
