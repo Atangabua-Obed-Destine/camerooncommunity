@@ -16,14 +16,14 @@ class YardController extends Controller
     {
         $user = $request->user();
 
-        $rooms = YardRoom::whereHas('members', function ($q) use ($user) {
-            $q->where('user_id', $user->id);
-        })
-            ->withCount('members')
-            ->orderByDesc('last_message_at')
-            ->get();
-
-        return view('yard.index', compact('rooms'));
+        // The open room is part of the URL (?room=<id|slug>), so refreshing,
+        // bookmarking or sharing a link puts you back in the same conversation
+        // instead of dropping you on the room list. An unknown or non-member
+        // room is ignored rather than fatal: stale links still open the Yard.
+        return view('yard.index', [
+            'rooms'      => $this->roomsFor($user),
+            'activeRoom' => $this->memberRoom($request->query('room'), $user),
+        ]);
     }
 
     public function room(Request $request, YardRoom $room)
@@ -35,7 +35,44 @@ class YardController extends Controller
             abort(403);
         }
 
-        return view('yard.room', compact('room'));
+        // Same page as /yard, with this room already open — one Yard, not two
+        // divergent layouts.
+        return view('yard.index', [
+            'rooms'      => $this->roomsFor($user),
+            'activeRoom' => $room,
+        ]);
+    }
+
+    /** The rooms this user belongs to, newest conversation first. */
+    protected function roomsFor(User $user)
+    {
+        return YardRoom::whereHas('members', function ($q) use ($user) {
+            $q->where('user_id', $user->id);
+        })
+            ->withCount('members')
+            ->orderByDesc('last_message_at')
+            ->get();
+    }
+
+    /**
+     * Resolve a ?room= value (id or slug) to a room this user is a member of,
+     * or null. Membership is checked here, not in the browser.
+     */
+    protected function memberRoom($identifier, User $user): ?YardRoom
+    {
+        if (! $identifier) {
+            return null;
+        }
+
+        $room = is_numeric($identifier)
+            ? YardRoom::find((int) $identifier)
+            : YardRoom::where('slug', $identifier)->first();
+
+        if (! $room) {
+            return null;
+        }
+
+        return $room->members()->where('user_id', $user->id)->exists() ? $room : null;
     }
 
     public function joinRoom(Request $request, YardRoom $room)
@@ -94,8 +131,8 @@ class YardController extends Controller
             ->first();
 
         if ($existingRoom) {
-            // slug lets callers outside the Yard navigate straight to the room:
-            // /yard only understands ?open=connections, not ?room=.
+            // slug and id both let callers outside the Yard navigate straight in,
+            // via /yard/room/{slug} or /yard?room={id}.
             return response()->json(['room_id' => $existingRoom->id, 'slug' => $existingRoom->slug]);
         }
 

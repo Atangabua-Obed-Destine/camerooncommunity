@@ -327,16 +327,15 @@ if (typeof window.userPreview !== 'function') {
                 }
             },
 
-            // Inside the Yard the chat swaps in place. Anywhere else we must navigate,
-            // and it has to be /yard/room/{slug}: the Yard page only reads
-            // ?open=connections from the URL, so ?room= would land on the room list
-            // without opening anything.
+            // Inside the Yard the chat swaps in place. Anywhere else we navigate to
+            // /yard?room=<id>, which the Yard resolves and opens server-side — the
+            // same URL a refresh inside a room leaves you on.
             goToRoom(roomId, slug) {
                 this.close();
                 if (window.location.pathname.includes('/yard')) {
                     window.dispatchEvent(new CustomEvent('room-selected', { detail: { roomId } }));
-                } else if (slug) {
-                    window.location.assign('{{ url('/yard/room') }}/' + slug);
+                } else if (roomId) {
+                    window.location.assign('{{ route('yard') }}?room=' + roomId);
                 } else {
                     window.location.assign('{{ route('yard') }}');
                 }

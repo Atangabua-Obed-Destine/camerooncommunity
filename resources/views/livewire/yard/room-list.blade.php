@@ -139,10 +139,21 @@
              @touchend="clearTimeout(longTimer)"
              @touchmove="clearTimeout(longTimer)"
              @click.away="ctx = false">
+        {{-- The chat is told to open in the same tick as the list's own click, so
+             the two Livewire updates travel in one request instead of the chat
+             waiting for this component's response first. ChatRoom::loadRoom is a
+             no-op for the room already open, so the server's own 'room-selected'
+             that follows costs nothing. --}}
         <button wire:click="selectRoom({{ $room->id }})"
+                @click="window.dispatchEvent(new CustomEvent('room-selected', { detail: { roomId: {{ $room->id }} } }))"
                 wire:loading.class="opacity-60"
                 wire:target="selectRoom({{ $room->id }})"
-                class="yard-room {{ $activeRoomId === $room->id ? 'yard-room--active' : '' }}"
+                {{-- The highlight follows the chat that is actually open, which is
+                     yardApp's activeRoom (this list renders inside it). Rendering
+                     the class server-side left the row highlighted after the back
+                     button closed the room, because nothing told this component. --}}
+                class="yard-room"
+                :class="Number(activeRoom) === {{ $room->id }} ? 'yard-room--active' : ''"
                 wire:loading.attr="disabled">
 
             {{-- Avatar --}}

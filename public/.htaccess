@@ -18,6 +18,15 @@
         </FilesMatch>
     </IfModule>
 
+    # Compress text responses. A room switch ships a few hundred KB of repetitive
+    # HTML inside Livewire's JSON reply; uncompressed that is seconds on mobile
+    # data. Guarded, so it is simply skipped where mod_deflate is not loaded.
+    <IfModule mod_deflate.c>
+        AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml
+        AddOutputFilterByType DEFLATE text/javascript application/javascript
+        AddOutputFilterByType DEFLATE application/json application/xml image/svg+xml
+    </IfModule>
+
     RewriteEngine On
 
     # Handle Authorization Header
