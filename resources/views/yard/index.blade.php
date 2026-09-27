@@ -1,7 +1,7 @@
 <x-layouts.app :yardMode="true">
     <x-slot:title>GoConnect | Cameroon Network</x-slot:title>
 
-    <div class="yard-container" x-data="yardApp()" @room-selected.window="onRoomSelected($event.detail)" @yard-back.window="goBack()" @yard-open-new-chat.window="openNewChat()" @toggle-room-info.window="toggleInfo()" @open-room-info.window="openInfo($event.detail?.roomId)" @room-type-changed.window="activeRoomType = $event.detail.roomType"
+    <div class="yard-container" x-data="yardApp(@js($activeRoom?->id), @js($activeRoom?->room_type?->value))" @room-selected.window="onRoomSelected($event.detail)" @room-deselected.window="onRoomSelected({ roomId: null })" @yard-back.window="goBack()" @yard-open-new-chat.window="openNewChat()" @toggle-room-info.window="toggleInfo()" @open-room-info.window="openInfo($event.detail?.roomId)" @room-type-changed.window="activeRoomType = $event.detail.roomType"
          @open-dm.window="startDmWith($event.detail.userId)"
          @connection-updated.window="syncConnectionState($event.detail)"
          @connection-failed.window="rollbackConnectionState($event.detail)"
@@ -157,7 +157,7 @@
                 </div>
 
                 <div class="yard-rooms">
-                    <livewire:yard.room-list />
+                    <livewire:yard.room-list :activeRoomId="$activeRoom?->id" />
                 </div>
             </div>
 
@@ -302,7 +302,14 @@
              }">
 
             <div x-show="activeRoom" x-cloak class="h-full">
-                <livewire:yard.chat-room />
+                {{-- ChatRoom::$room is a non-nullable typed property, so the room is
+                     passed only when there is one; with no room the component mounts
+                     empty and waits for 'room-selected', as it always has. --}}
+                @if($activeRoom)
+                    <livewire:yard.chat-room :room="$activeRoom" />
+                @else
+                    <livewire:yard.chat-room />
+                @endif
             </div>
 
             <div x-show="!activeRoom" class="yard-empty">
@@ -576,10 +583,10 @@
 
     @push('scripts')
     <script>
-        function yardApp() {
+        function yardApp(initialRoomId = null, initialRoomType = null) {
             return {
-                activeRoom: null,
-                activeRoomType: null,
+                activeRoom: initialRoomId,
+                activeRoomType: initialRoomType,
                 showInfo: false,
                 menuOpen: false,
                 searchOpen: false,
@@ -603,12 +610,28 @@
                         this.isMobile = window.innerWidth < 768;
                     });
                     window.addEventListener('popstate', () => {
-                        if (this.activeRoom && this.isMobile) {
+                        if (! this.isMobile) return;
+                        if (this.activeRoom) {
                             this.activeRoom = null;
                             this.showInfo = false;
                             window.dispatchEvent(new CustomEvent('chatroom-exited'));
                         }
+                        // The entry we popped to can still carry ?room= — the back
+                        // arrow closes the room itself and then calls history.back(),
+                        // and a refresh straight into a room pushed the same URL. Left
+                        // in place, the next refresh would reopen a room the user just
+                        // left, so strip it whenever no room is open.
+                        if (new URL(window.location.href).searchParams.has('room')) {
+                            history.replaceState({}, '', this.roomUrl(null));
+                        }
                     });
+
+                    // Landed straight in a room (refresh, bookmark, shared link):
+                    // give the back button an entry to pop, so it leaves the room
+                    // rather than the site.
+                    if (this.activeRoom && this.isMobile) {
+                        history.pushState({ room: this.activeRoom }, '');
+                    }
 
                     // ── In-app message toast + chime ──
                     // RoomList dispatches 'yard-incoming-message' (via Livewire) when a
@@ -664,19 +687,36 @@
                     } catch (_) { /* noop */ }
                 },
 
+                // The same page URL, with ?room= set to the open room or removed.
+                // Written on every room change so a refresh reopens the chat the
+                // user was actually in; the server reads it back in index().
+                roomUrl(roomId) {
+                    const url = new URL(window.location.href);
+                    if (roomId) url.searchParams.set('room', roomId);
+                    else url.searchParams.delete('room');
+                    return url.pathname + url.search + url.hash;
+                },
+
                 onRoomSelected(detail) {
                     const roomId = detail.roomId ?? detail;
                     if (roomId) {
                         this.activeRoom = roomId;
                         this.showInfo = false;
                         if (this.isMobile) {
-                            history.pushState({ room: roomId }, '');
+                            // Mobile keeps a history entry so the hardware back
+                            // button steps out of the room, WhatsApp-style.
+                            history.pushState({ room: roomId }, '', this.roomUrl(roomId));
                             window.dispatchEvent(new CustomEvent('chatroom-entered'));
+                        } else {
+                            // Desktop shows list and chat side by side, so switching
+                            // rooms is not navigation: rewrite, don't pile up entries.
+                            history.replaceState({ room: roomId }, '', this.roomUrl(roomId));
                         }
                     } else {
                         this.activeRoom = null;
                         this.showInfo = false;
                         if (this.isMobile) window.dispatchEvent(new CustomEvent('chatroom-exited'));
+                        else history.replaceState({}, '', this.roomUrl(null));
                     }
                 },
 
@@ -700,6 +740,8 @@
                     if (this.isMobile) {
                         window.dispatchEvent(new CustomEvent('chatroom-exited'));
                         history.back();
+                    } else {
+                        history.replaceState({}, '', this.roomUrl(null));
                     }
                 },
 

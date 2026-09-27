@@ -236,7 +236,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         // ── Accept call ──
-        accept() {
+        async accept() {
             if (!this.incomingCall) return;
 
             this.stopRingtone();
@@ -247,10 +247,18 @@ document.addEventListener('alpine:init', () => {
                 this.subscribeToRoom(this.incomingCall.roomId);
             }
 
-            // Tell server we answered
-            this.$wire.answerCall(this.incomingCall.callUuid);
-
+            const uuid = this.incomingCall.callUuid;
             this.incomingCall = null;
+
+            // The microphone MUST be open before the server is told we answered.
+            // Answering triggers the caller's offer, and the answer we send back
+            // carries only the tracks this side had at that moment — so acquiring
+            // media afterwards produced a one-way call: the caller was heard, but
+            // nothing went back the other way. getUserMedia can take a while (or
+            // prompt), which is why this was intermittent.
+            await this.acquireMedia(this.callType);
+
+            this.$wire.answerCall(uuid);
         },
 
         onCallAnswered(detail) {
@@ -364,12 +372,7 @@ document.addEventListener('alpine:init', () => {
             this.peers[peerId] = pc;
             this._pendingCandidates[peerId] = [];
 
-            // Add local tracks
-            if (this.localStream) {
-                this.localStream.getTracks().forEach(track => {
-                    pc.addTrack(track, this.localStream);
-                });
-            }
+            this.attachLocalTracks(pc);
 
             // Handle ICE candidates
             pc.onicecandidate = (event) => {
@@ -460,6 +463,13 @@ document.addEventListener('alpine:init', () => {
         },
 
         async handleOffer(peerId, data) {
+            // Last line of defence: an offer can still arrive before our own
+            // media is ready (permission prompt, slow device, a renegotiation).
+            // Answering without tracks is what makes a call one-way.
+            if (!this.localStream) {
+                await this.acquireMedia(this.callType);
+            }
+
             if (!this.peers[peerId]) {
                 this.createPeerConnection(peerId, null, false);
             }
@@ -479,6 +489,37 @@ document.addEventListener('alpine:init', () => {
                 'answer',
                 { sdp: pc.localDescription.toJSON() }
             );
+        },
+
+        /** Put our microphone/camera on a peer connection. Safe to call twice. */
+        attachLocalTracks(pc) {
+            if (!this.localStream || pc._hasLocalTracks) return false;
+
+            this.localStream.getTracks().forEach(track => {
+                pc.addTrack(track, this.localStream);
+            });
+            pc._hasLocalTracks = true;
+
+            return true;
+        },
+
+        /**
+         * Media that arrived after a peer connection was already built (a late
+         * permission grant, say) still has to reach the other side, and that
+         * means a fresh offer. Only the side whose media was late renegotiates,
+         * so the two peers cannot collide here.
+         */
+        async renegotiate(peerId) {
+            const pc = this.peers[peerId];
+            if (!pc || pc.signalingState !== 'stable') return;
+
+            try {
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                this.$wire.sendSignal(this.callUuid, peerId, 'offer', { sdp: pc.localDescription.toJSON() });
+            } catch (err) {
+                console.error('[CallEngine] Renegotiation failed:', err);
+            }
         },
 
         async handleAnswer(peerId, data) {
@@ -559,6 +600,20 @@ document.addEventListener('alpine:init', () => {
 
         // ── Media ──
         async acquireMedia(type) {
+            // Callers now ask for media from several places; opening a second
+            // microphone stream would leave the first one live and the call
+            // half-connected.
+            if (this.localStream) return;
+            if (this._mediaPromise) return this._mediaPromise;
+
+            this._mediaPromise = this._acquireMedia(type).finally(() => {
+                this._mediaPromise = null;
+            });
+
+            return this._mediaPromise;
+        },
+
+        async _acquireMedia(type) {
             // Check if we're in a secure context (HTTPS or localhost)
             if (!window.isSecureContext) {
                 console.warn('[CallEngine] Not a secure context, microphone/camera unavailable. Call will proceed without local media.');
@@ -583,6 +638,14 @@ document.addEventListener('alpine:init', () => {
                         const localVideo = document.getElementById('local-video');
                         if (localVideo) localVideo.srcObject = this.localStream;
                     });
+                }
+
+                // Any peer built while we had no media is currently sending
+                // silence. Give it the tracks and offer again.
+                for (const peerId of Object.keys(this.peers)) {
+                    if (this.attachLocalTracks(this.peers[peerId])) {
+                        await this.renegotiate(peerId);
+                    }
                 }
             } catch (err) {
                 console.error('[CallEngine] Media access denied:', err);

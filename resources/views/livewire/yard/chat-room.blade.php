@@ -10,6 +10,7 @@
      x-on:optimistic-media.window="optimistic.push({ id: ++_optId, kind: $event.detail.kind, url: $event.detail.url, fileName: $event.detail.fileName, fileSize: $event.detail.fileSize, fileIcon: $event.detail.fileIcon, caption: $event.detail.caption }); scrollToBottom()"
      x-on:scroll-to-message.window="scrollToMessageId($event.detail?.messageId ?? $event.detail?.[0]?.messageId)"
      x-on:chat-position-target.window="scrollToTarget($event.detail?.messageId ?? $event.detail?.[0]?.messageId)"
+     x-on:room-selected.window="beginPositioning()"
      x-on:focus-edit-input.window="$nextTick(() => { if($refs.editInput) $refs.editInput.focus() })"
      x-on:echo-subscribe.window="subscribeEcho($event.detail.channel)"
      x-on:messages-prepended.window="
@@ -37,12 +38,22 @@
      @keydown.escape.window="ctxClose()"
      x-init="@if(isset($room) && $room->exists) subscribeEcho('{{ 'tenant.' . $room->tenant_id . '.room.' . $room->id }}') @endif">
 
-    {{-- Loading overlay for room switching --}}
-    <div wire:loading.flex wire:target="loadRoom" class="yard-chat__loading">
+    {{-- Loading overlay for room switching. Driven by Alpine, not wire:loading:
+         the request finishing is not the moment the chat is ready — the messages
+         are still scrolled to the oldest one until scrollToTarget() runs, which is
+         what made a room look like it was loading history before it opened. --}}
+    <div x-show="positioning" x-cloak class="yard-chat__loading">
         <div class="yard-upload-spinner" style="width:24px;height:24px;border-width:3px"></div>
     </div>
 
     @if(isset($room) && $room->exists)
+
+    @if($this->autoTranslateLang && $this->hasPendingTranslations())
+        {{-- Auto-translate is on and some visible messages have no cached
+             translation. The remote work runs here, after the chat has painted,
+             instead of inside the render that the user is waiting for. --}}
+        <div x-init="$wire.translatePending()" class="hidden"></div>
+    @endif
 
     {{-- ── Chat Header ── --}}
     <header class="yard-chat__header">
@@ -328,7 +339,9 @@
     {{-- ── Messages Area ── --}}
     <div class="yard-chat__messages" id="chat-messages"
          x-ref="chatMessages"
-         x-init="scrollToBottom()"
+         x-init="positioning = true; scrollToBottom()"
+         :style="mobileUi ? { 'user-select': 'none', '-webkit-user-select': 'none', '-webkit-touch-callout': 'none' } : {}"
+         @resize.window.debounce.200ms="mobileUi = window.matchMedia('(max-width: 767px)').matches"
          @scroll.passive="
              // Telegram-style infinite scroll: when the user scrolls within
              // 80px of the top, auto-trigger loadMore (debounced via the flag).
@@ -508,6 +521,8 @@
                         @if($editingMessageId === $msg->id)
                         <div class="yard-msg__edit-wrap">
                             <textarea wire:model="editContent" x-ref="editInput"
+                                      {{-- the thread disables selection on mobile; editing still needs it --}}
+                                      style="-webkit-user-select:text; user-select:text;"
                                       class="yard-msg__edit-input" rows="2"
                                       @keydown.enter.prevent="$wire.saveEdit()"
                                       @keydown.escape="$wire.cancelEdit()"></textarea>
@@ -530,7 +545,7 @@
                              @pointerdown="keepKeyboard($event)"
                              @touchstart.passive="lpStart($event, { msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }} })"
                              @touchmove.passive="lpMove($event)"
-                             @touchend.passive="lpCancel()"
+                             @touchend="lpEnd($event)"
                              @touchcancel.passive="lpCancel()"
                              @contextmenu.prevent="ctxOpen({ msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }}, x: $event.clientX, y: $event.clientY })">
 
@@ -1517,7 +1532,10 @@
          x-transition:enter-start="opacity-0 scale-90"
          x-transition:enter-end="opacity-100 scale-100"
          class="yard-sel-react" @pointerdown="keepKeyboard($event)"
-         :style="'top:' + ctx.posY + 'px; left:' + ctx.posX + 'px'"
+         {{-- Object form, never a string: a string :style replaces the whole
+              inline style attribute, including the display:none that x-show
+              writes — which is what kept the grid below on screen. --}}
+         :style="{ top: ctx.posY + 'px', left: ctx.posX + 'px' }"
          @click.stop>
         <template x-for="em in ctx.quickEmojis" :key="em">
             <button class="yard-ctx-emoji-btn" @click="ctxReact(em)" x-text="em"></button>
@@ -1529,7 +1547,7 @@
     {{-- Expanded emoji picker, opened by the + --}}
     <div x-show="ctx.open && ctx.moreEmojis" x-cloak x-transition
          class="yard-sel-grid" @pointerdown="keepKeyboard($event)"
-         :style="'top:' + (ctx.posY + 58) + 'px; left:' + ctx.posX + 'px'"
+         :style="{ top: (ctx.posY + 58) + 'px', left: ctx.posX + 'px' }"
          @click.stop>
         <template x-for="em in ctx.extraEmojis" :key="em">
             <button class="yard-ctx-emoji-grid__item" @click="ctxReact(em)" x-text="em"></button>
@@ -1769,6 +1787,20 @@
                 _prevScrollTop: null,
                 _autoLoading: false,
 
+                // True from the moment a room is asked for until its messages are
+                // scrolled into place; the overlay above watches it.
+                positioning: false,
+
+                // What actually drops the keyboard on a phone is the browser's own
+                // long-press text selection: it starts a selection in the thread, the
+                // composer blurs, and the keyboard goes down with it. WhatsApp has no
+                // native selection in a chat at all — Copy lives in the selection bar
+                // instead — so it is switched off below 768px, and only there. This is
+                // an Alpine binding rather than a CSS class (a new class would force a
+                // Tailwind rebuild) and rather than a plain inline style (Livewire's
+                // morph strips attributes the server did not send).
+                mobileUi: window.matchMedia('(max-width: 767px)').matches,
+
                 init() {
                     // Hydrate the global msgStatus store with server-computed statuses
                     // so ticks render correctly on first paint and after Livewire updates.
@@ -1916,13 +1948,26 @@
                     this.lpCancel();
                     const t = e.touches ? e.touches[0] : e;
                     this._lpX = t.clientX; this._lpY = t.clientY;
+                    this._lpFired = false;
+                    // The reaction bar is anchored to the bubble, not to the finger:
+                    // opening it under the touch point put its buttons exactly where
+                    // the finger was about to lift. The rect is read now, because the
+                    // event is gone by the time the timer runs.
+                    const rect = e.currentTarget && e.currentTarget.getBoundingClientRect
+                        ? e.currentTarget.getBoundingClientRect()
+                        : null;
                     // Was the composer focused? Then the keyboard is up, and it has
                     // to stay up while the message is selected, like WhatsApp.
                     this._lpFocused = !!this.$refs.msgInput && document.activeElement === this.$refs.msgInput;
                     this._lpTimer = setTimeout(() => {
                         this._lpTimer = null;
+                        this._lpFired = true;
                         if (navigator.vibrate) navigator.vibrate(12);
-                        this.ctxOpen({ ...detail, x: this._lpX, y: this._lpY });
+                        this.ctxOpen({
+                            ...detail,
+                            x: rect ? rect.left : this._lpX,
+                            y: rect ? rect.top - 56 : this._lpY,
+                        });
                         this.restoreKeyboard();
                     }, 450);
                 },
@@ -1933,6 +1978,35 @@
                     if (Math.abs(t.clientX - this._lpX) > 10 || Math.abs(t.clientY - this._lpY) > 10) {
                         this.lpCancel();
                     }
+                },
+
+                // Lifting the finger after a long press fires a click wherever the
+                // finger is — which is now on top of the freshly opened reaction bar,
+                // so the press itself was tapping '+' (or an emoji). Cancelling the
+                // touchend default stops that synthetic click being generated at all.
+                lpEnd(e) {
+                    if (this._lpFired) {
+                        this._lpFired = false;
+                        if (e.cancelable) e.preventDefault();
+                        this.swallowNextClick();
+                    }
+                    this.lpCancel();
+                },
+
+                // Belt and braces for browsers that emit the click anyway: eat the
+                // very next one, then stop listening.
+                swallowNextClick() {
+                    const eat = (ev) => {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        cleanup();
+                    };
+                    const cleanup = () => {
+                        document.removeEventListener('click', eat, true);
+                        clearTimeout(this._lpClickTimer);
+                    };
+                    document.addEventListener('click', eat, true);
+                    this._lpClickTimer = setTimeout(cleanup, 700);
                 },
 
                 lpCancel() {
@@ -2070,10 +2144,24 @@
                         });
                 },
 
+                // Raise the curtain while a room opens, and never leave it up: a
+                // failed or dropped request must not hide the chat for good.
+                beginPositioning() {
+                    this.positioning = true;
+                    clearTimeout(this._posTimer);
+                    this._posTimer = setTimeout(() => { this.positioning = false; }, 4000);
+                },
+
+                endPositioning() {
+                    clearTimeout(this._posTimer);
+                    this.positioning = false;
+                },
+
                 scrollToBottom() {
                     this.$nextTick(() => {
                         const el = this.$refs.chatMessages;
                         if (el) el.scrollTop = el.scrollHeight;
+                        this.endPositioning();
                     });
                 },
 
@@ -2095,6 +2183,7 @@
                             if (el && container) {
                                 // Align the first unread message near the top of the viewport
                                 container.scrollTop = Math.max(0, el.offsetTop - 12);
+                                self.endPositioning();
                                 return;
                             }
                             if (++attempts < maxAttempts) {

@@ -39,8 +39,10 @@ class ChatRoom extends Component
     public string $messageSearch = '';
     public bool $searchActive = false;
 
-    // Pagination
-    public int $perPage = 50;
+    // Pagination. The first page is what the user waits for when a room opens,
+    // and each rendered bubble is several KB of HTML, so it is deliberately
+    // small — about a screenful. Scrolling up adds 50 at a time.
+    public int $perPage = 25;
     public bool $hasMore = true;
 
     protected $listeners = [
@@ -68,7 +70,43 @@ class ChatRoom extends Component
             return;
         }
 
-        $this->room = YardRoom::findOrFail($roomId);
+        // The room list opens a room twice on purpose — once optimistically from
+        // the browser and once from its own server response — so that the two
+        // Livewire updates travel together instead of one after the other. The
+        // second one lands here and must cost nothing.
+        if (isset($this->room) && $this->room->exists && $this->room->id === $roomId) {
+            return;
+        }
+
+        $room = YardRoom::findOrFail($roomId);
+
+        // 'room-selected' is a browser event, so the id cannot be trusted: without
+        // this, anyone could dispatch it from the console and read a private group
+        // or someone else's DM. Membership is the gate, decided here.
+        $isMember = YardRoomMember::where('room_id', $room->id)
+            ->where('user_id', auth()->id())
+            ->exists();
+
+        if (! $isMember) {
+            $this->dispatch('toast', type: 'warning', message: __('You are not a member of that chat.'));
+
+            return;
+        }
+
+        // Away/archived memberships are visible in the sidebar but locked; the
+        // room list refuses to open them, and so does this path.
+        $isArchived = YardRoomMember::where('room_id', $room->id)
+            ->where('user_id', auth()->id())
+            ->whereNotNull('auto_archived_at')
+            ->exists();
+
+        if ($isArchived) {
+            $this->dispatch('toast', type: 'info', message: __('This room is locked. Switch back to its location to reopen it.'));
+
+            return;
+        }
+
+        $this->room = $room;
         $this->newMessage = '';
         $this->replyToId = null;
         $this->replyToPreview = null;
@@ -77,11 +115,16 @@ class ChatRoom extends Component
         $this->messageSearch = '';
         $this->searchActive = false;
         $this->hasMore = true;
-        $this->perPage = 50;
+        $this->perPage = 25;
         // Drop any cached DM state from the previously-open room so a
         // "blocked-by-them" banner from a DM cannot leak into a group's
         // input bar after switching rooms.
-        unset($this->dmConnectionState, $this->dmPartnerStatus, $this->roomMessages);
+        unset($this->dmConnectionState, $this->dmPartnerStatus, $this->roomMessages, $this->pinnedMessages, $this->autoTranslateLang);
+        // Per-request memos belong to the room that was open, not this one.
+        $this->joinedAtMemo = false;
+        $this->translateMemo = null;
+        $this->translateMemoLoaded = false;
+        $this->translationsPending = false;
         $this->positionChatAtFirstUnreadOrBottom();
         $this->markAsRead();
         $this->dispatch('echo-subscribe', channel: 'tenant.' . $this->room->tenant_id . '.room.' . $this->room->id);
@@ -133,9 +176,7 @@ class ChatRoom extends Component
         // both participants effectively "join" when the conversation starts
         // and there is no prior history anyway.
         if ($this->room->room_type !== \App\Enums\RoomType::DirectMessage) {
-            $joinedAt = YardRoomMember::where('room_id', $this->room->id)
-                ->where('user_id', auth()->id())
-                ->value('joined_at');
+            $joinedAt = $this->joinedAt();
             if ($joinedAt) {
                 $query->where('created_at', '>=', $joinedAt);
             }
@@ -189,8 +230,13 @@ class ChatRoom extends Component
      * message has a cached translation in the target language, expose it
      * as `display_content` on the message instance so the view renders it
      * inline. Falls back to the original content otherwise.
+     *
+     * Rendering is cache-only by default. Translating calls OpenAI over the
+     * network, and doing that while a room opens meant the whole chat waited on
+     * up to a page of round trips. The remote work happens in translatePending()
+     * instead, once the messages are already on screen.
      */
-    protected function resolveDisplayContent(YardMessage $m, ?string $translateTo = null): ?string
+    protected function resolveDisplayContent(YardMessage $m, ?string $translateTo = null, bool $allowRemote = false): ?string
     {
         $original = $m->content;
 
@@ -209,6 +255,12 @@ class ChatRoom extends Component
         $cached = is_array($m->translated_content) ? ($m->translated_content[$target] ?? null) : null;
         if ($cached) {
             return $cached;
+        }
+
+        if (! $allowRemote) {
+            $this->translationsPending = true;
+
+            return $original;
         }
 
         // Lazy-translate via the AI service (cached 30 days inside the service).
@@ -242,9 +294,7 @@ class ChatRoom extends Component
         // Same WhatsApp-style history cut-off as the main message feed:
         // don't expose pinned messages that pre-date the viewer's join.
         if ($this->room->room_type !== \App\Enums\RoomType::DirectMessage) {
-            $joinedAt = YardRoomMember::where('room_id', $this->room->id)
-                ->where('user_id', auth()->id())
-                ->value('joined_at');
+            $joinedAt = $this->joinedAt();
             if ($joinedAt) {
                 $query->where('created_at', '>=', $joinedAt);
             }
@@ -1346,6 +1396,72 @@ class ChatRoom extends Component
         $this->dispatch('toast', type: 'success', message: $lang
             ? __('Auto-translate enabled.')
             : __('Auto-translate disabled.'));
+    }
+
+    /**
+     * Set during render when a visible message has no cached translation yet.
+     * Not public: it is a per-request fact, and the view asks for the follow-up.
+     */
+    protected bool $translationsPending = false;
+
+    public function hasPendingTranslations(): bool
+    {
+        // The flag is only meaningful once the messages have been built.
+        $this->roomMessages;
+
+        return $this->translationsPending;
+    }
+
+    /**
+     * Translate the visible messages that had no cached translation. Called by
+     * the view right after the chat paints, so opening a room never waits on the
+     * network. Bounded, so one very long page cannot stall a request either.
+     */
+    public function translatePending(): void
+    {
+        $target = $this->autoTranslateLang;
+
+        if (! $target || ! isset($this->room) || ! $this->room->exists) {
+            return;
+        }
+
+        $done = 0;
+        foreach ($this->roomMessages as $m) {
+            if ($done >= 25) {
+                break;
+            }
+            if ($m->user_id === auth()->id() || ! is_string($m->content) || $m->content === '') {
+                continue;
+            }
+            $cached = is_array($m->translated_content) ? ($m->translated_content[$target] ?? null) : null;
+            if ($cached) {
+                continue;
+            }
+
+            $this->resolveDisplayContent($m, $target, allowRemote: true);
+            $done++;
+        }
+
+        if ($done > 0) {
+            unset($this->roomMessages);
+        }
+    }
+
+    /**
+     * The viewer's join date for the open room, read once per request. Both the
+     * message feed and the pinned list need it as a history cut-off.
+     */
+    protected $joinedAtMemo = false;
+
+    protected function joinedAt()
+    {
+        if ($this->joinedAtMemo === false) {
+            $this->joinedAtMemo = YardRoomMember::where('room_id', $this->room->id)
+                ->where('user_id', auth()->id())
+                ->value('joined_at');
+        }
+
+        return $this->joinedAtMemo;
     }
 
     /** Per-request memo. Not public, so Livewire never serialises it. */

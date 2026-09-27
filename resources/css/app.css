@@ -6921,6 +6921,13 @@
 /* Desktop dropdown: not on phones. */
 @media (max-width: 767px) {
     .yard-ctx-menu { display: none !important; }
+
+    /* Hover affordances are a mouse idea. A tap still fires the compatibility
+       mouseenter, so on a phone these appeared over the bubble next to the
+       long-press UI; WhatsApp has neither. Long-press is the only way in here. */
+    .yard-msg__chevron,
+    .yard-msg__hover-emoji,
+    .yard-msg__quick-emoji { display: none !important; }
 }
 
 /* Reaction row, floating beside the selected message. */
