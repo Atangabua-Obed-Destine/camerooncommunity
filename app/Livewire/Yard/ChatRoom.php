@@ -1493,12 +1493,31 @@ class ChatRoom extends Component
             return;
         }
 
-        YardRoomMember::where('room_id', $this->room->id)
+        $member = YardRoomMember::where('room_id', $this->room->id)
             ->where('user_id', auth()->id())
-            ->update(['last_read_at' => now()]);
+            ->first(['id', 'last_read_at']);
+
+        if (! $member) {
+            return;
+        }
+
+        // Nothing new since the last visit: skip the write, the receipt sweep and
+        // the bell ping. This runs on every open and 1.5s after every incoming
+        // message, so it is worth not doing when there is nothing to clear.
+        $lastMessageAt = $this->room->last_message_at;
+        if ($lastMessageAt && $member->last_read_at && $member->last_read_at->gte($lastMessageAt)) {
+            return;
+        }
+
+        YardRoomMember::whereKey($member->id)->update(['last_read_at' => now()]);
 
         // Per-message read receipts (WhatsApp blue ticks).
         app(ReceiptService::class)->markRoomRead($this->room, auth()->id());
+
+        // The bell counts unread chats, and nothing told it when they stopped
+        // being unread — so its badge kept showing messages the user had just
+        // read until the next full page load.
+        $this->dispatch('bell-refresh');
     }
 
     protected function updateRoomMeta(string $preview): void

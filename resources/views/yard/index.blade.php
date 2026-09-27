@@ -1064,6 +1064,18 @@
                 const clean = window.location.pathname + window.location.hash;
                 window.history.replaceState({}, '', clean);
             }
+
+            // ?room=<id>&info=1 — a join-request notification wants the room's
+            // info panel, where the request is approved. The room itself is
+            // already open, resolved server-side. Only 'info' is stripped, so
+            // ?room= survives for the next refresh.
+            if (params.get('info') === '1') {
+                window.dispatchEvent(new CustomEvent('open-room-info'));
+                params.delete('info');
+                const qs = params.toString();
+                window.history.replaceState({}, '',
+                    window.location.pathname + (qs ? '?' + qs : '') + window.location.hash);
+            }
         });
     </script>
     @endauth

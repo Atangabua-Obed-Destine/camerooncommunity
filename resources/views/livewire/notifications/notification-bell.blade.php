@@ -90,6 +90,11 @@
                 <a
                     href="{{ $n['link'] }}"
                     class="nb-item nb-item--{{ $n['kind'] }}"
+                    @if($n['kind'] === 'stored')
+                        {{-- Marked read server-side first, then redirected; the href
+                             stays so middle-click and "open in new tab" still work. --}}
+                        wire:click.prevent="openStored('{{ \Illuminate\Support\Str::after($n['id'], 'note:') }}')"
+                    @endif
                     @click="open = false"
                 >
                     <div class="nb-avatar {{ $n['palette'] }}">
