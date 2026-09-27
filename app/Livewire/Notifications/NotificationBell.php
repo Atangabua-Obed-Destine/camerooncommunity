@@ -77,9 +77,13 @@ class NotificationBell extends Component
                 'body'      => $room->last_message_preview ?: trans_choice('{1} :n new message|[2,*] :n new messages', $count, ['n' => $count]),
                 'time'      => $room->last_message_at ?: $m->updated_at,
                 'unread'    => $count,
+                // ?room= is what the Yard resolves and opens; ?open= only ever
+                // meant ?open=connections, so these rows used to land the user on
+                // the room list with the message still unread — which is why the
+                // badge never went down.
                 'link'      => $room->origin === 'marketplace'
                                 ? route('marketplace.inbox') . '?c=' . $room->id
-                                : route('yard') . '?open=' . $room->id,
+                                : route('yard') . '?room=' . $room->id,
                 'icon'      => 'chat',
                 'palette'   => \App\Support\AvatarPalette::colorClass('user:' . ($partner?->id ?? 0)),
                 'initial'   => mb_strtoupper(mb_substr($name, 0, 1)),
@@ -134,7 +138,7 @@ class NotificationBell extends Component
                 'body'    => \Illuminate\Support\Str::limit(strip_tags((string) $r->body), 80),
                 'time'    => Carbon::parse($r->created_at),
                 'unread'  => 1,
-                'link'    => route('yard') . '?open=' . $r->room_id,
+                'link'    => route('yard') . '?room=' . $r->room_id,
                 'icon'    => 'at',
                 'palette' => \App\Support\AvatarPalette::colorClass('user:' . (int) $r->sender_id),
                 'initial' => mb_strtoupper(mb_substr($sender, 0, 1)),
@@ -176,7 +180,7 @@ class NotificationBell extends Component
                     'body'    => __('wants to join :group', ['group' => $jr->room?->name ?: __('your group')]),
                     'time'    => $jr->created_at,
                     'unread'  => 1,
-                    'link'    => route('yard') . '?open=' . $jr->room_id . '&info=1',
+                    'link'    => route('yard') . '?room=' . $jr->room_id . '&info=1',
                     'icon'    => 'user-plus',
                     'palette' => \App\Support\AvatarPalette::colorClass('user:' . (int) $jr->user_id),
                     'initial' => mb_strtoupper(mb_substr($name, 0, 1)),
@@ -306,6 +310,30 @@ class NotificationBell extends Component
     public function total(): int
     {
         return (int) $this->counts['all'];
+    }
+
+    /**
+     * Stored notifications are the only rows with a read state of their own: the
+     * rest stop counting when the underlying thing is handled. Clicking one has
+     * to mark it read, or it counts forever.
+     */
+    public function openStored(string $id)
+    {
+        $row = DB::table('notifications')
+            ->where('id', $id)
+            ->where('user_id', auth()->id())
+            ->first();
+
+        if (! $row) {
+            return null;
+        }
+
+        DB::table('notifications')->where('id', $id)->update(['read_at' => now()]);
+        $this->bust();
+
+        $data = json_decode($row->data, true) ?: [];
+
+        return redirect()->to($data['url'] ?? route('yard'));
     }
 
     public function setTab(string $tab): void
