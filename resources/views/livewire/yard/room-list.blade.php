@@ -657,6 +657,37 @@
                 </div>
                 @endif
 
+                {{-- Asking for the permission needs a button somewhere: automatic
+                     detection gives up for good once the browser reports 'denied',
+                     and in an installed PWA that verdict is inherited from the
+                     browser, so nothing would ever prompt again. --}}
+                <div class="mt-3" x-data="{ busy: false, note: '' }">
+                    <button type="button"
+                            @click="
+                                if (typeof window.cnRequestLocation !== 'function') return;
+                                busy = true; note = '';
+                                const res = await window.cnRequestLocation();
+                                busy = false;
+                                if (res.ok) { $wire.$refresh(); return; }
+                                note = {
+                                    insecure:    $store.lang.t('Your browser only allows location over a secure (https) connection.', 'Votre navigateur n\'autorise la localisation que sur une connexion sécurisée (https).'),
+                                    unsupported: $store.lang.t('This device does not support location.', 'Cet appareil ne prend pas en charge la localisation.'),
+                                    denied:      $store.lang.t('Location is blocked for this app. Allow it in your device or browser settings, then try again.', 'La localisation est bloquée pour cette application. Autorisez-la dans les réglages de votre appareil ou navigateur, puis réessayez.'),
+                                    timeout:     $store.lang.t('Timed out getting a fix. Try again, ideally near a window or outside.', 'Délai dépassé. Réessayez, de préférence près d\'une fenêtre ou dehors.'),
+                                }[res.reason] || $store.lang.t('Could not get your location. Please try again.', 'Impossible d\'obtenir votre position. Veuillez réessayer.');
+                            "
+                            :disabled="busy"
+                            class="yard-loc-modal__btn yard-loc-modal__btn--primary w-full justify-center">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span x-show="!busy" x-text="$store.lang.t('Use my current location', 'Utiliser ma position actuelle')"></span>
+                        <span x-show="busy" x-cloak x-text="$store.lang.t('Locating…', 'Localisation…')"></span>
+                    </button>
+                    <p x-show="note" x-cloak x-text="note" class="mt-2 text-xs leading-relaxed text-rose-600"></p>
+                </div>
+
                 {{-- Impact preview --}}
                 @if($hasDetected && $detectedDiffers)
                 <div class="yard-loc-modal__warn">
