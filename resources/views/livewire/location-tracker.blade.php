@@ -300,6 +300,78 @@
             }
         };
 
+        /**
+         * Ask for GPS on purpose, from a button.
+         *
+         * The automatic detection above deliberately gives up for good once the
+         * permission reads 'denied' — it must not nag. That left no way back:
+         * nothing in the app could raise the prompt again, which is what "I can't
+         * enable location" means, and it bites hardest in an installed PWA, where
+         * the permission is inherited from whatever the browser decided earlier.
+         *
+         * This bypasses both the cache and that short-circuit, and reports WHY it
+         * failed instead of silently falling back to IP.
+         *
+         * Resolves { ok: true, country, region } or { ok: false, reason }, where
+         * reason is insecure | unsupported | denied | unavailable | timeout | no-fix.
+         */
+        window.cnRequestLocation = async () => {
+            // getCurrentPosition is only allowed on https (or localhost). Over
+            // plain http the browser refuses without ever prompting.
+            if (!window.isSecureContext) return { ok: false, reason: 'insecure' };
+            if (!navigator.geolocation)  return { ok: false, reason: 'unsupported' };
+
+            let pos;
+            try {
+                pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject, {
+                        timeout: 15000,
+                        maximumAge: 0,          // a real fix, not the cached one
+                        enableHighAccuracy: false,
+                    });
+                });
+            } catch (err) {
+                const map = { 1: 'denied', 2: 'unavailable', 3: 'timeout' };
+                return { ok: false, reason: map[err && err.code] || 'unavailable' };
+            }
+
+            let country = '', region = '';
+            try {
+                const resp = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en`
+                );
+                const geo = await resp.json();
+                country = (geo.address || {}).country || '';
+                region  = (geo.address || {}).state   || '';
+            } catch (_) { /* handled below */ }
+
+            if (!country) return { ok: false, reason: 'no-fix' };
+
+            try {
+                sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                    lat: pos.coords.latitude, lng: pos.coords.longitude,
+                    country, region, ts: Date.now(), source: 'gps',
+                }));
+            } catch (_) {}
+
+            await fetch('{{ route("location.update") }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                },
+                body: JSON.stringify({
+                    lat: pos.coords.latitude,
+                    lng: pos.coords.longitude,
+                    country,
+                    region,
+                    city: '',
+                }),
+            }).catch(() => {});
+
+            return { ok: true, country, region };
+        };
+
         {{-- Boot detection with delay --}}
         setTimeout(() => {
             console.log('[LocationTracker] Starting location detection...');
