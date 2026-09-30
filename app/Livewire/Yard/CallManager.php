@@ -91,6 +91,16 @@ class CallManager extends Component
             ]);
         }
 
+        // Nobody to ring: CallStarted would go out on the room channel only,
+        // the caller would sit on 'outgoing' forever, and the row would stay
+        // ringing and block the room. Fail loudly instead.
+        if ($memberIds->isEmpty()) {
+            $call->end();
+            $this->dispatch('call-error', message: 'There is no one else in this chat to call.');
+
+            return;
+        }
+
         $this->activeCallId = $call->id;
         $this->activeCallUuid = $call->uuid;
         $this->callType = $type;
@@ -108,6 +118,20 @@ class CallManager extends Component
             $user->username ?? $user->name,
             $user->avatar ? asset('storage/' . $user->avatar) : null,
         ));
+
+        // Which channels the ring actually went to. When a call does not ring,
+        // this line and the callee's '[CallEngine] listening for calls on ...'
+        // are the two halves to compare.
+        \Log::info('Call initiated', [
+            'call'     => $call->uuid,
+            'room'     => $roomId,
+            'by'       => $user->id,
+            'ringing'  => $memberIds->all(),
+            'channels' => array_merge(
+                ['tenant.' . $call->tenant_id . '.room.' . $roomId],
+                $memberIds->map(fn ($id) => 'tenant.' . $call->tenant_id . '.user.' . $id . '.calls')->all(),
+            ),
+        ]);
 
         // Get the other participant info for the call UI
         $otherUser = $room->members()
