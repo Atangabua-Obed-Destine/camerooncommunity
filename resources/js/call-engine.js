@@ -81,11 +81,21 @@ document.addEventListener('alpine:init', () => {
 
             // Subscribe to user-specific call channel so we receive
             // incoming calls regardless of which room is currently open
+            console.log('[CallEngine] init', { userId: currentUserId, tenantId, echo: !!window.Echo });
+
+            if (!window.Echo || !tenantId || !currentUserId) {
+                console.error('[CallEngine] Cannot receive calls: missing ' +
+                    (!window.Echo ? 'Echo' : (!tenantId ? 'tenant id' : 'user id')) +
+                    '. Incoming calls will never ring on this page.');
+            }
+
             if (window.Echo) {
                 const userCallChannel = `tenant.${tenantId}.user.${currentUserId}.calls`;
+                console.log('[CallEngine] listening for calls on', userCallChannel);
                 this._userCallChannelName = userCallChannel;
                 this._userCallChannel = window.Echo.channel(userCallChannel);
                 this._userCallChannel.listen('.CallStarted', (data) => {
+                    console.log('[CallEngine] CallStarted on user channel', data);
                     if (data.initiated_by !== currentUserId) {
                         this.handleIncomingCall(data);
                     }
@@ -129,6 +139,7 @@ document.addEventListener('alpine:init', () => {
             this.unsubscribeRoom();
 
             if (window.Echo) {
+                console.log('[CallEngine] subscribing to room channel', channelName);
                 this._echoChannelName = channelName;
                 this._echoChannel = window.Echo.channel(channelName);
                 this._echoChannel._roomId = roomId;
@@ -199,7 +210,12 @@ document.addEventListener('alpine:init', () => {
 
         // ── Incoming call from broadcast ──
         handleIncomingCall(data) {
-            if (this.callState !== 'idle') return; // already in a call
+            if (this.callState !== 'idle') {
+                // A previous call that ended badly can leave this stuck, and then
+                // nothing ever rings again until the page is reloaded.
+                console.warn('[CallEngine] Ignoring incoming call: state is', this.callState);
+                return;
+            }
 
             this.incomingCall = {
                 callUuid: data.call_uuid,
@@ -814,10 +830,44 @@ document.addEventListener('alpine:init', () => {
         _oscillator: null,
 
         playRingtone() {
+            // A phone also has to buzz: an AudioContext created without a prior
+            // user gesture starts suspended, and on a page the user has not yet
+            // touched it stays that way — a silent incoming call.
+            this._startVibrating();
+
             try {
-                this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!Ctx) return;
+
+                this._audioCtx = new Ctx();
+
+                if (this._audioCtx.state === 'suspended') {
+                    this._audioCtx.resume()
+                        .then(() => this._playRingLoop())
+                        .catch(() => {
+                            console.warn('[CallEngine] Ringtone blocked: audio is suspended until the page is interacted with. Vibrating instead.');
+                        });
+                    return;
+                }
+
                 this._playRingLoop();
-            } catch (e) { /* Audio not available */ }
+            } catch (e) {
+                console.warn('[CallEngine] Ringtone unavailable:', e.message);
+            }
+        },
+
+        _startVibrating() {
+            if (!navigator.vibrate) return;
+            const buzz = () => { try { navigator.vibrate([600, 400]); } catch (_) {} };
+            buzz();
+            clearInterval(this._vibrateTimer);
+            this._vibrateTimer = setInterval(buzz, 1200);
+        },
+
+        _stopVibrating() {
+            clearInterval(this._vibrateTimer);
+            this._vibrateTimer = null;
+            try { navigator.vibrate && navigator.vibrate(0); } catch (_) {}
         },
 
         _playRingLoop() {
@@ -842,6 +892,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         stopRingtone() {
+            this._stopVibrating();
             clearTimeout(this._ringTimeout2);
             if (this._audioCtx) {
                 this._audioCtx.close().catch(() => {});
