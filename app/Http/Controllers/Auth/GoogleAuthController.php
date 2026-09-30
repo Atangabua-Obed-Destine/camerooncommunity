@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
+use App\Support\RemoteAvatar;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -46,7 +47,11 @@ class GoogleAuthController extends Controller
         $googleId = (string) $googleUser->getId();
         $email = strtolower((string) $googleUser->getEmail());
         $name = (string) ($googleUser->getName() ?: $googleUser->getNickname() ?: Str::before($email, '@'));
-        $avatar = (string) ($googleUser->getAvatar() ?: '');
+        // Google hands back an absolute lh3.googleusercontent.com URL, but the
+        // whole app renders avatars as asset('storage/' . $user->avatar) — so a
+        // URL there becomes /storage/https://lh3... and 404s. Copy it onto our
+        // own disk and keep the column a path, always.
+        $avatar = RemoteAvatar::fetch((string) ($googleUser->getAvatar() ?: '')) ?? '';
         $locale = $this->normaliseLocale($googleUser);
 
         if (! $email) {

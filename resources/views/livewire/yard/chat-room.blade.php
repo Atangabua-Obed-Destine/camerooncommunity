@@ -176,7 +176,7 @@
                 <button type="button" class="yard-chat__header-btn"
                         @click="open = !open"
                         :title="$store.lang.t('More', 'Plus')"
-                        :aria-label="$store.lang.t('More options', 'Plus d&apos;options')">
+                        :aria-label="$store.lang.t('More options', 'Plus d\'options')">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <circle cx="12" cy="5" r="1.5" fill="currentColor"/>
                         <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
