@@ -626,11 +626,19 @@
                         }
                     });
 
-                    // Landed straight in a room (refresh, bookmark, shared link):
-                    // give the back button an entry to pop, so it leaves the room
-                    // rather than the site.
-                    if (this.activeRoom && this.isMobile) {
-                        history.pushState({ room: this.activeRoom }, '');
+                    // Landed straight in a room (refresh, bookmark, shared link).
+                    // The room was opened server-side, so nothing announced it —
+                    // but other components only learn which room is open from the
+                    // 'room-selected' event. The call engine in particular
+                    // subscribes to the room's Echo channel on that event, and
+                    // without it a call placed from a freshly loaded ?room= page
+                    // never receives its signalling. Announce it once, after every
+                    // component has had its turn to register listeners.
+                    if (this.activeRoom) {
+                        const roomId = this.activeRoom;
+                        this.$nextTick(() => {
+                            window.dispatchEvent(new CustomEvent('room-selected', { detail: { roomId } }));
+                        });
                     }
 
                     // ── In-app message toast + chime ──
