@@ -7,14 +7,26 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 window.Pusher = Pusher;
 
+// The websocket endpoint is derived from the page, NOT from build-time env.
+//
+// public/build is committed, so whichever machine last ran `npm run build` bakes
+// its own VITE_REVERB_* values into the bundle everyone else then serves. A
+// bundle built on a dev machine (http, port 8080) would tell production browsers
+// to open ws://<domain>:8080 with TLS off — no realtime at all, which takes chat
+// delivery, presence and every call signal with it. Reading the scheme and port
+// off window.location makes one bundle correct in both places.
+const echoSecure = window.location.protocol === 'https:';
+
 window.Echo = new Echo({
     broadcaster: 'reverb',
     key: import.meta.env.VITE_REVERB_APP_KEY,
     wsHost: window.location.hostname,
-    wsPort: import.meta.env.VITE_REVERB_PORT ?? 80,
-    wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
-    forceTLS: (import.meta.env.VITE_REVERB_SCHEME ?? 'https') === 'https',
-    enabledTransports: ['ws', 'wss'],
+    // Behind TLS the proxy serves Reverb on the standard port; in local
+    // development it is Reverb's own port, 8080 unless VITE says otherwise.
+    wsPort: echoSecure ? 443 : Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+    wssPort: echoSecure ? 443 : Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
+    forceTLS: echoSecure,
+    enabledTransports: echoSecure ? ['wss'] : ['ws'],
 });
 
 // ── Echo cleanup ────────────────────────────────────────────────

@@ -47,6 +47,12 @@ class CallManager extends Component
         $user = Auth::user();
         $room = YardRoom::findOrFail($roomId);
 
+        // A call row only ever ends because a client says so. A client that
+        // crashes, loses the network, or has its tab closed never says so, and
+        // the leftover 'ringing' row then blocks the room for everyone, forever,
+        // with "A call is already in progress in this room."
+        $this->reapStaleCalls($roomId);
+
         // Check no active call in this room
         $existing = YardCall::where('room_id', $roomId)
             ->whereIn('status', ['ringing', 'active'])
@@ -235,6 +241,27 @@ class CallManager extends Component
         ));
 
         $this->resetCallState();
+    }
+
+    /**
+     * End call rows that cannot still be live: ringing for longer than the
+     * caller's own 45s ring timeout, or active far past any plausible call.
+     */
+    protected function reapStaleCalls(int $roomId): void
+    {
+        YardCall::where('room_id', $roomId)
+            ->whereIn('status', ['ringing', 'active'])
+            ->where(function ($q) {
+                $q->where(function ($qq) {
+                    $qq->where('status', 'ringing')->where('created_at', '<', now()->subMinutes(2));
+                })->orWhere(function ($qq) {
+                    $qq->where('status', 'active')->where('updated_at', '<', now()->subHours(6));
+                });
+            })
+            ->get()
+            ->each(function (YardCall $call) {
+                $call->end();
+            });
     }
 
     public function endCall(?string $callUuid = null): void
