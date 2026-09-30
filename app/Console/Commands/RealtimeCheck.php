@@ -17,7 +17,10 @@ use Illuminate\Support\Facades\Broadcast;
  */
 class RealtimeCheck extends Command
 {
-    protected $signature = 'realtime:check {--channel=diagnostic-channel : Channel to publish the test event on}';
+    protected $signature = 'realtime:check
+        {--channel=diagnostic-channel : Channel to publish the test event on}
+        {--event=DiagEvent : Event name to publish, e.g. CallStarted}
+        {--user= : Publish to this user id\'s personal call channel instead}';
 
     protected $description = 'Publish a test event to Reverb and report timing and configuration';
 
@@ -41,12 +44,36 @@ class RealtimeCheck extends Command
         }
 
         $channel = (string) $this->option('channel');
+        $event = (string) $this->option('event');
+
+        // The question that matters when calls do not ring: can THIS user's
+        // browser receive an event on the exact channel its call engine joined?
+        if ($userId = $this->option('user')) {
+            $user = \App\Models\User::withoutGlobalScopes()->find($userId);
+
+            if (! $user) {
+                $this->error("No user {$userId}.");
+
+                return self::FAILURE;
+            }
+
+            $channel = 'tenant.' . $user->tenant_id . '.user.' . $user->id . '.calls';
+            $this->line('Target user         : ' . ($user->username ?: $user->id) . ' (tenant ' . $user->tenant_id . ')');
+        }
+
         $started = microtime(true);
 
         try {
-            Broadcast::connection('reverb')->broadcast([$channel], 'DiagEvent', [
+            Broadcast::connection('reverb')->broadcast([$channel], $event, [
                 'ok' => true,
                 'at' => now()->toIso8601String(),
+                // Enough shape for the call engine to log it as an incoming call.
+                'call_uuid' => 'diagnostic',
+                'call_id' => 0,
+                'call_type' => 'voice',
+                'room_id' => 0,
+                'caller_name' => 'Realtime check',
+                'initiated_by' => -1,
             ]);
         } catch (\Throwable $e) {
             $this->error('Publish FAILED: ' . $e->getMessage());
@@ -57,7 +84,7 @@ class RealtimeCheck extends Command
         }
 
         $ms = round((microtime(true) - $started) * 1000);
-        $this->info("Published '{$channel}' in {$ms}ms.");
+        $this->info("Published '{$event}' on '{$channel}' in {$ms}ms.");
 
         if ($ms > 250) {
             $this->warn('  ! That is slow for a local publish; it is added to every message send.');
