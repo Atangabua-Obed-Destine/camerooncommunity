@@ -1,4 +1,10 @@
-<div x-data="callEngine(@js(auth()->id()), @js(app('currentTenant')?->id))"
+{{-- The endpoints are handed to the engine here: it is a bundled file, so it
+     cannot resolve routes itself, and the app lives under a subdirectory in
+     development but at the domain root in production. --}}
+<div x-data="callEngine(@js(auth()->id()), @js(app('currentTenant')?->id), @js([
+        'turn'     => route('api.turn-credentials'),
+        'nickname' => url('/yard/contacts/nickname'),
+     ]))"
      @call-started.window="onCallStarted($event.detail)"
      @call-answered.window="onCallAnswered($event.detail)"
      @call-ended.window="onCallEnded()"

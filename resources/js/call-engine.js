@@ -5,7 +5,20 @@
 document.addEventListener('alpine:init', () => {
     const Alpine = window.Alpine;
 
-    Alpine.data('callEngine', (currentUserId, tenantId) => ({
+    /**
+     * `endpoints` is passed in from Blade, because this file is bundled and
+     * cannot call route(). The URLs used to be written out by hand with the
+     * development subdirectory baked in ('/camerooncommunity/public/...'), which
+     * 404s in production — and a 404 on the TURN endpoint leaves the connection
+     * STUN-only, so any pair of peers behind carrier NAT never connects and the
+     * call just never starts.
+     */
+    Alpine.data('callEngine', (currentUserId, tenantId, endpoints = {}) => ({
+        endpoints: {
+            turn:     endpoints.turn     || '/api/turn-credentials',
+            nickname: endpoints.nickname || '/yard/contacts/nickname',
+        },
+
         // State
         callState: 'idle', // idle | outgoing | incoming | active
         callUuid: null,
@@ -140,7 +153,7 @@ document.addEventListener('alpine:init', () => {
 
         async fetchTurnServers() {
             try {
-                const resp = await fetch('/camerooncommunity/public/api/turn-credentials', {
+                const resp = await fetch(this.endpoints.turn, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                 });
                 if (!resp.ok) throw new Error('TURN API error');
@@ -209,7 +222,7 @@ document.addEventListener('alpine:init', () => {
             // so the incoming-call card shows the personalized name instead
             // of the raw username broadcast by the initiator.
             if (data.initiated_by) {
-                fetch(`/camerooncommunity/public/yard/contacts/nickname/${data.initiated_by}`, {
+                fetch(`${this.endpoints.nickname}/${data.initiated_by}`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
                     credentials: 'same-origin',
                 })
@@ -441,6 +454,12 @@ document.addEventListener('alpine:init', () => {
                         }
                     }, 10000);
                 } else if (pc.connectionState === 'failed') {
+                    // Nearly always a relay problem: no TURN server reachable and
+                    // both peers behind NAT. Silence made this look like the app
+                    // doing nothing at all.
+                    console.error('[CallEngine] Connection failed for peer ' + peerId +
+                        '; ICE servers in use:', this.iceServers.length);
+                    this.showError('Could not connect the call. Check your network and try again.');
                     this.removePeer(peerId);
                 }
             };
