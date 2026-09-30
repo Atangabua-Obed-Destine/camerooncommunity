@@ -63,7 +63,7 @@
                 <div class="bg-cm-green/10 border border-cm-green/20 rounded-xl p-4 max-w-sm mx-auto">
                     <p class="text-sm font-semibold text-cm-green flex items-center justify-center gap-2">
                         <span>✅</span>
-                        <span x-text="$store.lang.t('We\\'ll notify you when it launches!', 'Nous vous informerons lors du lancement !')"></span>
+                        <span x-text="$store.lang.t('We\'ll notify you when it launches!', 'Nous vous informerons lors du lancement !')"></span>
                     </p>
                 </div>
             </template>
