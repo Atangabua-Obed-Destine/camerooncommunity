@@ -95,6 +95,14 @@
 
     {{-- Bottom section: Settings + Profile --}}
     <div class="yard-icon-sidebar__bottom">
+        {{-- Contact us --}}
+        <a href="{{ route('contact') }}"
+           class="yard-icon-sidebar__item"
+           @mouseenter="tooltip = $store.lang.t('Contact us', 'Nous contacter')" @mouseleave="tooltip = ''">
+            <svg class="w-[22px] h-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+            <span class="yard-icon-sidebar__label" x-text="$store.lang.t('Contact us', 'Nous contacter')"></span>
+        </a>
+
         {{-- Language Toggle --}}
         <button @click="$store.lang.toggle()"
                 class="yard-icon-sidebar__item"

@@ -132,6 +132,8 @@
                 <a href="{{ route('yard') }}" class="rounded-full bg-cm-green px-5 py-2 text-white font-bold text-sm hover:bg-cm-green-light transition-colors"
                    x-text="$store.lang.t('Dashboard', 'Tableau de bord')">Dashboard</a>
             @else
+                <a href="{{ route('contact') }}" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
+                   x-text="$store.lang.t('Contact', 'Contact')">Contact</a>
                 <a href="{{ route('legal.terms') }}" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
                    x-text="$store.lang.t('Terms', 'Conditions')">Terms</a>
                 <a href="{{ route('legal.privacy') }}" :class="scrolled ? 'text-slate-800 hover:text-cm-green' : 'text-white hover:text-cm-yellow'" class="transition-colors drop-shadow-sm"
@@ -170,6 +172,8 @@
                     @auth
                         {{-- Placeholder for right column if authenticated --}}
                     @else
+                        <a href="{{ route('contact') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
+                           x-text="$store.lang.t('Contact us', 'Nous contacter')">Contact us</a>
                         <a href="{{ route('legal.terms') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"
                            x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')">Terms of Service</a>
                         <a href="{{ route('legal.privacy') }}" class="block w-full text-left text-slate-700 hover:text-cm-green font-bold"

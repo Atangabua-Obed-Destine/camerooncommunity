@@ -98,6 +98,12 @@
 
                 {{-- Account --}}
                 <div class="border-t border-slate-100 px-2 py-3">
+                    <a href="{{ route('contact') }}"
+                       class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold text-slate-700 transition-colors hover:bg-slate-100">
+                        <svg class="h-[22px] w-[22px] shrink-0" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/></svg>
+                        <span x-text="$store.lang.t('Contact us', 'Nous contacter')">Contact us</span>
+                    </a>
+
                     <button type="button" @click="$store.lang.toggle()"
                             class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[15px] font-semibold text-slate-700 transition-colors hover:bg-slate-100">
                         <span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border border-slate-300 text-[10px] font-extrabold text-slate-600"

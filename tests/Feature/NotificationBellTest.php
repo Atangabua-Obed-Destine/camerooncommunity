@@ -117,6 +117,38 @@ class NotificationBellTest extends TestCase
         $this->assertStringContainsString('?room=' . $room->id, $rows->first()['link']);
     }
 
+    public function test_following_a_chat_notification_lands_in_that_chat(): void
+    {
+        $me   = $this->createUser();
+        $them = $this->createUser(['username' => 'pinger']);
+        $room = $this->dmWithUnread($me, $them);
+        $room->update(['name' => 'Notification Target Room']);
+
+        // Exactly what a user does: open the bell, click the row, land somewhere.
+        $link = Livewire::actingAs($me)->test(NotificationBell::class)
+            ->instance()->feed->first()['link'];
+
+        $this->actingAs($me)
+            ->get($link)
+            ->assertOk()
+            ->assertSee('Unread 0')          // a message from the conversation
+            ->assertSee('yardApp(' . $room->id . ',', false);
+    }
+
+    public function test_a_chat_row_opens_the_room_in_place_inside_the_yard(): void
+    {
+        $me   = $this->createUser();
+        $them = $this->createUser(['username' => 'inplace']);
+        $room = $this->dmWithUnread($me, $them);
+
+        // Inside the Yard a full page load to reach a room you can already see is
+        // wasted; the row swaps the chat instead. The href stays for everywhere else.
+        $html = Livewire::actingAs($me)->test(NotificationBell::class)->html();
+
+        $this->assertStringContainsString("roomId: {$room->id}", $html);
+        $this->assertStringContainsString('?room=' . $room->id, $html);
+    }
+
     public function test_clicking_a_stored_notification_marks_it_read(): void
     {
         $me = $this->createUser();

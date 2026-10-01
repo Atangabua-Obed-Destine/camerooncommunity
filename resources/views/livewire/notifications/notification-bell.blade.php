@@ -95,7 +95,19 @@
                              stays so middle-click and "open in new tab" still work. --}}
                         wire:click.prevent="openStored('{{ \Illuminate\Support\Str::after($n['id'], 'note:') }}')"
                     @endif
-                    @click="open = false"
+                    {{-- Already in the Yard: swap the chat in place instead of reloading
+                         the whole page to arrive at the same room. The href is untouched,
+                         so this falls back to normal navigation everywhere else, and
+                         middle-click still opens a tab. --}}
+                    @click="
+                        open = false;
+                        @if($n['room_id'])
+                        if (window.location.pathname.replace(/\/$/, '').endsWith('/yard')) {
+                            $event.preventDefault();
+                            window.dispatchEvent(new CustomEvent('room-selected', { detail: { roomId: {{ (int) $n['room_id'] }} } }));
+                        }
+                        @endif
+                    "
                 >
                     <div class="nb-avatar {{ $n['palette'] }}">
                         <span>{{ $n['initial'] }}</span>
