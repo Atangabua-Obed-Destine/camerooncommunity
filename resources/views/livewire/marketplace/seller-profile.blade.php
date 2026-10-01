@@ -34,9 +34,25 @@
              rounded-t-2xl is not in the compiled CSS and adding it would
              force a Vite rebuild). --}}
         <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 mb-5">
+            {{-- Tapping the cover opens it full size in the same viewer the avatar
+                 uses. Only when there is one: with no cover this is a gradient, and
+                 the viewer's no-photo fallback is a round initial, which would make
+                 no sense here.
+
+                 Note the ";" before @endif in the style attribute: Blade ignores a
+                 directive whose '@' follows a word character, so 'cursor:zoom-in@endif'
+                 would leave the @if unclosed and break the whole view. --}}
             <div class="h-24 sm:h-32 bg-gradient-to-r from-cm-green to-cm-green-light
                 @if($user->cover_photo) bg-cover bg-center @endif"
-                 style="border-top-left-radius:1rem;border-top-right-radius:1rem;@if($user->cover_photo)background-image:url('{{ asset('storage/' . $user->cover_photo) }}')@endif"></div>
+                 style="border-top-left-radius:1rem;border-top-right-radius:1rem;@if($user->cover_photo)background-image:url('{{ asset('storage/' . $user->cover_photo) }}');cursor:zoom-in;@endif"
+                 @if($user->cover_photo)
+                 x-data
+                 role="button"
+                 tabindex="0"
+                 :aria-label="$store.lang.t('View cover photo', 'Voir la photo de couverture')"
+                 @keydown.enter="$dispatch('open-user-photo', { url: @js(asset('storage/' . $user->cover_photo)), name: @js($name) })"
+                 @click="$dispatch('open-user-photo', { url: @js(asset('storage/' . $user->cover_photo)), name: @js($name) })"
+                 @endif></div>
 
             <div class="px-4 sm:px-6 pb-5">
                 {{-- Facebook's arrangement: the avatar hangs off the bottom of the cover

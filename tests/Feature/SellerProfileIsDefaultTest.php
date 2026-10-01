@@ -254,6 +254,26 @@ class SellerProfileIsDefaultTest extends TestCase
             ->assertSee('Kumba');
     }
 
+    public function test_the_cover_photo_opens_full_size_when_there_is_one(): void
+    {
+        $viewer = $this->createUser();
+        $with   = $this->createUser(['username' => 'hascover', 'cover_photo' => 'covers/mine.jpg']);
+        $none   = $this->createUser(['username' => 'nocover']);
+
+        // Same viewer the avatar uses.
+        $this->actingAs($viewer)
+            ->get('/marketplace/seller/' . $with->username)
+            ->assertOk()
+            ->assertSee('cursor:zoom-in', false)
+            ->assertSee(asset('storage/covers/mine.jpg'), false);
+
+        // With no cover there is nothing to preview, so no click target.
+        $this->actingAs($viewer)
+            ->get('/marketplace/seller/' . $none->username)
+            ->assertOk()
+            ->assertDontSee('View cover photo', false);
+    }
+
     public function test_guest_is_sent_to_login(): void
     {
         $this->get('/marketplace/seller/anyone')->assertRedirect('/login');
