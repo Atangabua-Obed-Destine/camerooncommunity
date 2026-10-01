@@ -47,6 +47,11 @@ class CallManager extends Component
         $user = Auth::user();
         $room = YardRoom::findOrFail($roomId);
 
+        // Video calling is disabled. The buttons are gone, but 'initiate-call' is
+        // a browser event and old tabs may still be open, so the decision is made
+        // here: every call is a voice call.
+        $type = 'voice';
+
         // A call row only ever ends because a client says so. A client that
         // crashes, loses the network, or has its tab closed never says so, and
         // the leftover 'ringing' row then blocks the room for everyone, forever,

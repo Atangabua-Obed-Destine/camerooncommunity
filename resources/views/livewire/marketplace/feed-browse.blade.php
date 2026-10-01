@@ -143,7 +143,7 @@
                             </select>
                         </label>
                         <a href="{{ route('marketplace.sell') }}" wire:navigate
-                           class="inline-flex items-center gap-2 bg-cm-green hover:bg-cm-green/90 text-white font-semibold rounded-full px-5 py-2 text-sm shadow-md transition">
+                           class="inline-flex items-center gap-2 bg-cm-yellow hover:bg-cm-yellow/90 text-cm-green-dark font-bold rounded-full px-5 py-2 text-sm shadow-md transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
                             <span x-data x-text="$store.lang.t('Sell','Vendre')"></span>
                         </a>

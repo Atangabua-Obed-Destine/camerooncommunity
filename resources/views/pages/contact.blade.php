@@ -1,11 +1,18 @@
-<x-layouts.guest>
+{{-- Signed-in visitors get the same header as the rest of the app (the one on
+     the Yard), so following "Contact us" from a menu does not drop them onto a
+     page that looks like the public site. Guests keep the marketing navbar. --}}
+<x-dynamic-component :component="auth()->check() ? 'layouts.app' : 'layouts.guest'">
     <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Nous contacter' : 'Contact Us' }} | Cameroon Network</x-slot>
 
-    {{-- Sticky navbar (white state, like the legal pages) --}}
-    @php($forceScrolled = true)
-    @include('partials.site-nav')
+    @guest
+        {{-- Sticky navbar (white state, like the legal pages) --}}
+        @php($forceScrolled = true)
+        @include('partials.site-nav')
+    @endguest
 
-    <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 pt-24 sm:pt-28">
+    {{-- The app layout already pads <main> below its fixed header; the guest
+         navbar is fixed with nothing reserving space, so only guests need it. --}}
+    <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 @guest pt-24 sm:pt-28 @endguest">
         {{-- Hero --}}
         <section class="relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/20 via-transparent to-transparent pointer-events-none"></div>
@@ -192,4 +199,4 @@
             </div>
         </section>
     </div>
-</x-layouts.guest>
+</x-dynamic-component>
