@@ -110,6 +110,20 @@
                 {{-- Logo (inline, left). Sized in viewport units with min/max clamps so it
                      scales smoothly between phone & desktop, "bleeding" a bit above/below
                      the 64px bar via negative margins for visual weight. --}}
+                {{-- Menu (phones). The Yard rail only exists from 768px, so without
+                     this there is no way to reach Discover, Kamer AI or the account
+                     menu on a phone. Opens partials/app-drawer. --}}
+                @auth
+                <button type="button"
+                        @click="$dispatch('open-app-menu')"
+                        class="md:hidden -ml-1 mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition-colors hover:bg-white/10 active:bg-white/20"
+                        :aria-label="$store.lang.t('Menu', 'Menu')">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5"/>
+                    </svg>
+                </button>
+                @endauth
+
                 <a href="{{ route('home') }}"
                    class="group flex items-center shrink-0 mr-auto -my-2 transition-transform duration-200 ease-out hover:scale-[1.04] active:scale-[0.98]">
                     @if($__siteLogo ?? null)
@@ -231,6 +245,11 @@
          with $dispatch('open-user-preview', { id }) or { username }. --}}
     @auth
         @include('partials.user-preview')
+    @endauth
+
+    {{-- Slide-out menu behind the header's ☰ (phones). --}}
+    @auth
+        @include('partials.app-drawer')
     @endauth
 
     <x-connection-notifier />

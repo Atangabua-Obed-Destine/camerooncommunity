@@ -114,7 +114,17 @@
                              x-text="$store.lang.t('Chat & connect', 'Discuter & connecter')"></div>
                     </div>
 
-                    <div class="discover-card group" style="--accent: #F59E0B; --delay: 100ms;"
+                    <div class="discover-card group" style="--accent: #009639; --delay: 100ms;"
+                         @click="open = false; window.location.href='{{ route('marketplace.index') }}'">
+                        <div class="discover-card__icon">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/></svg>
+                        </div>
+                        <div class="font-bold text-slate-800 text-sm">GoMarket</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5"
+                             x-text="$store.lang.t('Buy and sell within the diaspora', 'Achetez et vendez dans la diaspora')"></div>
+                    </div>
+
+                    <div class="discover-card group" style="--accent: #F59E0B; --delay: 200ms;"
                          @click="open = false; setTimeout(() => Livewire.dispatch('open-kamer-ai'), 200)">
                         <div class="discover-card__icon">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
@@ -207,9 +217,6 @@ function discoverModal() {
             { name: 'Solidarity', emoji: '❤️', color: '#CE1126',
               descEn: 'Mutual aid & community fundraising.',
               descFr: 'Entraide & cagnottes communautaires.' },
-            { name: 'GoMarket', emoji: '🛒', color: '#009639',
-              descEn: 'Buy & sell within the diaspora.',
-              descFr: 'Achetez & vendez dans la diaspora.' },
             { name: 'GoParcel', emoji: '📦', color: '#0EA5E9',
               descEn: 'Send parcels home with trusted travelers.',
               descFr: 'Envoyez des colis avec des voyageurs vérifiés.' },

@@ -57,7 +57,9 @@ class UserPreviewTest extends TestCase
         $response->assertJsonPath('bio', 'Bamenda born, London based.');
         $response->assertJsonPath('is_self', false);
         $response->assertJsonPath('state', 'none');
-        $this->assertStringContainsString('London', $response->json('location'));
+        // A person's town is not shown to other people: country only.
+        $this->assertStringNotContainsString('London', (string) $response->json('location'));
+        $this->assertStringContainsString('UK', (string) $response->json('location'));
     }
 
     public function test_preview_can_be_looked_up_by_username(): void

@@ -70,6 +70,25 @@ if (_origFetch) {
 // Allow application code to opt-in: window.dispatchEvent(new Event('auth-logout'))
 window.addEventListener('auth-logout', disconnectEcho);
 
-// Final safety net for full-page navigations / tab close
-window.addEventListener('pagehide', disconnectEcho);
+// NOT on 'pagehide'. That fires every time the page is merely hidden — the user
+// switching apps, locking the phone, the tab going to the background — and
+// pusher-js never reconnects after an explicit disconnect(). A phone left on the
+// chat screen would therefore end up with a dead socket: no incoming call rings,
+// no live messages, and no sign that anything is wrong. The browser closes the
+// socket by itself on a real unload, so there is nothing to clean up here.
+//
+// Instead, make sure we are connected again whenever the page comes back.
+function reconnectEcho() {
+    const connection = window.Echo?.connector?.pusher?.connection;
+    if (!connection) return;
+    if (connection.state === 'connected' || connection.state === 'connecting') return;
+
+    try { window.Echo.connector.pusher.connect(); } catch (_) { /* noop */ }
+}
+
+window.addEventListener('pageshow', reconnectEcho);
+window.addEventListener('online', reconnectEcho);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') reconnectEcho();
+});
 

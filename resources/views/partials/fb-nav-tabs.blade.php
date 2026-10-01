@@ -5,7 +5,7 @@
     Tabs mirror the Yard sidebar:
         - Home          (live)
         - The Yard      (live)
-        - Marketplace   (coming soon — non-clickable, shows label)
+        - GoMarket      (live)
         - GoParcel  (coming soon)
         - RoadFam       (coming soon)
         - GoPartner   (coming soon)
