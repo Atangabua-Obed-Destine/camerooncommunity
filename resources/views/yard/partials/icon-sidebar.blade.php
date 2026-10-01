@@ -1,5 +1,13 @@
 @php($active = $active ?? 'yard')
-<aside class="yard-icon-sidebar" x-data="{ expanded: true, tooltip: '' }" :class="{ 'yard-icon-sidebar--expanded': expanded }">
+{{-- Starts collapsed: the rail is the default and expanding is the user's
+     choice, remembered per browser. --}}
+<aside class="yard-icon-sidebar"
+       x-data="{
+           expanded: (() => { try { return localStorage.getItem('yardSidebarExpanded') === '1'; } catch (_) { return false; } })(),
+           tooltip: '',
+       }"
+       x-init="$watch('expanded', v => { try { localStorage.setItem('yardSidebarExpanded', v ? '1' : '0'); } catch (_) {} })"
+       :class="{ 'yard-icon-sidebar--expanded': expanded }">
     {{-- Top section: Logo + main nav --}}
     <div class="yard-icon-sidebar__top">
         {{-- Sidebar title --}}

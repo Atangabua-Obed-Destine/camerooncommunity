@@ -25,7 +25,12 @@
      Any element carrying data-pwa-hide-when-installed is hidden inside the
      installed app. The rule lives here rather than in app.css so that adding it
      needs no `npm run build` (public/build is committed). --}}
-<style>html.pwa-standalone [data-pwa-hide-when-installed]{display:none !important}</style>
+<style>
+    html.pwa-standalone [data-pwa-hide-when-installed]{display:none !important}
+    /* The other half: shown only inside the installed app. */
+    [data-pwa-only-when-installed]{display:none !important}
+    html.pwa-standalone [data-pwa-only-when-installed]{display:inline-block !important}
+</style>
 <script>
     (function () {
         var standalone = window.matchMedia('(display-mode: standalone)').matches
@@ -35,6 +40,14 @@
 
         if (standalone) {
             document.documentElement.classList.add('pwa-standalone');
+
+            // Script face for the greeting that replaces the install prompt.
+            // Loaded here, not in the layout, so it costs nothing for the
+            // visitors who never install.
+            var script = document.createElement('link');
+            script.rel = 'stylesheet';
+            script.href = 'https://fonts.bunny.net/css?family=great-vibes:400';
+            document.head.appendChild(script);
         }
 
         // Keep the install prompt event globally. It can fire before Alpine starts, so the

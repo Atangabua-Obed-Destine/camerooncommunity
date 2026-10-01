@@ -52,7 +52,7 @@
                                 ['icon' => '💬', 'en' => 'GoConnect', 'fr' => 'GoConnect', 'desc_en' => 'Real-time chat rooms grouped by country, region, and city.', 'desc_fr' => 'Salons de discussion en temps réel par pays, région et ville.', 'live' => true, 'color' => 'from-emerald-500 to-emerald-600'],
                                 ['icon' => '🤝', 'en' => 'Solidarity', 'fr' => 'Solidarité', 'desc_en' => 'Community-powered fundraising for those who need it most.', 'desc_fr' => 'Collectes communautaires pour ceux qui en ont le plus besoin.', 'live' => false, 'color' => 'from-rose-500 to-pink-600'],
                                 ['icon' => '✨', 'en' => 'Kamer AI', 'fr' => 'Kamer AI', 'desc_en' => 'Your personal guide: answers in English, French, or Pidgin.', 'desc_fr' => 'Votre guide personnel : réponses en anglais, français ou pidgin.', 'live' => true, 'color' => 'from-indigo-500 to-purple-600'],
-                                ['icon' => '🛒', 'en' => 'GoMarket', 'fr' => 'GoMarket', 'desc_en' => 'Buy and sell within your trusted local community.', 'desc_fr' => 'Achetez et vendez au sein de votre communauté locale.', 'live' => false, 'color' => 'from-amber-500 to-orange-600'],
+                                ['icon' => '🛒', 'en' => 'GoMarket', 'fr' => 'GoMarket', 'desc_en' => 'Buy and sell within your trusted local community.', 'desc_fr' => 'Achetez et vendez au sein de votre communauté locale.', 'live' => true, 'color' => 'from-amber-500 to-orange-600'],
                                 ['icon' => '📦', 'en' => 'GoParcel', 'fr' => 'GoParcel', 'desc_en' => 'Send parcels home with verified Cameroonian travellers.', 'desc_fr' => 'Envoyez des colis avec des voyageurs camerounais vérifiés.', 'live' => false, 'color' => 'from-sky-500 to-cyan-600'],
                                 ['icon' => '🚗', 'en' => 'GoRide', 'fr' => 'GoRide', 'desc_en' => 'Carpool to events, family visits, and weekend getaways.', 'desc_fr' => 'Covoiturage pour événements, visites familiales et escapades.', 'live' => false, 'color' => 'from-fuchsia-500 to-pink-600'],
                             ];
@@ -124,10 +124,10 @@
                     <div class="p-6 sm:p-8">
                         @php
                             $steps = [
-                                ['icon' => '👤', 'en' => 'Create your free account', 'fr' => 'Créez votre compte gratuit', 'desc_en' => 'Just your name, email and a password. No phone numbers, no ID upload.', 'desc_fr' => 'Juste votre nom, e-mail et un mot de passe. Pas de numéro, pas de pièce d\'identité.'],
-                                ['icon' => '📍', 'en' => 'Tell us where you are', 'fr' => 'Dites-nous où vous êtes', 'desc_en' => 'GPS or city pick, we use it to suggest the right rooms for you.', 'desc_fr' => 'GPS ou choix de ville, on l\'utilise pour vous suggérer les bons salons.'],
-                                ['icon' => '🏠', 'en' => 'Step into GoConnect', 'fr' => 'Entrez dans GoConnect', 'desc_en' => 'Join your country, region, and city rooms instantly. Say "ashia" 👋', 'desc_fr' => 'Rejoignez vos salons pays, région et ville instantanément. Dites « ashia » 👋'],
-                                ['icon' => '🚀', 'en' => 'Build, share, support', 'fr' => 'Construisez, partagez, soutenez', 'desc_en' => 'Help a neighbour, raise funds, find friends. That\'s the Cameroonian way.', 'desc_fr' => 'Aidez un voisin, levez des fonds, trouvez des amis. C\'est la voie camerounaise.'],
+                                ['icon' => '👤', 'en' => 'Create your free account', 'fr' => 'Créez votre compte gratuit', 'desc_en' => 'A minute is all it takes: name, email and a password, or continue with Google. No phone number, no ID upload.', 'desc_fr' => 'Une minute suffit : nom, e-mail et mot de passe, ou continuez avec Google. Pas de numéro, pas de pièce d’identité.'],
+                                ['icon' => '🌍', 'en' => 'Find your people', 'fr' => 'Retrouvez les vôtres', 'desc_en' => 'You land straight in rooms with Cameroonians in your country and region.', 'desc_fr' => 'Vous arrivez directement dans les salons des Camerounais de votre pays et de votre région.'],
+                                ['icon' => '💬', 'en' => 'Chat and call, free', 'fr' => 'Discutez et appelez, gratuitement', 'desc_en' => 'Group rooms and private messages, voice and video calls. Say "ashia" 👋', 'desc_fr' => 'Salons de groupe et messages privés, appels audio et vidéo. Dites « ashia » 👋'],
+                                ['icon' => '🚀', 'en' => 'Buy, sell and ask', 'fr' => 'Achetez, vendez, demandez', 'desc_en' => 'Trade on GoMarket and ask Kamer AI anything. Solidarity and more are on the way.', 'desc_fr' => 'Achetez et vendez sur GoMarket, posez vos questions à Kamer AI. Solidarité et plus arrivent bientôt.'],
                             ];
                         @endphp
                         <ol class="relative space-y-6 before:absolute before:left-[19px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-indigo-200 before:via-violet-200 before:to-transparent">
@@ -186,7 +186,7 @@
                         <button @click="open = false" class="absolute top-4 right-4 z-10 h-9 w-9 rounded-full bg-white/20 backdrop-blur text-white hover:bg-white/30 transition-colors flex items-center justify-center">✕</button>
                         <div class="relative h-full flex flex-col items-center justify-center px-6 text-center text-white">
                             <span class="inline-flex items-center gap-2 rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider"
-                                  x-text="$store.lang.t('Solidarity', 'Solidarité')"></span>
+                                  x-text="$store.lang.t('Solidarity · Coming soon', 'Solidarité · Bientôt')"></span>
                             <h2 class="mt-3 text-2xl sm:text-3xl font-extrabold"
                                 x-text="$store.lang.t('When one of us hurts, all of us help.', 'Quand l\'un de nous souffre, nous aidons tous.')"></h2>
                         </div>
@@ -194,23 +194,8 @@
                     <div class="p-6 sm:p-8">
                         <p class="text-sm text-slate-600 leading-relaxed text-center max-w-md mx-auto"
                            x-text="$store.lang.t('Solidarity turns the Cameroonian tradition of njangi into a transparent, modern way to support each other: funerals, medical bills, school fees, business launches.', 'Solidarité transforme la tradition camerounaise du njangi en une manière transparente et moderne de se soutenir, funérailles, soins médicaux, frais de scolarité, lancements d\'entreprise.')"></p>
-                        <div class="mt-6 grid grid-cols-3 gap-3">
-                            <div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center">
-                                <div class="text-2xl font-extrabold text-rose-600">£12k+</div>
-                                <div class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-rose-700"
-                                     x-text="$store.lang.t('Raised', 'Levés')"></div>
-                            </div>
-                            <div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center">
-                                <div class="text-2xl font-extrabold text-rose-600">37</div>
-                                <div class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-rose-700"
-                                     x-text="$store.lang.t('Campaigns', 'Campagnes')"></div>
-                            </div>
-                            <div class="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-center">
-                                <div class="text-2xl font-extrabold text-rose-600">100%</div>
-                                <div class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-rose-700"
-                                     x-text="$store.lang.t('Transparent', 'Transparent')"></div>
-                            </div>
-                        </div>
+                        {{-- No figures here. Solidarity has not launched, so "£12k+ raised"
+                             and "37 campaigns" described money nobody had given. --}}
                         <div class="mt-6 rounded-2xl bg-slate-50 p-5">
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3"
                                 x-text="$store.lang.t('Three simple steps', 'Trois étapes simples')"></h3>
@@ -222,7 +207,7 @@
                         </div>
                         <div class="mt-6 flex justify-center">
                             <a href="{{ route('register') }}" class="rounded-full bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-3 text-sm font-bold text-white hover:brightness-110 transition-all"
-                               x-text="$store.lang.t('Be part of it', 'En faire partie')"></a>
+                               x-text="$store.lang.t('Join and be first to know', 'Inscrivez-vous pour être prévenu')"></a>
                         </div>
                     </div>
                 </div>

@@ -146,46 +146,28 @@
                         <p class="text-xs font-bold text-white/80 mt-0.5" x-text="$store.lang.t('To amplify your business', 'Pour amplifier votre activité')"></p>
                     </div>
 
-                    {{-- Get the App — Store badges (tablet/desktop; mobile uses fixed bottom bar).
-                         Hidden inside the installed app — see partials/pwa-head. --}}
+                    {{-- Get the App. There is no store listing: the app installs straight
+                         from the browser as a PWA, so this opens the real install prompt
+                         (and iOS's manual instructions, which have no prompt). The mobile
+                         bar further down dispatches the same event. Hidden once installed
+                         — see partials/pwa-head. --}}
                     <div class="pt-1 hidden md:block" data-pwa-hide-when-installed>
                         <p class="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-white/60 mb-2 text-center lg:text-left"
                            x-text="$store.lang.t('Get the app', 'Téléchargez l’app')"></p>
-                        <div class="flex flex-row flex-nowrap items-stretch gap-2 sm:gap-3 justify-center lg:justify-start">
-                            {{-- App Store --}}
-                            <a href="#"
-                               @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('iOS app coming soon!', 'App iOS bientôt disponible !') } }))"
-                               class="group relative inline-flex flex-1 sm:flex-none min-w-0 items-center gap-2 sm:gap-3 rounded-xl bg-black px-3 sm:px-4 py-2 sm:py-2.5 text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:ring-white/25"
-                               :title="$store.lang.t('Download on the App Store (Coming soon)', 'Télécharger sur l’App Store (Bientôt)')">
-                                <svg class="h-7 w-7 sm:h-8 sm:w-8 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
+                        <div class="flex flex-col items-center lg:items-start gap-2">
+                            <button type="button"
+                                    @click="window.dispatchEvent(new CustomEvent('pwa-open-install'))"
+                                    class="group inline-flex items-center gap-3 rounded-xl bg-white px-5 py-3 text-cm-green-dark shadow-lg ring-1 ring-black/5 transition-all hover:-translate-y-0.5 hover:shadow-xl">
+                                <svg class="h-6 w-6 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
                                 </svg>
-                                <div class="flex flex-col leading-tight min-w-0">
-                                    <span class="text-[9px] sm:text-[10px] uppercase tracking-wide text-white/70" x-text="$store.lang.t('Download on the', 'Télécharger sur l’')"></span>
-                                    <span class="text-sm sm:text-base font-semibold truncate">App Store</span>
-                                </div>
-                                <span class="absolute -top-1.5 -right-1.5 rounded-full bg-cm-yellow px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-cm-green-dark shadow"
-                                      x-text="$store.lang.t('SOON', 'BIENTÔT')"></span>
-                            </a>
-
-                            {{-- Google Play --}}
-                            <a href="#"
-                               @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('Android app coming soon!', 'App Android bientôt disponible !') } }))"
-                               class="group relative inline-flex flex-1 sm:flex-none min-w-0 items-center gap-2 sm:gap-3 rounded-xl bg-black px-3 sm:px-4 py-2 sm:py-2.5 text-white shadow-lg ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:ring-white/25"
-                               :title="$store.lang.t('Get it on Google Play (Coming soon)', 'Disponible sur Google Play (Bientôt)')">
-                                <svg class="h-7 w-7 sm:h-8 sm:w-8 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z" fill="#34a853"/>
-                                    <path d="m13.792 12 2.92-2.92 4.06 2.34a1 1 0 0 1 0 1.74l-4.06 2.34L13.792 12z" fill="#fbbc04"/>
-                                    <path d="m16.713 9.08-2.92 2.92L3.61 1.814A1 1 0 0 1 4.43 1.7l12.282 7.38z" fill="#ea4335"/>
-                                    <path d="m13.792 12 2.92 2.92L4.43 22.3a1 1 0 0 1-.82-.114L13.792 12z" fill="#4285f4"/>
-                                </svg>
-                                <div class="flex flex-col leading-tight min-w-0">
-                                    <span class="text-[9px] sm:text-[10px] uppercase tracking-wide text-white/70" x-text="$store.lang.t('Get it on', 'Disponible sur')"></span>
-                                    <span class="text-sm sm:text-base font-semibold truncate">Google Play</span>
-                                </div>
-                                <span class="absolute -top-1.5 -right-1.5 rounded-full bg-cm-yellow px-1.5 py-0.5 text-[8px] sm:text-[9px] font-bold text-cm-green-dark shadow"
-                                      x-text="$store.lang.t('SOON', 'BIENTÔT')"></span>
-                            </a>
+                                <span class="flex flex-col leading-tight text-left">
+                                    <span class="text-sm sm:text-base font-extrabold"
+                                          x-text="$store.lang.t('Install the app', 'Installer l’app')"></span>
+                                </span>
+                            </button>
+                            <p class="text-[10px] sm:text-[11px] text-white/50"
+                               x-text="$store.lang.t('Installs straight from your browser — no app store needed.', 'S’installe depuis votre navigateur — pas besoin de magasin d’applications.')"></p>
                         </div>
                     </div>
 
@@ -1052,30 +1034,15 @@
                 style="text-decoration: underline; text-underline-offset: 3px;"
                 class="text-white font-semibold text-sm tracking-wide"
                 x-text="$store.lang.t('Download Our App', 'Téléchargez notre app')"></button>
-        {{-- Vertical separator --}}
-        <span class="h-5 w-px bg-white" aria-hidden="true"></span>
-        {{-- Google Play icon --}}
-        <a href="#"
-           @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('Android app coming soon!', 'App Android bientôt disponible !') } }))"
-           aria-label="Google Play"
-           class="flex items-center justify-center text-white transition-transform hover:scale-110">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M3.609 1.814 13.792 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734a1 1 0 0 1 .609-.92z"/>
-                <path d="m13.792 12 2.92-2.92 4.06 2.34a1 1 0 0 1 0 1.74l-4.06 2.34L13.792 12z"/>
-                <path d="m16.713 9.08-2.92 2.92L3.61 1.814A1 1 0 0 1 4.43 1.7l12.282 7.38z"/>
-                <path d="m13.792 12 2.92 2.92L4.43 22.3a1 1 0 0 1-.82-.114L13.792 12z"/>
-            </svg>
-        </a>
-        {{-- Apple App Store icon --}}
-        <a href="#"
-           @click.prevent="window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'info', message: $store.lang.t('iOS app coming soon!', 'App iOS bientôt disponible !') } }))"
-           aria-label="App Store"
-           class="-ml-1.5 flex items-center justify-center text-white transition-transform hover:scale-110">
-            <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M16.365 1.43c0 1.14-.493 2.27-1.177 3.08-.744.9-1.99 1.57-2.987 1.57-.12 0-.23-.02-.3-.03-.01-.06-.04-.22-.04-.39 0-1.15.572-2.27 1.206-2.98.804-.94 2.142-1.64 3.248-1.68.03.13.05.28.05.43zm4.565 15.71c-.03.07-.463 1.58-1.518 3.12-.945 1.34-1.94 2.71-3.43 2.71-1.517 0-1.9-.88-3.63-.88-1.698 0-2.302.91-3.67.91-1.492 0-2.52-1.27-3.439-2.61C3.142 17.43 2 13.95 2 10.68c0-5.25 3.39-8.04 6.73-8.04 1.49 0 2.74.97 3.66.97.88 0 2.28-1.04 3.93-1.04.63 0 2.95.06 4.45 2.22-.12.07-2.62 1.52-2.62 4.54 0 3.55 3.16 4.85 3.16 4.85z"/>
-            </svg>
-        </a>
         </div>{{-- /download part --}}
+
+        {{-- Inside the installed app the prompt above is hidden, which would leave
+             this bar empty, so it says hello instead. Visibility and the script
+             font are both handled in partials/pwa-head. --}}
+        <span data-pwa-only-when-installed
+              class="text-white select-none"
+              style="font-family: 'Great Vibes', 'Segoe Script', cursive; font-size: 1.9rem; line-height: 1.1;"
+              x-text="$store.lang.t('hello', 'bonjour')">hello</span>
     </div>
     </div>
 

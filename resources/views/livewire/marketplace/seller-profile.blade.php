@@ -10,7 +10,10 @@
     $conn = $this->connection;
     $dmRoomId = $this->dmRoomId;
     $name = $user->name ?: $user->username;
-    $loc = trim(($user->current_city ? $user->current_city . ', ' : '') . ($user->current_country ?? ''));
+    // Someone's town is not public. Only the owner of the profile sees their
+        // own city; everyone else sees the country, which is what the rooms and
+        // the marketplace are organised around anyway.
+    $loc = trim((($isSelf && $user->current_city) ? $user->current_city . ', ' : '') . ($user->current_country ?? ''));
     $badges = \App\Support\TrustBadges::forSeller($user);
 @endphp
 <div class="min-h-[calc(100vh-96px)] bg-slate-100"
@@ -193,13 +196,17 @@
                         @if($user->home_region)
                             <li class="flex items-start gap-2">
                                 <span>&#127968;</span>
-                                <span><span x-data x-text="$store.lang.t('From', 'De')"></span> <strong>{{ $user->home_city ? $user->home_city . ', ' : '' }}{{ $user->home_region }}</strong></span>
+                                <span><span x-data x-text="$store.lang.t('From', 'De')"></span> <strong>{{ ($isSelf && $user->home_city) ? $user->home_city . ', ' : '' }}{{ $user->home_region }}</strong></span>
                             </li>
                         @endif
-                        @if($user->current_city || $user->current_country)
+                        @php
+                            // Same rule as the header: the town is shown to its owner only.
+                            $shownCity = $isSelf ? $user->current_city : null;
+                        @endphp
+                        @if($shownCity || $user->current_country)
                             <li class="flex items-start gap-2">
                                 <span>&#128205;</span>
-                                <span><span x-data x-text="$store.lang.t('Lives in', 'Vit à')"></span> <strong>{{ $user->current_city }}{{ $user->current_city && $user->current_country ? ', ' : '' }}{{ config("cameroon.countries.{$user->current_country}", $user->current_country) }}</strong></span>
+                                <span><span x-data x-text="$store.lang.t('Lives in', 'Vit à')"></span> <strong>{{ $shownCity }}{{ $shownCity && $user->current_country ? ', ' : '' }}{{ config("cameroon.countries.{$user->current_country}", $user->current_country) }}</strong></span>
                             </li>
                         @endif
                         @if($user->language_pref)

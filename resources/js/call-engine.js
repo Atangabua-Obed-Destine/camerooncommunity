@@ -116,11 +116,13 @@ document.addEventListener('alpine:init', () => {
                 }
             });
 
-            // When the user logs out / leaves the page, drop the user channel too.
-            window.addEventListener('pagehide', () => {
-                try { if (this._userCallChannel && window.Echo && this._userCallChannelName) window.Echo.leave(this._userCallChannelName); } catch(_) {}
-                this.unsubscribeRoom();
-            });
+            // Deliberately NOT unsubscribing on 'pagehide'. That event fires when
+            // the page is merely hidden — switching apps, locking the phone, the
+            // tab going to the background — which is precisely when a device most
+            // needs to still be reachable. Leaving the channel there meant a phone
+            // sitting on the chat screen stopped being ringable, silently, with no
+            // way back until a reload. Reverb drops the subscription by itself when
+            // the socket actually closes.
         },
 
         unsubscribeRoom() {

@@ -201,8 +201,8 @@
                     <div class="w-20 h-20 mx-auto rounded-2xl bg-cm-red/10 flex items-center justify-center text-4xl mb-4">🤲</div>
                     <h2 class="text-2xl font-bold text-slate-900 mb-2" x-text="$store.lang.t('Solidarity & More', 'Solidarité et Plus')"></h2>
                     <p class="text-slate-600 max-w-md mx-auto" x-text="$store.lang.t(
-                        'Support fellow Cameroonians through community fundraising. Plus, discover GoMarket, events, housing and more, coming soon!',
-                        'Soutenez vos compatriotes camerounais par le financement communautaire. En plus, découvrez le marché, les événements, le logement et plus encore, bientôt disponible !'
+                        'Buy and sell on GoMarket today. Community fundraising, events, housing and more are coming soon.',
+                        'Achetez et vendez sur GoMarket dès aujourd\'hui. Les collectes communautaires, les événements, le logement et plus encore arrivent bientôt.'
                     )"></p>
                 </div>
 

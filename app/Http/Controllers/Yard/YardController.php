@@ -382,10 +382,9 @@ class YardController extends Controller
         $isSelf = $other->id === $viewer->id;
         $blocked = in_array($state, ['blocked-by-me', 'blocked-by-them'], true);
 
-        $location = trim(implode(', ', array_filter([
-            $other->current_city,
-            config("cameroon.countries.{$other->current_country}", $other->current_country),
-        ])));
+        // No town: a person's city is not shown to other people, here or on
+        // their profile page. Country only.
+        $location = trim((string) config("cameroon.countries.{$other->current_country}", $other->current_country));
 
         // Message should open the conversation that already exists, not start a new one.
         $dmRoom = $isSelf ? null : YardRoom::where('room_type', RoomType::DirectMessage)

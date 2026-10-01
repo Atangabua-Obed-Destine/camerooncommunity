@@ -227,6 +227,33 @@ class SellerProfileIsDefaultTest extends TestCase
         $this->actingAs($viewer)->get('/marketplace')->assertSee($bar, false);
     }
 
+    public function test_a_persons_town_is_not_shown_to_other_people(): void
+    {
+        $viewer = $this->createUser();
+        $target = $this->createUser([
+            'username'        => 'towntest',
+            'current_city'    => 'Bamenda',
+            'current_country' => 'CM',
+            'home_city'       => 'Kumba',
+            'home_region'     => 'South West',
+        ]);
+
+        // Other people see the country (and home region), never the town.
+        $this->actingAs($viewer)
+            ->get('/marketplace/seller/' . $target->username)
+            ->assertOk()
+            ->assertDontSee('Bamenda')
+            ->assertDontSee('Kumba')
+            ->assertSee('South West');
+
+        // On your own profile you still see your own.
+        $this->actingAs($target)
+            ->get('/marketplace/seller/' . $target->username)
+            ->assertOk()
+            ->assertSee('Bamenda')
+            ->assertSee('Kumba');
+    }
+
     public function test_guest_is_sent_to_login(): void
     {
         $this->get('/marketplace/seller/anyone')->assertRedirect('/login');
