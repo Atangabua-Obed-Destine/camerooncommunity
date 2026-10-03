@@ -60,7 +60,9 @@
                     <p class="mt-1 text-xs leading-relaxed text-slate-600">
                         <span x-text="$store.lang.t('We detected you in ', 'Nous vous avons détecté à ')"></span>
                         <span class="font-semibold text-cm-green">
-                            <span x-text="$store.locationToast?.prompt?.region"></span><template x-if="$store.locationToast?.prompt?.region && $store.locationToast?.prompt?.country">, </template><span x-text="$store.locationToast?.prompt?.country"></span>
+                            <span x-text="$store.locationToast?.prompt?.region"></span>{{-- The separator needs a real element inside the template: x-if reads
+                                 content.firstElementChild, and a bare text node makes that null —
+                                 "Cannot set properties of null (setting '_x_dataStack')". --}}<template x-if="$store.locationToast?.prompt?.region && $store.locationToast?.prompt?.country"><span>, </span></template><span x-text="$store.locationToast?.prompt?.country"></span>
                         </span>.
                         <br>
                         <span class="text-slate-500">

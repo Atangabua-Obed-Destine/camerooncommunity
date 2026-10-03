@@ -14,6 +14,10 @@ return Application::configure(basePath: dirname(__DIR__))
         __DIR__.'/../routes/channels.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Must run before anything broadcasts: a bogus X-Socket-ID makes
+        // every toOthers() call throw instead of publishing.
+        $middleware->prepend(\App\Http\Middleware\SanitizeSocketId::class);
+
         $middleware->append(\App\Http\Middleware\InitializeTenancy::class);
         $middleware->append(\App\Http\Middleware\SetUserLanguage::class);
 
