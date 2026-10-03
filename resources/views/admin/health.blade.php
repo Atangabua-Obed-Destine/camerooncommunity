@@ -63,6 +63,41 @@
             @endif
         </div>
 
+        {{-- Browser side. The probe above proves PHP can hand an event to
+             Reverb; this proves one actually reaches a browser, which is the
+             half that fails silently behind a proxy or CDN. --}}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5"
+             x-data="realtimeBrowserCheck()" x-init="watch()">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="font-semibold text-slate-900">Realtime (this browser)</h2>
+                    <p class="text-sm text-slate-500">Dialling <span class="font-mono" x-text="endpoint"></span></p>
+                </div>
+                <span class="rounded-full px-3 py-1 text-xs font-bold"
+                      :class="{
+                          'bg-emerald-50 text-emerald-700': state === 'connected',
+                          'bg-amber-50 text-amber-700': state === 'connecting',
+                          'bg-rose-50 text-rose-700': state !== 'connected' && state !== 'connecting',
+                      }"
+                      x-text="state"></span>
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-center gap-3">
+                <button type="button" @click="ping()" :disabled="busy"
+                        class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
+                    <span x-text="busy ? 'Waiting…' : 'Send test event'"></span>
+                </button>
+                <span class="text-sm" :class="result.ok ? 'text-emerald-700' : 'text-rose-700'" x-text="result.message"></span>
+            </div>
+
+            <p class="mt-3 text-xs text-slate-500">
+                The server publishes an event on your private health channel and this page
+                listens for it. Published but never received means the break is between
+                Reverb and the browser — a proxy, a CDN with websockets off, or a firewall —
+                not in the application.
+            </p>
+        </div>
+
         {{-- Queue --}}
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
             <h2 class="font-semibold text-slate-900">Queue</h2>
@@ -154,4 +189,81 @@
             @endif
         </div>
     </div>
+    @push('scripts')
+    <script>
+        function realtimeBrowserCheck() {
+            return {
+                state: 'unknown',
+                endpoint: '(unknown)',
+                busy: false,
+                result: { ok: false, message: '' },
+                _heard: false,
+
+                watch() {
+                    const echo = window.Echo;
+                    if (! echo) {
+                        this.state = 'no Echo on this page';
+                        return;
+                    }
+
+                    const options = echo.connector?.options ?? {};
+                    const scheme = options.forceTLS ? 'wss' : 'ws';
+                    const port = options.forceTLS ? (options.wssPort ?? 443) : (options.wsPort ?? 80);
+                    this.endpoint = `${scheme}://${options.wsHost}:${port}`;
+
+                    const connection = echo.connector?.pusher?.connection;
+                    if (! connection) return;
+
+                    this.state = connection.state;
+                    connection.bind('state_change', (s) => { this.state = s.current; });
+
+                    // Our own channel, so nothing else can make this look healthy.
+                    echo.channel('admin-health.{{ auth()->id() }}')
+                        .listen('.HealthPing', () => { this._heard = true; });
+                },
+
+                async ping() {
+                    this.busy = true;
+                    this._heard = false;
+                    this.result = { ok: false, message: '' };
+
+                    const started = performance.now();
+
+                    try {
+                        const res = await fetch('{{ route('admin.health.ping') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=\'csrf-token\']')?.content ?? '',
+                            },
+                            body: JSON.stringify({ token: String(Date.now()) }),
+                        });
+
+                        const data = await res.json();
+
+                        if (! data.ok) {
+                            this.result = { ok: false, message: 'Server could not publish: ' + (data.error ?? 'unknown error') };
+                            this.busy = false;
+                            return;
+                        }
+
+                        // Give the websocket a moment to deliver it.
+                        await new Promise((resolve) => setTimeout(resolve, 2500));
+
+                        const ms = Math.round(performance.now() - started);
+
+                        this.result = this._heard
+                            ? { ok: true, message: `Received in ${ms} ms — realtime is working end to end.` }
+                            : { ok: false, message: `Published in ${data.ms} ms but never arrived. The break is between Reverb and this browser.` };
+                    } catch (e) {
+                        this.result = { ok: false, message: 'Request failed: ' + e.message };
+                    }
+
+                    this.busy = false;
+                },
+            };
+        }
+    </script>
+    @endpush
 </x-layouts.admin>

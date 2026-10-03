@@ -341,6 +341,9 @@ Route::prefix('admin')->name('admin.')
 
     // Operational health.
     Route::get('/health', [\App\Http\Controllers\Admin\AdminController::class, 'health'])->name('health');
+    // Fires a test event the health page listens for: proves delivery all the
+    // way to a real browser, which no server-side check can.
+    Route::post('/health/ping', [\App\Http\Controllers\Admin\AdminController::class, 'healthPing'])->name('health.ping');
     Route::get('/yard', [\App\Http\Controllers\Admin\AdminController::class, 'yard'])->name('yard');
     Route::get('/solidarity', [\App\Http\Controllers\Admin\AdminController::class, 'solidarity'])->name('solidarity');
     Route::post('/solidarity/{campaign}/approve', [\App\Http\Controllers\Admin\AdminController::class, 'approveCampaign'])->name('solidarity.approve');
