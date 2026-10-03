@@ -50,7 +50,7 @@
                 <span x-data x-text="$store.lang.t('Filters','Filtres')"></span>
             </button>
             <a href="{{ route('marketplace.sell') }}" wire:navigate
-               class="inline-flex items-center gap-1 bg-white hover:bg-slate-100 text-cm-bar font-semibold rounded-full px-3 py-1.5 text-xs shadow-sm transition">
+               class="inline-flex items-center gap-1 bg-cm-yellow hover:bg-cm-yellow/90 text-cm-green-dark font-bold rounded-full px-3 py-1.5 text-xs shadow-sm transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M12 4v16m8-8H4"/></svg>
                 <span x-data x-text="$store.lang.t('Sell','Vendre')"></span>
             </a>

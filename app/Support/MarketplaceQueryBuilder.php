@@ -94,11 +94,20 @@ class MarketplaceQueryBuilder
      */
     public static function applyRadius(Builder $q, ?float $lat, ?float $lng, ?int $radiusKm): Builder
     {
-        if ($lat === null || $lng === null || $radiusKm === null || $radiusKm <= 0) {
+        if ($lat === null || $lng === null) {
             return $q;
         }
 
-        $keys = \App\Support\CameroonGeo::regionsWithin($lat, $lng, (float) $radiusKm);
+        // A place with no distance set means that place, not everywhere.
+        // Returning the query untouched here is what made choosing an area on
+        // GoMarket appear to do nothing: the label showed in the pill, the URL
+        // carried ?loc=Centre&radius=, and every listing in the country still
+        // came back.
+        if ($radiusKm === null || $radiusKm <= 0) {
+            $keys = array_filter([\App\Support\CameroonGeo::nearestRegion($lat, $lng)]);
+        } else {
+            $keys = \App\Support\CameroonGeo::regionsWithin($lat, $lng, (float) $radiusKm);
+        }
         $aliases = \App\Support\CameroonGeo::aliasesFor($keys);
 
         if ($aliases === []) {

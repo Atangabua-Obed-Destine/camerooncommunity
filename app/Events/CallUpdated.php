@@ -34,18 +34,24 @@ class CallUpdated implements ShouldBroadcastNow
             new Channel('tenant.' . $this->tenantId . '.room.' . $this->roomId),
         ];
 
-        // For ended/declined actions, also broadcast to personal channels
-        // so participants receive the update even if not subscribed to the room
-        if (in_array($this->action, ['ended', 'declined'])) {
-            $call = \App\Models\YardCall::where('uuid', $this->callUuid)->first();
-            if ($call) {
-                $participantIds = $call->participants()
-                    ->where('user_id', '!=', $this->userId)
-                    ->pluck('user_id');
+        // Also address each other participant directly.
+        //
+        // The room channel alone was not enough: a caller who landed in the room
+        // by way of something that never announced it, or whose socket dropped
+        // and came back mid-ring, is not subscribed to it — and then the 'joined'
+        // event from the person picking up never arrived, leaving the caller on
+        // "Calling…" while the other side was already in the call. Everyone in a
+        // call is always on their own .calls channel, since that is how the call
+        // reached them in the first place.
+        $call = \App\Models\YardCall::where('uuid', $this->callUuid)->first();
 
-                foreach ($participantIds as $uid) {
-                    $channels[] = new Channel('tenant.' . $this->tenantId . '.user.' . $uid . '.calls');
-                }
+        if ($call) {
+            $participantIds = $call->participants()
+                ->where('user_id', '!=', $this->userId)
+                ->pluck('user_id');
+
+            foreach ($participantIds as $uid) {
+                $channels[] = new Channel('tenant.' . $this->tenantId . '.user.' . $uid . '.calls');
             }
         }
 

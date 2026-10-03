@@ -21,3 +21,10 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Built per machine from that machine's .env — committing it would ship local
+# database credentials and APP_URL to the server. packages.php and services.php
+# are tracked deliberately; these are not.
+/bootstrap/cache/config.php
+/bootstrap/cache/events.php
+/bootstrap/cache/routes-*.php

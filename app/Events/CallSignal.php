@@ -29,9 +29,21 @@ class CallSignal implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        return [
+        $channels = [
             new Channel('tenant.' . $this->tenantId . '.room.' . $this->roomId),
         ];
+
+        // Signalling is point to point, so send it to the recipient's own call
+        // channel as well. The room channel is the historical path, but a peer
+        // is only on it while the room is open and announced — and an offer or
+        // an ICE candidate that misses its target leaves a call that looks
+        // connected with no audio flowing. Everyone in a call is on their own
+        // .calls channel, which is how the call reached them to begin with.
+        if ($this->toUserId > 0) {
+            $channels[] = new Channel('tenant.' . $this->tenantId . '.user.' . $this->toUserId . '.calls');
+        }
+
+        return $channels;
     }
 
     public function broadcastWith(): array

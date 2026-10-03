@@ -117,7 +117,17 @@
         <div class="px-4 sm:px-5 py-4 space-y-5 flex-1">
 
             {{-- ─── Photos ─── --}}
-            <div>
+            <div x-data="photoPicker(@js([
+                    'tooBig'   => $lang === 'fr'
+                        ? 'Cette photo dépasse la limite de 8 Mo. Choisissez-en une plus petite ou réduisez sa taille.'
+                        : 'This photo is over the 8MB limit. Pick a smaller one or compress it.',
+                    'notImage' => $lang === 'fr'
+                        ? 'Ce fichier n\'est pas une image. Choisissez un JPG, PNG ou WEBP.'
+                        : 'That file is not an image. Choose a JPG, PNG or WEBP.',
+                    'failed'   => $lang === 'fr'
+                        ? 'Le téléversement a échoué. C\'est souvent une connexion instable — réessayez, ou avec une image plus petite.'
+                        : 'The upload did not go through. That is usually an unstable connection — try again, or use a smaller photo.',
+                 ]))">
                 <div class="flex items-baseline justify-between mb-1.5">
                     <span class="text-[15px] font-bold text-slate-900">{{ $lang === 'fr' ? 'Photos' : 'Photos' }}</span>
                     <span class="text-[12px] text-slate-500">{{ $usedImages }}/{{ $maxImages }} · {{ $lang === 'fr' ? 'jusqu\'à '.$maxImages.' · Max 8 Mo/img' : 'up to '.$maxImages.' · Max 8MB/img' }}</span>
@@ -130,7 +140,9 @@
                         </div>
                         <div class="mt-2 text-sm font-bold text-slate-800">{{ $lang === 'fr' ? 'Ajouter des photos' : 'Add photos' }}</div>
                         <div class="mt-0.5 text-xs text-slate-500">{{ $lang === 'fr' ? 'ou glissez-déposez (Max 8 Mo/image)' : 'or drag and drop (Max 8MB/image)' }}</div>
-                        <input type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-empty" id="photos-empty">
+                        <input type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-empty" id="photos-empty"
+                               x-on:change="check($event)"
+                               x-on:livewire-upload-error="failed()">
                     </label>
                 @else
                     {{-- Drag a thumbnail onto another to reorder; the first photo is the cover (FB-style). --}}
@@ -150,51 +162,48 @@
                             }
                          }">
                         @foreach ($previewMedia as $m)
+                            {{-- Tapping the photo opens it full screen in the same
+                                 lightbox the preview panel uses — the only way to
+                                 check what was actually uploaded from a 90px thumb. --}}
                             <div wire:key="mphoto-{{ $m['id'] }}" data-mid="{{ $m['id'] }}" draggable="true"
                                  @dragstart="start({{ $m['id'] }}, $event)"
                                  @dragover.prevent
                                  @drop.prevent="drop({{ $m['id'] }})"
-                                 class="relative aspect-square rounded-lg overflow-hidden ring-2 {{ $m['is_cover'] ? 'ring-cm-green' : 'ring-slate-200' }} group bg-slate-100 cursor-move">
+                                 @click="pi = {{ $loop->index }}; lb = true"
+                                 role="button" tabindex="0"
+                                 @keydown.enter="pi = {{ $loop->index }}; lb = true"
+                                 title="{{ $lang === 'fr' ? 'Agrandir' : 'View larger' }}"
+                                 class="relative aspect-square rounded-lg overflow-hidden ring-2 {{ $m['is_cover'] ? 'ring-cm-green' : 'ring-slate-200' }} group bg-slate-100 cursor-zoom-in sm:cursor-move">
                                 <img src="{{ $m['url'] }}" class="w-full h-full object-cover pointer-events-none" alt="">
                                 @if ($m['is_cover'])
                                     <span class="absolute top-1 left-1 bg-cm-green text-white text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full">★</span>
                                 @else
-                                    <button type="button" wire:click="makeCover({{ $m['id'] }})"
-                                            class="absolute top-1 left-1 bg-black/55 hover:bg-cm-green text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition"
+                                    {{-- Visible on touch, hover-revealed on a mouse.
+                                         These were hover-only, so on a phone — where
+                                         there is no hover — a photo could not be
+                                         removed or made the cover at all. --}}
+                                    <button type="button" wire:click="makeCover({{ $m['id'] }})" @click.stop
+                                            class="absolute top-1 left-1 bg-black/60 hover:bg-cm-green text-white text-[11px] sm:text-[9px] font-bold w-7 h-7 sm:w-auto sm:h-auto sm:px-1.5 sm:py-0.5 rounded-full grid place-items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition"
                                             title="{{ $lang === 'fr' ? 'Couverture' : 'Set cover' }}">★</button>
                                 @endif
-                                <button type="button" wire:click="removeMedia({{ $m['id'] }})"
-                                        class="absolute top-1 right-1 bg-black/55 hover:bg-cm-red text-white w-5 h-5 rounded-full text-[11px] grid place-items-center opacity-0 group-hover:opacity-100 transition">✕</button>
+                                <button type="button" wire:click="removeMedia({{ $m['id'] }})" @click.stop
+                                        title="{{ $lang === 'fr' ? 'Supprimer' : 'Remove' }}"
+                                        class="absolute top-1 right-1 bg-black/60 hover:bg-cm-red text-white w-7 h-7 sm:w-5 sm:h-5 rounded-full text-[13px] sm:text-[11px] grid place-items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition">✕</button>
                             </div>
                         @endforeach
                         @if ($usedImages < $maxImages)
                             <label for="photos-grid" class="aspect-square rounded-lg border-2 border-dashed border-slate-300 grid place-items-center cursor-pointer hover:border-cm-green hover:bg-cm-green/5 transition text-slate-400 hover:text-cm-green">
                                 <svg class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
                                 <input id="photos-grid" type="file" wire:model="photos" multiple accept="image/*" class="hidden" wire:key="photos-grid"
-                                    x-on:change="
-                                        const maxSize = 8 * 1024 * 1024;
-                                        for (let i = 0; i < $event.target.files.length; i++) {
-                                            const file = $event.target.files[i];
-                                            if (file.size > maxSize) {
-                                                alert('{{ $lang === 'fr' ? 'Fichier trop volumineux :' : 'File size issue:' }} \'' + file.name + '\' {{ $lang === 'fr' ? 'dépasse la limite de 8 Mo. Veuillez réduire sa taille ou choisir une autre image pour pouvoir continuer.' : 'exceeds the 8MB limit. Please compress the image or choose a smaller one to proceed.' }}');
-                                                $event.target.value = '';
-                                                return;
-                                            }
-                                            if (!file.type.startsWith('image/')) {
-                                                alert('{{ $lang === 'fr' ? 'Format non supporté :' : 'Format issue:' }} \'' + file.name + '\' {{ $lang === 'fr' ? 'n\'est pas une image. Veuillez choisir un fichier JPG, PNG ou WEBP.' : 'is not an image. Please choose a JPG, PNG, or WEBP file.' }}');
-                                                $event.target.value = '';
-                                                return;
-                                            }
-                                        }
-                                    "
-                                    x-on:livewire-upload-error="
-                                        alert('{{ $lang === 'fr' ? 'Échec du téléversement. Cela est souvent dû à une connexion instable ou à un fichier bloqué. Essayez avec une image plus petite.' : 'Upload failed. This is often due to an unstable connection or the server blocking the file. Try using a smaller image.' }}');
-                                    "
+                                    x-on:change="check($event)"
+                                    x-on:livewire-upload-error="failed()"
                                 >
                             </label>
                         @endif
                     </div>
-                    <p class="mt-1.5 text-[11px] text-slate-400">{{ $lang === 'fr' ? 'Glissez pour réorganiser · la 1ʳᵉ photo est la couverture.' : 'Drag to reorder · the first photo is the cover.' }}</p>
+                    <p class="mt-1.5 text-[11px] text-slate-400">{{ $lang === 'fr'
+                        ? 'Touchez pour agrandir · ✕ pour supprimer · ★ pour la couverture · glissez pour réorganiser · max 8 Mo par photo.'
+                        : 'Tap to enlarge · ✕ to remove · ★ to set the cover · drag to reorder · max 8MB per photo.' }}</p>
                 @endif
 
                 <div wire:loading wire:target="photos" class="mt-2 flex items-center gap-2 text-xs text-cm-green font-medium">
@@ -695,7 +704,7 @@
 
     {{-- ═══ Preview photo lightbox (teleported to body to cover the full screen) ═══ --}}
     <template x-teleport="body">
-    <div x-show="lb" x-cloak @click.self="lb = false" x-transition.opacity
+    <div x-show="lb" x-cloak x-overlay="lb" @click.self="lb = false" x-transition.opacity
          class="fixed inset-0 z-[80] bg-black flex items-center justify-center">
         <button type="button" @click="lb = false" aria-label="{{ $lang === 'fr' ? 'Fermer' : 'Close' }}"
                 class="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white grid place-items-center z-10">

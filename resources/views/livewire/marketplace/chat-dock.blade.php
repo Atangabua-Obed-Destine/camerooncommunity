@@ -9,6 +9,20 @@
         $pName = $partner ? ($partner->username ?? $partner->name) : __('Seller');
     @endphp
 
+    {{-- Back closes the dock.
+         On a phone the system back button is how anything gets dismissed, and
+         the dock floats over the listing without being part of history — so
+         back used to leave the page with the conversation still open behind it.
+         The dock's open state lives on the server, not in an Alpine boolean, so
+         it registers with the overlay stack by hand instead of using x-overlay:
+         opening pushes a history entry, back calls close(), and closing by the
+         ✕ steps over the entry it pushed. --}}
+    <div wire:key="dock-back-{{ $this->roomId }}"
+         x-data="{
+            init() { window.cnOverlay?.open(this.$el, () => $wire.close()); },
+            destroy() { window.cnOverlay?.close(this.$el); }
+         }"></div>
+
     <div class="fixed z-[70] bottom-0 right-0 sm:right-4 sm:bottom-4 w-full sm:w-[348px]"
          x-data="{
             scrollDown() { $nextTick(() => { const t = $refs.thread; if (t) t.scrollTop = t.scrollHeight; }); }

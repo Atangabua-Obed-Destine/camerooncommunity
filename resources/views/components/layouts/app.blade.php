@@ -132,7 +132,7 @@
                     @if($__siteLogo ?? null)
                     <img src="{{ $__siteLogo }}"
                          alt="{{ $__siteName ?? 'Logo' }}"
-                         class="h-12 sm:h-14 md:h-16 lg:h-[72px] xl:h-20 w-auto max-w-[42vw] sm:max-w-none object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-all duration-200 group-hover:drop-shadow-[0_3px_10px_rgba(252,209,22,0.45)]">
+                         class="h-14 sm:h-[72px] md:h-20 lg:h-[88px] xl:h-24 w-auto max-w-[52vw] sm:max-w-none object-contain drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-all duration-200 group-hover:drop-shadow-[0_3px_10px_rgba(252,209,22,0.45)]">
                     @else
                     <span class="text-3xl sm:text-4xl lg:text-5xl leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.35)]">🇨🇲</span>
                     @endif

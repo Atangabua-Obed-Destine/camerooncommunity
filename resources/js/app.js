@@ -36,6 +36,44 @@ document.addEventListener('alpine:init', () => {
         }
     });
 
+    /**
+     * Check photos before they are uploaded, and say what is wrong.
+     *
+     * The server rejects anything over 8 MB or not an image, but by then the
+     * file has been sent over a phone connection and the failure comes back as
+     * a validation error with no obvious cause. Checking here turns that into
+     * an immediate, specific message naming the file.
+     *
+     * Lives in Alpine's registry rather than in the Blade view so both the
+     * empty-state picker and the grid's "+" use the same copy of it.
+     */
+    Alpine.data('photoPicker', (messages = {}) => ({
+        maxBytes: 8 * 1024 * 1024,
+
+        check(event) {
+            const files = Array.from(event.target.files || []);
+
+            for (const file of files) {
+                if (file.size > this.maxBytes) {
+                    const mb = (file.size / 1024 / 1024).toFixed(1);
+                    window.alert(`${messages.tooBig ?? 'This photo is too large'}\n\n${file.name} — ${mb} MB`);
+                    event.target.value = '';
+                    return;
+                }
+
+                if (! file.type.startsWith('image/')) {
+                    window.alert(`${messages.notImage ?? 'That file is not an image'}\n\n${file.name}`);
+                    event.target.value = '';
+                    return;
+                }
+            }
+        },
+
+        failed() {
+            window.alert(messages.failed ?? 'The upload did not go through. Please try again.');
+        },
+    }));
+
     // "last seen 5 min ago" under a DM partner's name.
     //
     // Registered here rather than in the chat view: a component-local function

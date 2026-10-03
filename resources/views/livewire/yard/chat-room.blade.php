@@ -338,8 +338,8 @@
          :class="sel.on ? 'yard-chat__messages--selecting' : ''"
          x-ref="chatMessages"
          x-init="positioning = true; scrollToBottom()"
-         :style="mobileUi ? { 'user-select': 'none', '-webkit-user-select': 'none', '-webkit-touch-callout': 'none' } : {}"
-         @resize.window.debounce.200ms="mobileUi = window.matchMedia('(max-width: 767px)').matches"
+         {{-- Selection is switched off in CSS by pointer type, not here by
+              width — see the (pointer: coarse) block in app.css. --}}
          @scroll.passive="
              // Telegram-style infinite scroll: when the user scrolls within
              // 80px of the top, auto-trigger loadMore (debounced via the flag).
@@ -1793,7 +1793,6 @@
                 // an Alpine binding rather than a CSS class (a new class would force a
                 // Tailwind rebuild) and rather than a plain inline style (Livewire's
                 // morph strips attributes the server did not send).
-                mobileUi: window.matchMedia('(max-width: 767px)').matches,
 
                 init() {
                     // Hydrate the global msgStatus store with server-computed statuses
@@ -1901,6 +1900,11 @@
                 },
 
                 ctxOpen(detail) {
+                    // A right-click (and some long presses) leaves a half-made
+                    // selection behind the menu, which then sits there
+                    // highlighted until the user clicks somewhere to get rid
+                    // of it.
+                    this.dropNativeSelection();
                     this.ctx.msgId = detail.msgId;
                     this.ctx.isOwn = detail.isOwn;
                     this.ctx.msgType = detail.msgType;
@@ -1940,6 +1944,7 @@
                 // scroll never turns into a selection.
                 lpStart(e, detail) {
                     this.lpCancel();
+                    this.dropNativeSelection();
                     const t = e.touches ? e.touches[0] : e;
                     this._lpX = t.clientX; this._lpY = t.clientY;
                     this._lpFired = false;
@@ -2016,8 +2021,24 @@
                     return this.sel.ids.includes(id);
                 },
 
+                /**
+                 * Throw away any native text selection.
+                 *
+                 * Picking messages and selecting text are two different modes,
+                 * and leaving the browser's highlight on screen while the app's
+                 * own selection runs is what makes the thread feel like a web
+                 * page being wrestled with rather than an app.
+                 */
+                dropNativeSelection() {
+                    try {
+                        const s = window.getSelection();
+                        if (s && ! s.isCollapsed) s.removeAllRanges();
+                    } catch (_) { /* not worth failing a long press over */ }
+                },
+
                 /** Enter selection mode on one message (long press, or Select in the menu). */
                 selStart(detail) {
+                    this.dropNativeSelection();
                     this.sel.on = true;
                     this.sel.ids = [];
                     this.sel.texts = {};
