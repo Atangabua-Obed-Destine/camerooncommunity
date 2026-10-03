@@ -324,16 +324,27 @@ class AdminController extends Controller
      * Operational state of the things that fail quietly: realtime, the queue,
      * and the configuration that only bites in production.
      */
-    public function health()
+    public function health(Request $request)
     {
         abort_unless(auth()->user()->can('view_system_health'), 403);
 
         $probe = app(\App\Services\RealtimeProbe::class)->run();
 
+        // A CDN in front of the site is the usual reason a websocket handshake
+        // succeeds from the server itself and fails from a browser: the proxy
+        // has to be told to allow WebSockets.
+        $edge = match (true) {
+            (bool) $request->header('CF-Ray')             => 'Cloudflare',
+            (bool) $request->header('X-Sucuri-ID')        => 'Sucuri',
+            (bool) $request->header('X-Akamai-Request-ID') => 'Akamai',
+            default                                        => null,
+        };
+
         $manifest = public_path('build/manifest.json');
 
         return view('admin.health', [
             'realtime' => $probe,
+            'edge'     => $edge,
             'queue' => [
                 'driver'  => config('queue.default'),
                 'pending' => \Illuminate\Support\Facades\Schema::hasTable('jobs')

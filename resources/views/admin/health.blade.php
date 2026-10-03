@@ -82,6 +82,15 @@
                       x-text="state"></span>
             </div>
 
+            @if($edge)
+                <p class="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                    This request came through <strong>{{ $edge }}</strong>. A proxy in front of
+                    the site must be configured to allow WebSockets, or the handshake dies at
+                    the edge — which looks exactly like this while a check run on the server
+                    itself passes.
+                </p>
+            @endif
+
             <div class="mt-4 flex flex-wrap items-center gap-3">
                 <button type="button" @click="ping()" :disabled="busy"
                         class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
@@ -89,6 +98,9 @@
                 </button>
                 <span class="text-sm" :class="result.ok ? 'text-emerald-700' : 'text-rose-700'" x-text="result.message"></span>
             </div>
+
+            <p x-show="socketError" x-cloak class="mt-3 rounded-lg bg-rose-50 px-3 py-2 font-mono text-xs text-rose-700"
+               x-text="'socket: ' + socketError"></p>
 
             <p class="mt-3 text-xs text-slate-500">
                 The server publishes an event on your private health channel and this page
@@ -195,6 +207,7 @@
             return {
                 state: 'unknown',
                 endpoint: '(unknown)',
+                socketError: '',
                 busy: false,
                 result: { ok: false, message: '' },
                 _heard: false,
@@ -216,6 +229,17 @@
 
                     this.state = connection.state;
                     connection.bind('state_change', (s) => { this.state = s.current; });
+
+                    // The close code is the most diagnostic thing available:
+                    // 4001 = unknown app key, 4004 = over limit, 1006 = the
+                    // connection was cut without a close frame, which is what a
+                    // proxy or firewall blocking the upgrade looks like.
+                    connection.bind('error', (err) => {
+                        const data = err?.error?.data ?? err?.data ?? {};
+                        const code = data.code ?? err?.code ?? '';
+                        const message = data.message ?? err?.error?.message ?? err?.message ?? '';
+                        this.socketError = [code, message].filter(Boolean).join(' · ') || 'connection error';
+                    });
 
                     // Our own channel, so nothing else can make this look healthy.
                     echo.channel('admin-health.{{ auth()->id() }}')
