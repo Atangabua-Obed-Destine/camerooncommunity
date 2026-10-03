@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ComingSoonSignup;
 use App\Models\User;
+use App\Support\MarketplaceQueryBuilder;
 use App\Services\AIService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,10 +24,63 @@ class HomeController extends Controller
         // landing page.
         $view = auth()->check() ? 'feed' : 'home';
 
+        $nearby = auth()->check()
+            ? $this->listingsNearUser(auth()->user())
+            : ['items' => collect(), 'label' => '', 'region' => ''];
+
         return view($view, [
-            'memberCount' => $memberCount,
-            'regionCount' => max($regionCount, 1),
+            'memberCount'     => $memberCount,
+            'regionCount'     => max($regionCount, 1),
+            'nearbyListings'  => $nearby['items'],
+            'nearbyLabel'     => $nearby['label'],
+            'nearbyRegion'    => $nearby['region'],
         ]);
+    }
+
+    /**
+     * Listings to show on the home feed, the viewer's own area first.
+     *
+     * Their region leads; if it cannot fill the row the rest comes from their
+     * country, then from anywhere, so a member in a quiet region still sees a
+     * full shelf instead of an empty one. Ordering is what carries the
+     * "near me first" promise — nothing is hidden.
+     */
+    private function listingsNearUser(User $user, int $limit = 8): array
+    {
+        $region  = trim((string) ($user->current_region ?? ''));
+        $country = trim((string) ($user->current_country ?? ''));
+
+        $items = collect();
+
+        if ($region !== '') {
+            $items = MarketplaceQueryBuilder::build(['region' => $region, 'sort' => 'newest'])
+                ->limit($limit)
+                ->get();
+        }
+
+        if ($items->count() < $limit && $country !== '') {
+            $items = $items->concat(
+                MarketplaceQueryBuilder::build(['country' => $country, 'sort' => 'newest'])
+                    ->whereNotIn('id', $items->pluck('id')->all())
+                    ->limit($limit - $items->count())
+                    ->get()
+            );
+        }
+
+        if ($items->count() < $limit) {
+            $items = $items->concat(
+                MarketplaceQueryBuilder::build(['sort' => 'newest'])
+                    ->whereNotIn('id', $items->pluck('id')->all())
+                    ->limit($limit - $items->count())
+                    ->get()
+            );
+        }
+
+        return [
+            'items'  => $items,
+            'label'  => $region !== '' ? $region : $country,
+            'region' => $region,
+        ];
     }
 
     /**

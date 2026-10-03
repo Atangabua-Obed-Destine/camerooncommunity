@@ -3,7 +3,11 @@
          CONNECTIONS MODAL
          ══════════════════════════════════════════════════════════════ --}}
     @if($show)
-    <div class="comm-backdrop" wire:click="close" x-data x-transition.opacity></div>
+    {{-- Back closes this instead of leaving the Yard. --}}
+    <div class="comm-backdrop" wire:click="close" x-data="{
+             init() { window.cnOverlay?.open(this, () => $wire.close()); },
+             destroy() { window.cnOverlay?.close(this); },
+         }" x-transition.opacity></div>
 
     <div class="comm-modal" x-data x-transition.scale.95.origin.center x-trap.noscroll="true">
         {{-- Header --}}

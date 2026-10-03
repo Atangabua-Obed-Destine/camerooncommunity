@@ -52,6 +52,18 @@ class LocationController extends Controller
         app(LocationService::class)->handleUserLocation($user, $country, '', $region, $lat, $lng);
         $user->refresh();
 
+        // Append to the member's trail. The service decides whether this is a
+        // real move or the same stop reported again, so it is safe to call on
+        // every report. Recorded after handleUserLocation so the place names
+        // are the normalised ones (e.g. "England" resolved to "London").
+        app(\App\Services\LocationHistoryService::class)->record($user, [
+            'lat'     => $lat,
+            'lng'     => $lng,
+            'country' => $user->current_country,
+            'region'  => $user->current_region,
+            'city'    => $user->current_city,
+        ], 'gps', $request->ip());
+
         // Use the NORMALIZED region (e.g. "England" → "London") for downstream logic
         $normalizedRegion = $user->current_region;
 
@@ -110,6 +122,16 @@ class LocationController extends Controller
         }
 
         app(LocationSwitchService::class)->switchTo($user, $validated['country'], $validated['region'] ?? null);
+
+        // A deliberate switch is part of the trail too, with no coordinates of
+        // its own — record the member's last known point against the new place.
+        app(\App\Services\LocationHistoryService::class)->record($user, [
+            'lat'     => $user->current_lat,
+            'lng'     => $user->current_lng,
+            'country' => $validated['country'],
+            'region'  => $validated['region'] ?? null,
+            'city'    => null,
+        ], 'switch', $request->ip());
 
         return response()->json(['ok' => true, 'switched' => true]);
     }

@@ -12,6 +12,84 @@
             </div>
         </div>
 
+        {{-- The numbers that say whether the platform is alive, before the
+             growth chart that says whether it is growing. --}}
+        <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            @foreach([
+                ['Daily actives', $activity['dau'], 'last 24 hours'],
+                ['Weekly actives', $activity['wau'], 'last 7 days'],
+                ['Monthly actives', $activity['mau'], 'last 30 days'],
+                ['Returning', $activity['returning'], 'signed up >7d ago, back this week'],
+            ] as [$label, $value, $hint])
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <div class="text-xs uppercase tracking-wide text-slate-400">{{ $label }}</div>
+                    <div class="mt-1 text-3xl font-extrabold text-slate-900">{{ number_format($value) }}</div>
+                    <div class="mt-1 text-xs text-slate-400">{{ $hint }}</div>
+                </div>
+            @endforeach
+        </div>
+
+        <div class="grid gap-4 lg:grid-cols-2">
+            {{-- Calls: the only place in the panel that shows whether calling
+                 actually connects. --}}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <h2 class="font-semibold text-slate-900">Calls (30 days)</h2>
+                @if($calls['total'] === 0)
+                    <p class="mt-3 text-sm text-slate-500">No calls placed.</p>
+                @else
+                    <dl class="mt-4 grid grid-cols-3 gap-4 text-sm">
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">Placed</dt>
+                            <dd class="text-2xl font-extrabold text-slate-900">{{ $calls['total'] }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">Connected</dt>
+                            <dd class="text-2xl font-extrabold {{ ($calls['rate'] ?? 0) >= 50 ? 'text-emerald-600' : 'text-rose-600' }}">
+                                {{ $calls['rate'] }}%
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-xs uppercase tracking-wide text-slate-400">Median length</dt>
+                            <dd class="text-2xl font-extrabold text-slate-900">
+                                {{ $calls['medianSeconds'] !== null ? gmdate('i:s', $calls['medianSeconds']) : '—' }}
+                            </dd>
+                        </div>
+                    </dl>
+                    @if(($calls['rate'] ?? 100) < 50)
+                        <p class="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                            Fewer than half of calls connect. Check the realtime and TURN
+                            status on the System Health page.
+                        </p>
+                    @endif
+                @endif
+            </div>
+
+            {{-- Funnel: where people stop. --}}
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <h2 class="font-semibold text-slate-900">From signup to first message</h2>
+                @php $top = max(1, $funnel[0]['count']); @endphp
+                <ul class="mt-4 space-y-3">
+                    @foreach($funnel as $i => $step)
+                        @php $pct = round($step['count'] / $top * 100); @endphp
+                        <li>
+                            <div class="flex items-baseline justify-between text-sm">
+                                <span class="font-medium text-slate-700">{{ $step['label'] }}</span>
+                                <span class="text-slate-500">{{ number_format($step['count']) }} · {{ $pct }}%</span>
+                            </div>
+                            <div class="mt-1 h-2 rounded-full bg-slate-100">
+                                <div class="h-2 rounded-full bg-cm-green" style="width: {{ $pct }}%"></div>
+                            </div>
+                            @if($i > 0 && $funnel[$i - 1]['count'] > $step['count'])
+                                <div class="mt-1 text-xs text-slate-400">
+                                    {{ number_format($funnel[$i - 1]['count'] - $step['count']) }} dropped off here
+                                </div>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+
         {{-- User Growth Chart --}}
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
             <h2 class="font-semibold text-slate-900 mb-4" x-text="$store.lang.t('User Growth (Last 30 Days)', 'Croissance Utilisateurs (30 Derniers Jours)')"></h2>

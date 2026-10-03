@@ -1019,6 +1019,67 @@ class ChatRoom extends Component
         }
     }
 
+    /**
+     * Delete several of your own messages at once (selection mode).
+     *
+     * Each id goes through deleteMessage(), which already refuses messages that
+     * are not yours — selecting someone else's and hitting delete quietly skips
+     * it rather than failing the whole batch.
+     */
+    public function deleteMessages(array $ids)
+    {
+        foreach (array_slice(array_filter(array_map('intval', $ids)), 0, 100) as $id) {
+            $this->deleteMessage($id);
+        }
+
+        unset($this->roomMessages, $this->pinnedMessages);
+    }
+
+    /**
+     * Star or unstar a selection. Mixed selections are starred, matching
+     * WhatsApp: the action only clears stars when every message already has one.
+     */
+    public function starMessages(array $ids)
+    {
+        $ids = array_slice(array_filter(array_map('intval', $ids)), 0, 100);
+
+        if (empty($ids)) {
+            return;
+        }
+
+        $userId = auth()->id();
+        $starred = \DB::table('yard_message_stars')
+            ->where('user_id', $userId)
+            ->whereIn('message_id', $ids)
+            ->pluck('message_id')
+            ->all();
+
+        $allStarred = count($starred) === count($ids);
+
+        foreach ($ids as $id) {
+            $isStarred = in_array($id, $starred, true);
+
+            // toggleStar() flips one message; call it only where the end state
+            // differs from what we want, so a mixed selection ends up all starred.
+            if ($allStarred || ! $isStarred) {
+                $this->toggleStar($id);
+            }
+        }
+    }
+
+    /** Forward a selection into another room, oldest first. */
+    public function forwardMessages(array $ids, int $targetRoomId)
+    {
+        $ids = array_slice(array_filter(array_map('intval', $ids)), 0, 50);
+        sort($ids);
+
+        foreach ($ids as $id) {
+            $this->forwardMessage($id, $targetRoomId);
+        }
+
+        return count($ids);
+    }
+
     // ─── STAR ───
 
     public function toggleStar(int $messageId)

@@ -17,7 +17,9 @@
     $badges = \App\Support\TrustBadges::forSeller($user);
 @endphp
 <div class="min-h-[calc(100vh-96px)] bg-slate-100"
-     x-data="{ settingsOpen: {{ ($errors->any() || session('success')) && $isSelf ? 'true' : 'false' }} }">
+     x-data="{ settingsOpen: {{ ($errors->any() || session('success')) && $isSelf ? 'true' : 'false' }} }"
+     {{-- Back closes the settings popup rather than leaving the profile. --}}
+     x-overlay="settingsOpen">
     <div class="max-w-5xl mx-auto px-3 sm:px-4 lg:px-5 py-4 lg:py-5">
 
         {{-- Profiles are reached from chat, People and GoMarket alike, so go back
@@ -106,9 +108,25 @@
                             </div>
                         @endif
 
-                    {{-- Actions --}}
+                    {{-- Actions. Everything here follows one value, $state, so the
+                         page can never show two contradictory things (a "Pending"
+                         chip beside a live Connect button, say). The other side
+                         acting reaches us over Echo as connection-state-changed,
+                         which the wrapper below turns into a refresh. --}}
                     @unless($isSelf)
-                        <div class="mt-4 flex items-center gap-2">
+                        {{-- Block form on purpose. The short one-line form with a method
+                             call emits an unterminated PHP open tag here and swallows the rest
+                             of the file. Note Blade compiles directives BEFORE comments, so a
+                             directive written inside a comment still runs — which is why this
+                             one names no directives. --}}
+                        @php
+                            $state = $this->connectionState;
+                        @endphp
+                        <div class="mt-4 flex flex-wrap items-center gap-2"
+                             x-data
+                             @connection-state-changed.window="$wire.$refresh()"
+                             @connection-updated.window="$wire.$refresh()">
+
                             <button type="button" wire:click="toggleFollow({{ $user->id }})"
                                     @class([
                                         'inline-flex items-center gap-1.5 font-bold text-sm rounded-full px-4 py-2 transition',
@@ -121,30 +139,77 @@
                                     + <span x-data x-text="$store.lang.t('Follow','Suivre')"></span>
                                 @endif
                             </button>
-                            {{-- Opens the normal Yard DM, not the GoMarket dock: this is a
-                                 general profile, so there is no listing context here. --}}
-                            <a href="{{ $dmRoomId ? route('yard') . '?room=' . $dmRoomId : route('yard') . '?dm=' . $user->id }}"
-                               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-sm rounded-full px-4 py-2 transition">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-                                <span x-data x-text="$store.lang.t('Message','Message')"></span>
-                            </a>
 
-                            @if($conn?->status === \App\Models\UserConnection::STATUS_ACCEPTED)
+                            {{-- ── Connected: message, and the way out ── --}}
+                            @if($state === 'connected')
+                                <button type="button" wire:click="message" wire:loading.attr="disabled"
+                                        class="inline-flex items-center gap-1.5 bg-cm-green text-white hover:bg-cm-green/90 shadow font-bold text-sm rounded-full px-4 py-2 transition">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                                    <span x-data x-text="$store.lang.t('Message','Message')"></span>
+                                </button>
                                 <span class="inline-flex items-center gap-1 px-3 py-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold">
                                     &check; <span x-data x-text="$store.lang.t('Connected', 'Connecté')"></span>
                                 </span>
-                            @elseif($conn?->status === \App\Models\UserConnection::STATUS_PENDING)
-                                <span class="inline-flex items-center gap-1 px-3 py-2 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold">
-                                    ⏳ <span x-data x-text="$store.lang.t('Pending', 'En attente')"></span>
+
+            {{-- ── Request sent ──
+                 Status and action are separate elements on purpose. A single
+                 button that changed label on hover told a phone user nothing —
+                 there is no hover — and the first tap would have cancelled
+                 silently. The chip states where things stand; the button next to
+                 it says exactly what it does. --}}
+                            @elseif($state === 'outgoing')
+                                <span class="inline-flex items-center gap-1.5 px-3 py-2 rounded-full bg-amber-50 text-amber-700 ring-1 ring-amber-200 text-xs font-semibold">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                    <span x-data x-text="$store.lang.t('Request sent', 'Demande envoyée')"></span>
                                 </span>
-                            @elseif(! $conn)
-                                {{-- No connection yet: offer to start one, same as the People directory. --}}
+                                <button type="button" wire:click="cancelRequest"
+                                        wire:loading.attr="disabled" wire:target="cancelRequest"
+                                        class="inline-flex items-center gap-1.5 bg-white ring-1 ring-slate-300 hover:bg-rose-50 hover:text-rose-700 hover:ring-rose-200 text-slate-700 font-bold text-sm rounded-full px-4 py-2 transition">
+                                    <span wire:loading.remove wire:target="cancelRequest" x-data
+                                          x-text="$store.lang.t('Cancel request', 'Annuler la demande')"></span>
+                                    <span wire:loading wire:target="cancelRequest" x-data
+                                          x-text="$store.lang.t('Cancelling…', 'Annulation…')"></span>
+                                </button>
+
+                            {{-- ── They asked us ── --}}
+                            @elseif($state === 'incoming')
+                                <button type="button" wire:click="acceptRequest" wire:loading.attr="disabled"
+                                        class="inline-flex items-center gap-1.5 bg-cm-green text-white hover:bg-cm-green/90 shadow font-bold text-sm rounded-full px-4 py-2 transition">
+                                    &check; <span x-data x-text="$store.lang.t('Accept request', 'Accepter')"></span>
+                                </button>
+                                <button type="button" wire:click="declineRequest" wire:loading.attr="disabled"
+                                        class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-full px-4 py-2 transition">
+                                    <span x-data x-text="$store.lang.t('Decline', 'Refuser')"></span>
+                                </button>
+
+                            {{-- ── We blocked them ── --}}
+                            @elseif($state === 'blocked-by-me')
+                                <button type="button" wire:click="unblock" wire:loading.attr="disabled"
+                                        class="inline-flex items-center gap-1.5 bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100 font-bold text-sm rounded-full px-4 py-2 transition">
+                                    <span x-data x-text="$store.lang.t('Unblock', 'Débloquer')"></span>
+                                </button>
+
+                            {{-- ── They blocked us: no actions, just the truth ── --}}
+                            @elseif($state === 'blocked-by-them')
+                                <span class="inline-flex items-center gap-1 px-3 py-2 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold"
+                                      x-data x-text="$store.lang.t('Unavailable', 'Indisponible')"></span>
+
+                            {{-- ── Strangers: connecting is the only door to messaging ── --}}
+                            @else
                                 <button type="button" wire:click="connect" wire:loading.attr="disabled"
-                                        class="inline-flex items-center gap-1.5 bg-white ring-1 ring-slate-300 hover:bg-slate-50 text-slate-800 font-bold text-sm rounded-full px-4 py-2 transition">
+                                        class="inline-flex items-center gap-1.5 bg-cm-green text-white hover:bg-cm-green/90 shadow font-bold text-sm rounded-full px-4 py-2 transition">
                                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 7.5v6m3-3h-6M5.25 21v-1.5a6 6 0 0 1 6-6h2.25a6 6 0 0 1 4.215 1.737M15.75 7.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0z"/>
                                     </svg>
                                     <span x-data x-text="$store.lang.t('Connect', 'Se connecter')"></span>
+                                </button>
+                                {{-- Shown, not hidden: people look for Message, and this
+                                     explains why it is not available yet. --}}
+                                <button type="button" wire:click="message"
+                                        class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-400 cursor-not-allowed font-bold text-sm rounded-full px-4 py-2"
+                                        :title="$store.lang.t('Connect first to send a message', 'Connectez-vous d’abord pour envoyer un message')">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+                                    <span x-data x-text="$store.lang.t('Message','Message')"></span>
                                 </button>
                             @endif
 
@@ -154,11 +219,22 @@
                                     <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 12.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5ZM12 18.75a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z"/></svg>
                                 </button>
                                 <div x-show="open" @click.away="open=false" x-transition x-cloak
-                                     class="absolute right-0 top-full mt-2 w-52 rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl z-30">
+                                     class="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl z-30">
                                     <a href="#" @click.prevent="navigator.clipboard.writeText(window.location.href); $dispatch('toast',{type:'success',message:'Link copied'}); open=false"
-                                       class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">📋 <span x-text="$store.lang.t('Copy link', 'Copier le lien')"></span></a>
-                                    <a href="{{ route('yard') }}?dm={{ $user->id }}#info"
-                                       class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">🏷️ <span x-text="$store.lang.t('Save as a contact', 'Enregistrer comme contact')"></span></a>
+                                       class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">&#128203; <span x-text="$store.lang.t('Copy link', 'Copier le lien')"></span></a>
+                                    @if($state === 'connected')
+                                        <a href="{{ route('yard') }}?dm={{ $user->id }}#info"
+                                           class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">&#127991; <span x-text="$store.lang.t('Save as a contact', 'Enregistrer comme contact')"></span></a>
+                                        <hr class="my-1 border-slate-100">
+                                        {{-- Destructive, so it lives in the menu and asks first. --}}
+                                        <button type="button"
+                                                @click="open=false"
+                                                wire:click="disconnect"
+                                                wire:confirm="{{ $lang === 'fr' ? 'Vous déconnecter de cette personne ? Vous ne pourrez plus vous envoyer de messages.' : 'Disconnect from this person? You will not be able to message each other.' }}"
+                                                class="block w-full px-4 py-2 text-left text-sm text-cm-red hover:bg-red-50">
+                                            &#128683; <span x-text="$store.lang.t('Disconnect', 'Se déconnecter')"></span>
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
                         </div>

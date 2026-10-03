@@ -35,7 +35,7 @@
              }
          }));
      "
-     @keydown.escape.window="ctxClose()"
+     @keydown.escape.window="sel.on ? selClear() : ctxClose()"
      x-init="@if(isset($room) && $room->exists) subscribeEcho('{{ 'tenant.' . $room->tenant_id . '.room.' . $room->id }}') @endif">
 
     {{-- Loading overlay for room switching. Driven by Alpine, not wire:loading:
@@ -335,6 +335,7 @@
 
     {{-- ── Messages Area ── --}}
     <div class="yard-chat__messages" id="chat-messages"
+         :class="sel.on ? 'yard-chat__messages--selecting' : ''"
          x-ref="chatMessages"
          x-init="positioning = true; scrollToBottom()"
          :style="mobileUi ? { 'user-select': 'none', '-webkit-user-select': 'none', '-webkit-touch-callout': 'none' } : {}"
@@ -388,9 +389,29 @@
                     $sysMeta = is_array($msg->media_metadata) ? $msg->media_metadata : [];
                     $sysKind = $sysMeta['kind'] ?? null;
                     $isAdminViewer = $room->created_by === auth()->id();
+
+                    // "X joined" and "X requested to join" are about a person, so
+                    // the pill opens that person's card — the same preview a tap
+                    // on their avatar gives. Other system notices (a renamed room,
+                    // a security notice) have no subject and stay inert.
+                    $sysPersonId = in_array($sysKind, ['member_joined', 'join_request'], true)
+                        ? ($sysMeta['user_id'] ?? $sysMeta['requester_id'] ?? $msg->user_id)
+                        : null;
+
+                    // Your own arrival is not worth a card.
+                    if ($sysPersonId === auth()->id()) {
+                        $sysPersonId = null;
+                    }
                 @endphp
                 <div class="yard-chat__system" wire:key="msg-{{ $msg->id }}">
-                    {{ $msg->content }}
+                    @if($sysPersonId)
+                        <button type="button"
+                                class="yard-chat__system-person"
+                                @click="$dispatch('open-user-preview', { id: {{ (int) $sysPersonId }} })"
+                                :title="$store.lang.t('View profile', 'Voir le profil')">{{ $msg->content }}</button>
+                    @else
+                        {{ $msg->content }}
+                    @endif
                     @if($sysKind === 'join_request' && $isAdminViewer)
                         <button type="button"
                                 onclick="window.dispatchEvent(new CustomEvent('open-room-info', { detail: { roomId: {{ $room->id }} } }))"
@@ -500,12 +521,16 @@
                         <button class="yard-msg__sender" @click="$dispatch('open-user-preview', { id: {{ $msg->user_id }} })">{{ $msgDisplayName }}</button>
                         @endunless
 
-                        {{-- Reply preview --}}
+                        {{-- Reply preview. Tapping it jumps to the message being quoted,
+                             loading older pages first if that message is not on screen yet.
+                             While selecting, it picks the message like the rest of the bubble. --}}
                         @if($msg->parent)
-                        <div class="yard-msg__reply-preview">
+                        <button type="button" class="yard-msg__reply-preview yard-msg__reply-preview--jump"
+                                @click.stop="sel.on ? selToggle({ msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }} }) : jumpToMessage({{ $msg->parent_message_id }})"
+                                :title="$store.lang.t('Go to the message', 'Aller au message')">
                             <span class="font-semibold">{{ $msg->parent->user?->username ?? $msg->parent->user?->name }}</span>:
                             {{ \Illuminate\Support\Str::limit($msg->parent->content, 60) }}
-                        </div>
+                        </button>
                         @endif
 
                         {{-- Pinned badge --}}
@@ -538,7 +563,13 @@
                              dimming backdrop so it stays legible. --}}
                         <div class="yard-msg__bubble {{ $isOwn ? 'yard-msg__bubble--own' : 'yard-msg__bubble--other' }}"
                              x-data="{ hover: false, emojiPick: false }"
-                             :class="ctx.open && ctx.msgId === {{ $msg->id }} ? 'yard-msg__bubble--selected' : ''"
+                             :class="{
+                                 'yard-msg__bubble--selected': ctx.open && ctx.msgId === {{ $msg->id }} && sel.ids.length === 1,
+                                 'yard-msg__bubble--picked': selHas({{ $msg->id }}),
+                             }"
+                             {{-- While selecting, a plain click picks the message instead of
+                                  doing whatever it would normally do. --}}
+                             @click="if (sel.on) { $event.preventDefault(); $event.stopPropagation(); selToggle({ msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }} }); }"
                              @mouseenter="hover = true" @mouseleave="if (!emojiPick) hover = false"
                              @click.outside="emojiPick = false; hover = false"
                              @pointerdown="keepKeyboard($event)"
@@ -1454,6 +1485,10 @@
         {{-- Menu items --}}
         <div class="yard-ctx-items">
             {{-- Reply --}}
+            <button class="yard-ctx-item" @click="selStart(ctx); ctx.open = false;">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span x-text="$store.lang.t('Select messages', 'Sélectionner')"></span>
+            </button>
             <button class="yard-ctx-item" @click="ctxAction('reply')">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg>
                 <span x-text="$store.lang.t('Reply', 'Répondre')"></span>
@@ -1525,8 +1560,9 @@
          so inline layout here silently collapses.
          ══════════════════════════════════════════════════════════════════ --}}
 
-    {{-- Reaction row only, floating beside the selected message --}}
-    <div x-show="ctx.open" x-cloak
+    {{-- Reaction row, floating beside the selected message. Only while exactly
+         one message is picked: there is nothing to react to in a batch. --}}
+    <div x-show="ctx.open && sel.ids.length === 1" x-cloak
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0 scale-90"
          x-transition:enter-end="opacity-100 scale-100"
@@ -1544,7 +1580,7 @@
     </div>
 
     {{-- Expanded emoji picker, opened by the + --}}
-    <div x-show="ctx.open && ctx.moreEmojis" x-cloak x-transition
+    <div x-show="ctx.open && ctx.moreEmojis && sel.ids.length === 1" x-cloak x-transition
          class="yard-sel-grid" @pointerdown="keepKeyboard($event)"
          :style="{ top: (ctx.posY + 58) + 'px', left: ctx.posX + 'px' }"
          @click.stop>
@@ -1553,82 +1589,65 @@
         </template>
     </div>
 
-    {{-- Action bar over the chat header: back, count, then the actions as icons --}}
-    <div x-show="ctx.open" x-cloak
+    {{-- Selection bar. Driven by sel, not by the context menu, so it serves
+         one message or twenty, on a phone or a desktop. It sits over the chat
+         header the way WhatsApp's does. --}}
+    <div x-show="sel.on" x-cloak
          x-transition:enter="transition ease-out duration-150"
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
-         class="yard-sel-bar" @pointerdown="keepKeyboard($event)" @click.stop>
+         class="yard-sel-bar" @pointerdown="keepKeyboard($event)" @click.stop
+         @clear-selection.window="selClear()">
 
-        <button type="button" class="yard-sel-bar__btn" @click="ctxClose()"
-                :aria-label="$store.lang.t('Close', 'Fermer')">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        <button type="button" class="yard-sel-bar__btn" @click="selClear()"
+                :aria-label="$store.lang.t('Cancel selection', 'Annuler la sélection')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
-        <span class="yard-sel-bar__count">1</span>
+        <span class="yard-sel-bar__count" x-text="sel.ids.length"></span>
         <span class="yard-sel-bar__spacer"></span>
 
-        <button type="button" class="yard-sel-bar__btn" @click="ctxAction('reply')"
+        {{-- Reply only makes sense for a single message. --}}
+        <button type="button" class="yard-sel-bar__btn" x-show="sel.ids.length === 1"
+                @click="$wire.setReply(sel.ids[0]); selClear();"
                 :aria-label="$store.lang.t('Reply', 'Répondre')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 015 5v5m-15-10l5-5m-5 5l5 5"/></svg>
         </button>
 
-        <button type="button" class="yard-sel-bar__btn yard-sel-bar__btn--danger" x-show="ctx.isOwn"
-                @click="ctxAction('delete')" :aria-label="$store.lang.t('Delete', 'Supprimer')">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-        </button>
-
-        <button type="button" class="yard-sel-bar__btn" x-show="ctx.msgType === 'text'" @click="ctxCopy()"
+        <button type="button" class="yard-sel-bar__btn" @click="selCopy()"
                 :aria-label="$store.lang.t('Copy', 'Copier')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path stroke-linecap="round" d="M5 15V5a2 2 0 012-2h10"/></svg>
         </button>
 
-        <button type="button" class="yard-sel-bar__btn" @click="ctxAction('forward')"
+        <button type="button" class="yard-sel-bar__btn" @click="selStar()"
+                :aria-label="$store.lang.t('Star', 'Favori')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.5l2.2 4.46 4.92.72-3.56 3.47.84 4.9-4.4-2.31-4.4 2.31.84-4.9L4.36 8.68l4.92-.72 2.2-4.46z"/></svg>
+        </button>
+
+        <button type="button" class="yard-sel-bar__btn" @click="selForward()"
                 :aria-label="$store.lang.t('Forward', 'Transférer')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a5 5 0 00-5 5v5m15-10l-5-5m5 5l-5 5"/></svg>
         </button>
 
-        <button type="button" class="yard-sel-bar__btn" @click="ctxAction('pin')"
+        {{-- Only shown when the selection contains something this user may delete. --}}
+        <button type="button" class="yard-sel-bar__btn yard-sel-bar__btn--danger"
+                x-show="selOwnCount() > 0" @click="selDelete()"
+                :aria-label="$store.lang.t('Delete', 'Supprimer')">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+
+        {{-- Pin stays single-message: pinning a batch is not a thing. --}}
+        <button type="button" class="yard-sel-bar__btn" x-show="sel.ids.length === 1"
+                @click="$wire.togglePin(sel.ids[0]); selClear();"
                 :aria-label="$store.lang.t('Pin', 'Épingler')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 17v5m-5-9.5V4h10v8.5l-5 4-5-4z"/></svg>
         </button>
-
-        <div class="yard-sel-bar__more">
-            <button type="button" class="yard-sel-bar__btn" @click.stop="ctx.moreMenu = !ctx.moreMenu"
-                    :aria-label="$store.lang.t('More', 'Plus')">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z"/></svg>
-            </button>
-
-            <div x-show="ctx.moreMenu" x-cloak x-transition @click.away="ctx.moreMenu = false"
-                 class="yard-sel-bar__dropdown">
-                <button class="yard-ctx-item" @click="ctxAction('star')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.5l2.2 4.46 4.92.72-3.56 3.47.84 4.9-4.4-2.31-4.4 2.31.84-4.9L4.36 8.68l4.92-.72 2.2-4.46z"/></svg>
-                    <span x-text="$store.lang.t('Star', 'Favori')"></span>
-                </button>
-                <button class="yard-ctx-item" x-show="ctx.isOwn && ctx.msgType === 'text'" @click="ctxAction('edit')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path stroke-linecap="round" d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    <span x-text="$store.lang.t('Edit', 'Modifier')"></span>
-                </button>
-                <button class="yard-ctx-item" x-show="ctx.msgType === 'text'" @click="ctxAction('translate-en')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
-                    <span x-text="$store.lang.t('Translate to English', 'Traduire en Anglais')"></span>
-                </button>
-                <button class="yard-ctx-item" x-show="ctx.msgType === 'text'" @click="ctxAction('translate-fr')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
-                    <span x-text="$store.lang.t('Translate to French', 'Traduire en Français')"></span>
-                </button>
-                <button class="yard-ctx-item" x-show="!ctx.isOwn" @click="ctxAction('report')">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 9v2m0 4h.01M5.07 19H19a2.12 2.12 0 001.83-3.14L13.83 4.23a2.12 2.12 0 00-3.66 0L3.24 15.86A2.12 2.12 0 005.07 19z"/></svg>
-                    <span x-text="$store.lang.t('Report', 'Signaler')"></span>
-                </button>
-            </div>
-        </div>
     </div>
-
     {{-- ══════════════════════════════════════════════════════════════════
          Forward Message Modal
          ══════════════════════════════════════════════════════════════════ --}}
-    <div x-data="forwardModal()" x-cloak
-         @open-forward.window="openForward($event.detail.msgId)"
+    {{-- Back closes this instead of leaving the chat. --}}
+    <div x-data="forwardModal()" x-overlay="show" x-cloak
+         @open-forward.window="openForward($event.detail.msgId, $event.detail.msgIds)"
          @keydown.escape.window="show = false">
         <div x-show="show" x-transition.opacity class="yard-ctx-backdrop" @click="show = false"></div>
         <div x-show="show" x-transition.scale.90 class="yard-forward-modal" @click.stop>
@@ -1679,6 +1698,10 @@
          globally, and is opened with $dispatch('open-user-preview', { id }). --}}
 
     {{-- ── Image Lightbox ── --}}
+    {{-- An open photo, and selection mode, both answer the back button. --}}
+    <div x-overlay="lightboxOpen" class="contents"></div>
+    <div x-overlay="sel.on" class="contents"></div>
+
     <div x-show="lightboxOpen" x-transition.opacity @click="lightboxOpen = false"
          class="yard-lightbox" x-cloak>
         <img :src="lightboxSrc" class="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl">
@@ -1701,16 +1724,24 @@
             return {
                 show: false,
                 msgId: null,
+                msgIds: [],
                 search: '',
-                openForward(msgId) {
-                    this.msgId = msgId;
+                // Takes one message or a selection; the rest of the modal does
+                // not care which, so the list is the single source of truth.
+                openForward(msgId, msgIds) {
+                    this.msgIds = (msgIds && msgIds.length) ? [...msgIds] : (msgId ? [msgId] : []);
+                    this.msgId = this.msgIds[0] ?? null;
                     this.search = '';
                     this.show = true;
                 },
                 doForward(roomId) {
-                    this.$wire.forwardMessage(this.msgId, roomId).then((result) => {
+                    const ids = this.msgIds.length ? this.msgIds : [this.msgId];
+
+                    this.$wire.forwardMessages(ids, roomId).then((result) => {
                         this.show = false;
                         this.msgId = null;
+                        this.msgIds = [];
+                        window.dispatchEvent(new CustomEvent('clear-selection'));
                         // Only navigate to the target room when the forward
                         // actually succeeded. PHP returns false when the
                         // target is a DM with a blocked / unconnected user.
@@ -1789,6 +1820,12 @@
                 // True from the moment a room is asked for until its messages are
                 // scrolled into place; the overlay above watches it.
                 positioning: false,
+
+                // ── Selection mode (WhatsApp's multi-select) ──
+                // ids keeps the order people picked things in; texts and own are
+                // kept alongside so Copy and Delete do not have to go digging
+                // through the DOM or ask the server what it already sent us.
+                sel: { on: false, ids: [], texts: {}, own: {} },
 
                 // What actually drops the keyboard on a phone is the browser's own
                 // long-press text selection: it starts a selection in the thread, the
@@ -1962,6 +1999,10 @@
                         this._lpTimer = null;
                         this._lpFired = true;
                         if (navigator.vibrate) navigator.vibrate(12);
+                        // A long press both selects the message and offers the
+                        // reactions, exactly as WhatsApp does. Tapping further
+                        // messages then extends the selection.
+                        this.selStart(detail);
                         this.ctxOpen({
                             ...detail,
                             x: rect ? rect.left : this._lpX,
@@ -2010,6 +2051,125 @@
 
                 lpCancel() {
                     if (this._lpTimer) { clearTimeout(this._lpTimer); this._lpTimer = null; }
+                },
+
+                // ── Selection mode ───────────────────────────────────────────
+                selHas(id) {
+                    return this.sel.ids.includes(id);
+                },
+
+                /** Enter selection mode on one message (long press, or Select in the menu). */
+                selStart(detail) {
+                    this.sel.on = true;
+                    this.sel.ids = [];
+                    this.sel.texts = {};
+                    this.sel.own = {};
+                    this.selAdd(detail);
+                },
+
+                selAdd(detail) {
+                    if (! this.selHas(detail.msgId)) {
+                        this.sel.ids.push(detail.msgId);
+                    }
+                    this.sel.texts[detail.msgId] = detail.content || '';
+                    this.sel.own[detail.msgId] = !! detail.isOwn;
+                },
+
+                /** Tapping a message while selecting adds or removes it. */
+                selToggle(detail) {
+                    if (this.selHas(detail.msgId)) {
+                        this.sel.ids = this.sel.ids.filter(i => i !== detail.msgId);
+                        delete this.sel.texts[detail.msgId];
+                        delete this.sel.own[detail.msgId];
+
+                        // Last one unpicked: leave selection mode, like WhatsApp.
+                        if (this.sel.ids.length === 0) {
+                            this.selClear();
+                            return;
+                        }
+                    } else {
+                        this.selAdd(detail);
+                    }
+
+                    // Reactions belong to a single message; once this is a batch
+                    // the emoji row has nothing to act on.
+                    if (this.sel.ids.length !== 1) {
+                        this.ctx.open = false;
+                        this.ctx.moreEmojis = false;
+                    }
+                },
+
+                selClear() {
+                    this.sel = { on: false, ids: [], texts: {}, own: {} };
+                    this.ctxClose();
+                },
+
+                /** How many of the selected messages this user may delete. */
+                selOwnCount() {
+                    return this.sel.ids.filter(id => this.sel.own[id]).length;
+                },
+
+                selCopy() {
+                    // Chronological, not pick order: a pasted conversation should
+                    // read the way it happened.
+                    const text = [...this.sel.ids]
+                        .sort((a, b) => a - b)
+                        .map(id => this.sel.texts[id])
+                        .filter(t => t)
+                        .join('\n');
+
+                    if (! text) {
+                        this.selClear();
+                        return;
+                    }
+
+                    navigator.clipboard?.writeText(text).then(() => {
+                        window.dispatchEvent(new CustomEvent('toast', {
+                            detail: { type: 'success', message: this.$store.lang.t('Copied', 'Copié') },
+                        }));
+                    }).catch(() => {});
+
+                    this.selClear();
+                },
+
+                selStar() {
+                    this.$wire.starMessages([...this.sel.ids]);
+                    this.selClear();
+                },
+
+                selForward() {
+                    window.dispatchEvent(new CustomEvent('open-forward', {
+                        detail: { msgIds: [...this.sel.ids] },
+                    }));
+                    // Keep the selection until the forward modal has used it.
+                    this.sel.on = false;
+                    this.ctxClose();
+                },
+
+                selDelete() {
+                    const mine = this.sel.ids.filter(id => this.sel.own[id]);
+
+                    if (mine.length === 0) {
+                        window.dispatchEvent(new CustomEvent('toast', {
+                            detail: {
+                                type: 'warning',
+                                message: this.$store.lang.t(
+                                    'You can only delete your own messages.',
+                                    'Vous ne pouvez supprimer que vos propres messages.'
+                                ),
+                            },
+                        }));
+                        return;
+                    }
+
+                    const question = this.$store.lang.t(
+                        'Delete ' + mine.length + ' message(s)?',
+                        'Supprimer ' + mine.length + ' message(s) ?'
+                    );
+                    if (! window.confirm(question)) return;
+
+                    this.$wire.deleteMessages(mine);
+                    this.selClear();
                 },
 
                 // Keeping the on-screen keyboard up while a message is selected.
@@ -2200,6 +2360,58 @@
                  * The message may not be in the DOM yet if the room just opened or
                  * if it's older than the loaded page — we retry briefly.
                  */
+                /**
+                 * Bring a message into view and flash it.
+                 *
+                 * Unlike scrollToMessageId below, this one will fetch older pages
+                 * when the message is not loaded yet, which is the common case for
+                 * a reply to something said a while ago.
+                 */
+                jumpToMessage(id, depth = 0) {
+                    if (!id) return;
+
+                    const el = document.getElementById('msg-' + id);
+                    if (el) {
+                        this.flashMessage(el);
+                        return;
+                    }
+
+                    // Not rendered: pull in another page and look again. Three
+                    // rounds is 150 messages, past which "scroll up" is fairer
+                    // than loading the whole history.
+                    if (depth < 3 && this.$wire.hasMore) {
+                        this.$wire.loadMore().then(() => {
+                            setTimeout(() => this.jumpToMessage(id, depth + 1), 250);
+                        });
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('toast', { detail: {
+                        type: 'info',
+                        message: this.$store.lang.t(
+                            'That message is too far back to jump to.',
+                            'Ce message est trop ancien pour y accéder directement.'
+                        ),
+                    }}));
+                },
+
+                /** Scroll a message into the middle and ring it briefly. */
+                flashMessage(el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    const bubble = el.querySelector('.yard-msg__bubble') || el;
+                    const prevTransition = bubble.style.transition;
+                    const prevShadow = bubble.style.boxShadow;
+
+                    bubble.style.transition = 'box-shadow 200ms ease-out';
+                    bubble.style.boxShadow = '0 0 0 3px rgba(252, 209, 22, 0.7)';
+
+                    setTimeout(() => {
+                        bubble.style.boxShadow = prevShadow;
+                        setTimeout(() => { bubble.style.transition = prevTransition; }, 250);
+                    }, 1200);
+                },
+
                 scrollToMessageId(id) {
                     if (!id) return;
                     let attempts = 0;
@@ -2207,16 +2419,7 @@
                     const tick = () => {
                         const el = document.getElementById('msg-' + id);
                         if (el) {
-                            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            const bubble = el.querySelector('.yard-msg__bubble') || el;
-                            const prevTransition = bubble.style.transition;
-                            const prevShadow = bubble.style.boxShadow;
-                            bubble.style.transition = 'box-shadow 200ms ease-out';
-                            bubble.style.boxShadow = '0 0 0 3px rgba(252, 209, 22, 0.7)';
-                            setTimeout(() => {
-                                bubble.style.boxShadow = prevShadow;
-                                setTimeout(() => { bubble.style.transition = prevTransition; }, 250);
-                            }, 1200);
+                            this.flashMessage(el);
                             return;
                         }
                         if (++attempts < maxAttempts) {

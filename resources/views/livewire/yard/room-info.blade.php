@@ -159,7 +159,7 @@
         {{-- Avatar --}}
         @php
             // Block form, not @php(...): the short form fails to parse this
-            // expression and silently emits an unterminated <?php tag.
+            // expression and silently emits an unterminated PHP open tag.
             $heroPhoto = null;
             if ($isDm && $dmPartner?->avatar) {
                 $heroPhoto = asset('storage/' . $dmPartner->avatar);

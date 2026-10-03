@@ -11,7 +11,9 @@
      rendered inside it would be painted underneath.
      ═══════════════════════════════════════════════════════════════ --}}
 @auth
+{{-- Back closes this instead of leaving the page (see resources/js/overlay-history.js). --}}
 <div x-data="{ open: false }"
+     x-overlay="open"
      @open-app-menu.window="open = true"
      @keydown.escape.window="open = false">
     <template x-teleport="body">

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Report;
 use App\Models\SolidarityCampaign;
 use App\Models\User;
+use App\Models\UserLocationHistory;
 use App\Models\YardMessage;
 use App\Models\SponsoredAd;
 use App\Models\YardRoom;
@@ -61,9 +62,34 @@ class AdminController extends Controller
             $query->where('current_country', $country);
         }
 
-        $users = $query->latest()->paginate(25);
+        if ($region = $request->input('region')) {
+            $query->where('current_region', $region);
+        }
 
-        return view('admin.users', compact('users'));
+        // "Who has moved recently" is the question that sends an admin to this
+        // page during an incident, so it is a filter rather than a sort.
+        if ($request->input('moved') === '24h') {
+            $query->where('location_updated_at', '>=', now()->subDay());
+        } elseif ($request->input('moved') === '7d') {
+            $query->where('location_updated_at', '>=', now()->subWeek());
+        }
+
+        if ($request->input('status') === 'suspended') {
+            $query->where('is_active', false);
+        } elseif ($request->input('status') === 'active') {
+            $query->where('is_active', true);
+        }
+
+        $users = $query->latest()->paginate(25)->withQueryString();
+
+        return view('admin.users', [
+            'users'   => $users,
+            'regions' => User::query()
+                ->whereNotNull('current_region')
+                ->distinct()
+                ->orderBy('current_region')
+                ->pluck('current_region'),
+        ]);
     }
 
     public function showUser(User $user)
@@ -75,7 +101,106 @@ class AdminController extends Controller
             'roles'         => $user->getRoleNames(),
         ];
 
-        return view('admin.user-show', compact('user', 'stats'));
+        // Only fetched for people allowed to see it; the view hides the card
+        // entirely otherwise.
+        $recentLocations = auth()->user()->can('view_user_location')
+            ? UserLocationHistory::where('user_id', $user->id)
+                ->latest('created_at')
+                ->limit(5)
+                ->get()
+            : collect();
+
+        return view('admin.user-show', compact('user', 'stats', 'recentLocations'));
+    }
+
+    /**
+     * A member's movement history.
+     *
+     * Gated by `view_user_location` rather than a role, so the line can be
+     * moved without a deploy, and every visit is written to the audit log —
+     * following someone around should itself leave a trace.
+     */
+    public function userLocations(Request $request, User $user)
+    {
+        abort_unless(auth()->user()->can('view_user_location'), 403);
+
+        $from = $request->date('from') ?: now()->subDays(30)->startOfDay();
+        $to   = $request->date('to') ?: now();
+
+        $query = UserLocationHistory::where('user_id', $user->id)
+            ->whereBetween('created_at', [$from, $to])
+            ->latest('created_at');
+
+        activity()
+            ->performedOn($user)
+            ->causedBy(auth()->user())
+            ->withProperties(['from' => $from->toDateString(), 'to' => $to->toDateString()])
+            ->log('Viewed location history');
+
+        if ($request->input('export') === 'csv') {
+            return $this->streamLocationCsv($user, (clone $query)->get());
+        }
+
+        return view('admin.user-locations', [
+            'user'   => $user,
+            'points' => $query->paginate(100)->withQueryString(),
+            // The map draws the route oldest-first, capped so one very busy
+            // member cannot push megabytes of coordinates into the page.
+            'track'  => (clone $query)->reorder('created_at')->limit(500)
+                ->get(['lat', 'lng', 'city', 'region', 'country', 'source', 'created_at']),
+            'from'   => $from,
+            'to'     => $to,
+        ]);
+    }
+
+    private function streamLocationCsv(User $user, $points)
+    {
+        $filename = 'locations-' . ($user->username ?: $user->id) . '-' . now()->format('Ymd') . '.csv';
+
+        return response()->streamDownload(function () use ($points) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, ['recorded_at', 'latitude', 'longitude', 'city', 'region', 'country', 'source', 'ip']);
+
+            foreach ($points as $p) {
+                fputcsv($out, [
+                    $p->created_at?->toIso8601String(),
+                    $p->lat, $p->lng, $p->city, $p->region, $p->country, $p->source, $p->ip_address,
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Everyone's latest known position on one map.
+     *
+     * Reads the snapshot columns on `users` rather than the history table, so
+     * it stays a single indexed query however long the trails get.
+     */
+    public function map(Request $request)
+    {
+        abort_unless(auth()->user()->can('view_user_location'), 403);
+
+        $query = User::query()
+            ->whereNotNull('current_lat')
+            ->whereNotNull('current_lng');
+
+        if ($country = $request->input('country')) {
+            $query->where('current_country', $country);
+        }
+
+        if ($seen = $request->input('seen')) {
+            $query->where('last_active_at', '>=', $seen === '24h' ? now()->subDay() : now()->subWeek());
+        }
+
+        return view('admin.map', [
+            'people' => $query->limit(2000)->get([
+                'id', 'name', 'username', 'avatar', 'current_lat', 'current_lng',
+                'current_city', 'current_region', 'current_country', 'last_active_at',
+            ]),
+            'countries' => User::whereNotNull('current_country')->distinct()->orderBy('current_country')->pluck('current_country'),
+        ]);
     }
 
     public function toggleAdmin(User $user)
@@ -92,6 +217,186 @@ class AdminController extends Controller
 
         $user->assignRole('admin');
         return back()->with('success', "{$user->name} has been made an admin.");
+    }
+
+    /**
+     * Suspend or restore an account.
+     *
+     * `is_active` is already enforced by the EnsureUserActive middleware, which
+     * signs the member out on their next request — this just gives it a button
+     * and makes the reason part of the permanent record.
+     */
+    public function toggleSuspension(Request $request, User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'You cannot suspend your own account.');
+        }
+
+        $data = $request->validate(['reason' => 'nullable|string|max:500']);
+        $suspending = (bool) $user->is_active;
+
+        $user->forceFill(['is_active' => ! $suspending])->save();
+
+        activity()
+            ->performedOn($user)
+            ->causedBy(auth()->user())
+            ->withProperties(['reason' => $data['reason'] ?? null])
+            ->log($suspending ? 'Suspended account' : 'Restored account');
+
+        return back()->with('success', $suspending
+            ? "{$user->name} has been suspended."
+            : "{$user->name} has been restored.");
+    }
+
+    /**
+     * Sign a member out everywhere.
+     *
+     * Sessions live in files on the server, so there is no row to delete.
+     * Bumping the stamp invalidates every existing session for that member the
+     * next time Laravel validates one.
+     */
+    public function forceLogout(User $user)
+    {
+        $user->forceFill(['remember_token' => \Illuminate\Support\Str::random(60)])->save();
+
+        \Illuminate\Support\Facades\DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->delete();
+
+        activity()->performedOn($user)->causedBy(auth()->user())->log('Forced logout');
+
+        return back()->with('success', "{$user->name} has been signed out on all devices.");
+    }
+
+    /**
+     * See the app as a member sees it.
+     *
+     * The most useful support tool there is, and the most dangerous button on
+     * the page: it needs its own permission, never applies to another admin,
+     * and both entering and leaving are logged. The original admin id is kept
+     * in the session so the banner can hand it back.
+     */
+    public function impersonate(User $user)
+    {
+        abort_unless(auth()->user()->can('impersonate_users'), 403);
+
+        if ($user->id === auth()->id()) {
+            return back();
+        }
+
+        if ($user->hasRole('super_admin') || $user->hasRole('admin')) {
+            return back()->with('error', 'You cannot impersonate another administrator.');
+        }
+
+        activity()->performedOn($user)->causedBy(auth()->user())->log('Started impersonation');
+
+        session(['impersonator_id' => auth()->id()]);
+        auth()->login($user);
+
+        return redirect()->route('home');
+    }
+
+    /** Hand the session back to the admin who started impersonating. */
+    public function stopImpersonating()
+    {
+        $adminId = session('impersonator_id');
+
+        if (! $adminId) {
+            return redirect()->route('home');
+        }
+
+        $admin = User::find($adminId);
+        session()->forget('impersonator_id');
+
+        if (! $admin) {
+            auth()->logout();
+
+            return redirect()->route('login');
+        }
+
+        activity()->performedOn(auth()->user())->causedBy($admin)->log('Stopped impersonation');
+        auth()->login($admin);
+
+        return redirect()->route('admin.users');
+    }
+
+    /**
+     * Operational state of the things that fail quietly: realtime, the queue,
+     * and the configuration that only bites in production.
+     */
+    public function health()
+    {
+        abort_unless(auth()->user()->can('view_system_health'), 403);
+
+        $probe = app(\App\Services\RealtimeProbe::class)->run();
+
+        $manifest = public_path('build/manifest.json');
+
+        return view('admin.health', [
+            'realtime' => $probe,
+            'queue' => [
+                'driver'  => config('queue.default'),
+                'pending' => \Illuminate\Support\Facades\Schema::hasTable('jobs')
+                    ? \Illuminate\Support\Facades\DB::table('jobs')->count() : null,
+                'failed'  => \Illuminate\Support\Facades\Schema::hasTable('failed_jobs')
+                    ? \Illuminate\Support\Facades\DB::table('failed_jobs')->count() : null,
+                'recentFailures' => \Illuminate\Support\Facades\Schema::hasTable('failed_jobs')
+                    ? \Illuminate\Support\Facades\DB::table('failed_jobs')->latest('failed_at')->limit(5)->get()
+                    : collect(),
+            ],
+            'config' => [
+                'env'            => config('app.env'),
+                // Debug mode in production prints the environment, secrets and
+                // all, on any unhandled error.
+                'debug'          => config('app.debug'),
+                'url'            => config('app.url'),
+                'configCached'   => file_exists(base_path('bootstrap/cache/config.php')),
+                'storageLinked'  => is_link(public_path('storage')) || is_dir(public_path('storage')),
+                'buildManifest'  => file_exists($manifest) ? substr(md5_file($manifest), 0, 8) : null,
+                'cacheDriver'    => config('cache.default'),
+                'sessionDriver'  => config('session.driver'),
+                'broadcastDriver'=> config('broadcasting.default'),
+            ],
+            'errors' => $this->recentLogErrors(),
+        ]);
+    }
+
+    /** Today's ERROR lines, grouped so repeats read as one problem. */
+    private function recentLogErrors(int $limit = 8): array
+    {
+        $candidates = [
+            storage_path('logs/laravel-' . now()->toDateString() . '.log'),
+            storage_path('logs/laravel.log'),
+        ];
+
+        foreach ($candidates as $path) {
+            if (! is_file($path)) {
+                continue;
+            }
+
+            // Only the tail: these files reach hundreds of megabytes.
+            $size = filesize($path);
+            $handle = fopen($path, 'r');
+            fseek($handle, max(0, $size - 256 * 1024));
+            $tail = fread($handle, 256 * 1024) ?: '';
+            fclose($handle);
+
+            $counts = [];
+            foreach (explode("
+", $tail) as $line) {
+                if (! str_contains($line, '.ERROR:')) {
+                    continue;
+                }
+                $message = trim(\Illuminate\Support\Str::limit(\Illuminate\Support\Str::after($line, '.ERROR:'), 160));
+                $counts[$message] = ($counts[$message] ?? 0) + 1;
+            }
+
+            arsort($counts);
+
+            return array_slice($counts, 0, $limit, true);
+        }
+
+        return [];
     }
 
     public function yard()
@@ -350,7 +655,18 @@ class AdminController extends Controller
 
     public function analytics()
     {
-        return view('admin.analytics', [
+        // Ten minutes is fresh enough for a dashboard and keeps a page refresh
+        // from re-running a dozen aggregates, the way the AI insight is cached.
+        $extra = \Illuminate\Support\Facades\Cache::remember('admin_analytics_v1', now()->addMinutes(10), function () {
+            return [
+                'activity'   => $this->activityCounts(),
+                'engagement' => $this->engagementCounts(),
+                'calls'      => $this->callCounts(),
+                'funnel'     => $this->funnelCounts(),
+            ];
+        });
+
+        return view('admin.analytics', array_merge($extra, [
             'userGrowth' => User::selectRaw('DATE(created_at) as date, COUNT(*) as count')
                 ->where('created_at', '>=', now()->subDays(30))
                 ->groupByRaw('DATE(created_at)')
@@ -362,7 +678,93 @@ class AdminController extends Controller
                 ->orderByDesc('count')
                 ->limit(10)
                 ->get(),
-        ]);
+        ]));
+    }
+
+    /** Daily / weekly / monthly actives, from last_active_at. */
+    private function activityCounts(): array
+    {
+        return [
+            'dau' => User::where('last_active_at', '>=', now()->subDay())->count(),
+            'wau' => User::where('last_active_at', '>=', now()->subWeek())->count(),
+            'mau' => User::where('last_active_at', '>=', now()->subMonth())->count(),
+            // Of the people who signed up 7+ days ago, how many came back this week.
+            'returning' => User::where('created_at', '<', now()->subWeek())
+                ->where('last_active_at', '>=', now()->subWeek())
+                ->count(),
+            'total' => User::count(),
+        ];
+    }
+
+    /** What people actually did, per day, over the last fortnight. */
+    private function engagementCounts(): array
+    {
+        $since = now()->subDays(14)->startOfDay();
+
+        return [
+            'messages' => YardMessage::where('created_at', '>=', $since)
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->groupByRaw('DATE(created_at)')->orderBy('date')->get(),
+            'listings' => \Illuminate\Support\Facades\Schema::hasTable('marketplace_listings')
+                ? \Illuminate\Support\Facades\DB::table('marketplace_listings')
+                    ->where('created_at', '>=', $since)
+                    ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                    ->groupByRaw('DATE(created_at)')->orderBy('date')->get()
+                : collect(),
+            'messagesToday' => YardMessage::whereDate('created_at', today())->count(),
+        ];
+    }
+
+    /**
+     * Calls, with the number that matters: how many actually connected.
+     * Nothing else in the panel shows whether calling works.
+     */
+    private function callCounts(): array
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('yard_calls')) {
+            return ['total' => 0, 'answered' => 0, 'rate' => null, 'medianSeconds' => null];
+        }
+
+        $since = now()->subDays(30);
+
+        $total = \Illuminate\Support\Facades\DB::table('yard_calls')->where('created_at', '>=', $since)->count();
+        $answered = \Illuminate\Support\Facades\DB::table('yard_calls')
+            ->where('created_at', '>=', $since)
+            ->where('duration_seconds', '>', 0)
+            ->count();
+
+        $durations = \Illuminate\Support\Facades\DB::table('yard_calls')
+            ->where('created_at', '>=', $since)
+            ->where('duration_seconds', '>', 0)
+            ->orderBy('duration_seconds')
+            ->pluck('duration_seconds');
+
+        return [
+            'total'         => $total,
+            'answered'      => $answered,
+            'rate'          => $total > 0 ? round($answered / $total * 100) : null,
+            'medianSeconds' => $durations->count() ? (int) $durations[intdiv($durations->count(), 2)] : null,
+        ];
+    }
+
+    /** Signup → onboarded → in a room → first message, and where people stop. */
+    private function funnelCounts(): array
+    {
+        $registered = User::count();
+
+        $onboarded = User::whereNotNull('current_country')->count();
+
+        $inRoom = \Illuminate\Support\Facades\DB::table('yard_room_members')
+            ->distinct()->count('user_id');
+
+        $spoke = YardMessage::distinct()->count('user_id');
+
+        return [
+            ['label' => 'Registered',    'count' => $registered],
+            ['label' => 'Gave location', 'count' => $onboarded],
+            ['label' => 'Joined a room', 'count' => $inRoom],
+            ['label' => 'Sent a message','count' => $spoke],
+        ];
     }
 
     // ── Sponsored Ads ──
