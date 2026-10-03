@@ -96,11 +96,23 @@
                         class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50">
                     <span x-text="busy ? 'Waiting…' : 'Send test event'"></span>
                 </button>
+
+                {{-- Opens its own socket, bypassing Echo, so the close code is
+                     visible. That code is the difference between "the key is
+                     wrong" and "something cut the connection". --}}
+                <button type="button" @click="rawTest()" :disabled="raw.busy"
+                        class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                    <span x-text="raw.busy ? 'Connecting…' : 'Raw socket test'"></span>
+                </button>
                 <span class="text-sm" :class="result.ok ? 'text-emerald-700' : 'text-rose-700'" x-text="result.message"></span>
             </div>
 
             <p x-show="socketError" x-cloak class="mt-3 rounded-lg bg-rose-50 px-3 py-2 font-mono text-xs text-rose-700"
                x-text="'socket: ' + socketError"></p>
+
+            <p x-show="raw.message" x-cloak class="mt-3 rounded-lg px-3 py-2 font-mono text-xs"
+               :class="raw.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
+               x-text="raw.message"></p>
 
             <p class="mt-3 text-xs text-slate-500">
                 The server publishes an event on your private health channel and this page
@@ -208,6 +220,7 @@
                 state: 'unknown',
                 endpoint: '(unknown)',
                 socketError: '',
+                raw: { busy: false, ok: false, message: '' },
                 busy: false,
                 result: { ok: false, message: '' },
                 _heard: false,
@@ -244,6 +257,62 @@
                     // Our own channel, so nothing else can make this look healthy.
                     echo.channel('admin-health.{{ auth()->id() }}')
                         .listen('.HealthPing', () => { this._heard = true; });
+                },
+
+                /**
+                 * Connect to Reverb directly and report what happens.
+                 *
+                 * 101 then "connection_established" means the path is clear.
+                 * Close 1006 with no open means something between the browser
+                 * and Reverb refused or cut the upgrade — nginx, a firewall, a
+                 * filtering network. 4001 means the app key is not recognised.
+                 */
+                rawTest() {
+                    this.raw = { busy: true, ok: false, message: '' };
+
+                    const key = @js(config('broadcasting.connections.reverb.key'));
+                    const url = `${this.endpoint}/app/${key}?protocol=7&client=health&version=1&flash=false`;
+                    const started = performance.now();
+                    let opened = false;
+
+                    let socket;
+                    try {
+                        socket = new WebSocket(url);
+                    } catch (e) {
+                        this.raw = { busy: false, ok: false, message: 'could not open socket: ' + e.message };
+                        return;
+                    }
+
+                    const finish = (ok, message) => {
+                        if (! this.raw.busy) return;
+                        this.raw = { busy: false, ok, message };
+                        try { socket.close(); } catch (_) {}
+                    };
+
+                    socket.onopen = () => {
+                        opened = true;
+                    };
+
+                    socket.onmessage = (event) => {
+                        const ms = Math.round(performance.now() - started);
+                        if (String(event.data).includes('connection_established')) {
+                            finish(true, `connected in ${ms} ms — the websocket path is clear`);
+                        }
+                    };
+
+                    socket.onclose = (event) => {
+                        finish(false, opened
+                            ? `opened, then closed: code ${event.code} ${event.reason || ''}`.trim()
+                            : `never opened: close code ${event.code}${event.code === 1006 ? ' (cut with no close frame — a proxy, firewall or network blocked the upgrade)' : ''}`);
+                    };
+
+                    socket.onerror = () => {
+                        // onerror carries no detail by design; onclose follows
+                        // with the code, so only act if it does not.
+                        setTimeout(() => finish(false, 'connection error with no close code'), 1500);
+                    };
+
+                    setTimeout(() => finish(false, 'timed out after 8s with no response'), 8000);
                 },
 
                 async ping() {
