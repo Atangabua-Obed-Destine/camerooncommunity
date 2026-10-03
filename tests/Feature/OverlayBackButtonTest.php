@@ -34,15 +34,12 @@ class OverlayBackButtonTest extends TestCase
             'x-overlay="photo.open"',  // full-size photo
             'x-overlay="open"',        // discover modal / drawer
             'x-overlay="showInfo"',    // room info panel
-            'x-overlay="sel.on"',      // message selection
-            'x-overlay="show"',        // forward modal
-            'x-overlay="lightboxOpen"',
         ] as $hook) {
             $this->assertStringContainsString($hook, $body, "missing back-button wiring: {$hook}");
         }
     }
 
-    public function test_the_chat_does_not_also_consume_a_press_an_overlay_took(): void
+    public function test_the_chat_overlays_register_once_a_room_is_open(): void
     {
         $user = $this->createUser(['username' => 'presser']);
         $room = YardRoom::factory()->create(['tenant_id' => $this->tenant->id]);
@@ -55,10 +52,17 @@ class OverlayBackButtonTest extends TestCase
             'joined_at' => now(),
         ]);
 
-        $this->actingAs($user)
-            ->get('/yard?room=' . $room->id)
-            ->assertOk()
-            ->assertSee('__cnOverlayConsumedPop', false);
+        $body = $this->actingAs($user)->get('/yard?room=' . $room->id)->assertOk()->getContent();
+
+        foreach ([
+            'x-overlay="sel.on"',        // message selection
+            'x-overlay="show"',          // forward modal
+            'x-overlay="lightboxOpen"',  // image viewer
+            // The chat panel must not also act on a press an overlay took.
+            '__cnOverlayConsumedPop',
+        ] as $hook) {
+            $this->assertStringContainsString($hook, $body, "missing back-button wiring: {$hook}");
+        }
     }
 
     public function test_the_profile_settings_popup_answers_back(): void
