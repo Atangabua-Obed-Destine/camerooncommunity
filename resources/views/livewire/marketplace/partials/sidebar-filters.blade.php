@@ -11,6 +11,8 @@
     {{-- Location + radius (FB-style "within X km of …") --}}
     @php
         $_radiusOpts = $this->radiusOptions();
+        $_regions = \App\Support\CameroonGeo::regionLabels();
+        $_activeRegion = $locLabel !== '' ? \App\Support\CameroonGeo::matchRegion($locLabel) : '';
         $_locText = $locLabel !== '' ? $locLabel : ($mpLang === 'fr' ? 'Tout le Cameroun' : 'All of Cameroon');
         $_radiusText = $radius ? ('· ' . $radius . ' km') : '';
     @endphp
@@ -108,6 +110,30 @@
              x-transition:enter-start="opacity-0 -translate-y-1"
              x-transition:enter-end="opacity-100 translate-y-0"
              class="mt-2 rounded-xl bg-white ring-1 ring-slate-200 p-3 shadow-sm relative z-40">
+            {{-- The ten regions, one tap each.
+                 Searching a city works, but it needs typing and a round trip to
+                 an outside geocoder — on a phone, on a Cameroonian connection,
+                 that is the difference between filtering by area and giving up.
+                 Everything a listing records is region-granular anyway, so these
+                 are the real choices. --}}
+            <div class="flex flex-wrap gap-1.5 mb-2.5">
+                @foreach ($_regions as $_key => $_names)
+                    @php $_label = $mpLang === 'fr' ? $_names['fr'] : $_names['en']; @endphp
+                    <button type="button"
+                            wire:click="setLocation(@js($_label))"
+                            @click="q = @js($_label)"
+                            class="px-2.5 py-1 rounded-full text-[12px] font-semibold transition {{ $_activeRegion === $_key
+                                ? 'bg-cm-green text-white'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200' }}">{{ $_label }}</button>
+                @endforeach
+                @if ($locLabel !== '')
+                    <button type="button" wire:click="clearLocation" @click="q = ''"
+                            class="px-2.5 py-1 rounded-full text-[12px] font-semibold text-slate-500 hover:text-cm-red transition">
+                        {{ $mpLang === 'fr' ? 'Tout le Cameroun' : 'All of Cameroon' }}
+                    </button>
+                @endif
+            </div>
+
             <div class="relative">
                 <input type="text" x-model="q" @input="searchLoc"
                        @keydown.enter.prevent="if(results.length > 0) selectLoc(results[0].lat, results[0].lon, results[0].display_name)"
@@ -165,11 +191,18 @@
             <div class="pt-3 mt-3 border-t border-slate-100">
                 <div class="flex justify-between items-center mb-2">
                     <div class="text-[12px] font-semibold text-slate-600" x-data x-text="$store.lang.t('Radius','Rayon')"></div>
-                    <div class="text-[12px] font-bold text-slate-900">{{ $radius ? $radius . ' km' : ($mpLang === 'fr' ? 'Tout' : 'All') }}</div>
+                    <div class="text-[12px] font-bold text-slate-900">{{ $radius
+                        ? $radius . ' km'
+                        : ($locLabel !== ''
+                            ? ($mpLang === 'fr' ? 'Cette région' : 'This region')
+                            : ($mpLang === 'fr' ? 'Tout' : 'All')) }}</div>
                 </div>
                 <input type="range" wire:model.live.debounce.800ms="radius" min="0" max="500" step="5" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-cm-green">
                 <div class="flex justify-between text-[10px] text-slate-400 mt-1.5">
-                    <span x-data x-text="$store.lang.t('Any','Tout')"></span>
+                    {{-- Left end used to read "Any", which read as "anywhere" while
+                         meaning "no distance chosen". With a place selected it is
+                         that place; widen from there. --}}
+                    <span x-data x-text="$store.lang.t('This region','Cette région')"></span>
                     <span>500 km</span>
                 </div>
             </div>

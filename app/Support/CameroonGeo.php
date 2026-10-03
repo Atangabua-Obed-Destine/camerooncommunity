@@ -69,11 +69,26 @@ class CameroonGeo
         // strip accents the simple way
         $s = strtr($s, ['é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','à'=>'a','â'=>'a','ô'=>'o','î'=>'i','ï'=>'i','ç'=>'c','ù'=>'u','û'=>'u']);
 
-        foreach (self::aliases() as $key => $aliases) {
-            foreach ($aliases as $a) {
-                if (preg_match('/\b' . preg_quote($a, '/') . '\b/iu', $s)) { return $key; }
+        // Longest alias first. Declaration order put 'nord' ahead of
+        // 'nord-ouest', and a hyphen is a word boundary, so every French
+        // Nord-Ouest and Sud-Ouest resolved to North and South — quietly
+        // filtering the marketplace to the wrong half of the country.
+        static $ordered = null;
+
+        if ($ordered === null) {
+            $ordered = [];
+            foreach (self::aliases() as $key => $aliases) {
+                foreach ($aliases as $a) {
+                    $ordered[] = [$key, $a];
+                }
             }
+            usort($ordered, fn ($x, $y) => mb_strlen($y[1]) <=> mb_strlen($x[1]));
         }
+
+        foreach ($ordered as [$key, $a]) {
+            if (preg_match('/\b' . preg_quote($a, '/') . '\b/iu', $s)) { return $key; }
+        }
+
         return '';
     }
 
@@ -110,6 +125,53 @@ class CameroonGeo
             }
         }
         return $keys;
+    }
+
+    /**
+     * Display names for the ten regions, for a picker the user reads.
+     *
+     * config('cameroon.regions') exists but keys Adamaoua as 'adamawa' and
+     * carries no French, so it cannot drive a picker that has to agree with
+     * the keys used here.
+     *
+     * @return array<string, array{en: string, fr: string}>
+     */
+    public static function regionLabels(): array
+    {
+        return [
+            'adamaoua'  => ['en' => 'Adamaoua',  'fr' => 'Adamaoua'],
+            'centre'    => ['en' => 'Centre',    'fr' => 'Centre'],
+            'east'      => ['en' => 'East',      'fr' => 'Est'],
+            'far_north' => ['en' => 'Far North', 'fr' => 'Extrême-Nord'],
+            'littoral'  => ['en' => 'Littoral',  'fr' => 'Littoral'],
+            'north'     => ['en' => 'North',     'fr' => 'Nord'],
+            'northwest' => ['en' => 'Northwest', 'fr' => 'Nord-Ouest'],
+            'south'     => ['en' => 'South',     'fr' => 'Sud'],
+            'southwest' => ['en' => 'Southwest', 'fr' => 'Sud-Ouest'],
+            'west'      => ['en' => 'West',      'fr' => 'Ouest'],
+        ];
+    }
+
+    /**
+     * The region a coordinate belongs to: the nearest regional capital.
+     *
+     * Used when someone picks a place without choosing a distance — “near
+     * Yaoundé” then means the Centre region rather than nothing at all.
+     */
+    public static function nearestRegion(float $lat, float $lng): string
+    {
+        $best = '';
+        $bestKm = INF;
+
+        foreach (self::centroids() as $key => $c) {
+            $km = self::haversineKm($lat, $lng, $c['lat'], $c['lng']);
+            if ($km < $bestKm) {
+                $bestKm = $km;
+                $best = $key;
+            }
+        }
+
+        return $best;
     }
 
     /**

@@ -50,6 +50,14 @@ document.addEventListener('alpine:init', () => {
 
         // Peer connections: { peerId: RTCPeerConnection }
         peers: {},
+
+        // Who we have already opened a connection to, so a 'joined' that
+        // arrives twice (two channels, or broadcast plus poll) is harmless.
+        _joinedPeers: [],
+        _joinPoll: null,
+
+        // Keys of signals already applied, so a duplicate delivery is ignored.
+        _seenSignals: [],
         remoteStreams: [],
 
         // Participants (from server)
@@ -102,6 +110,13 @@ document.addEventListener('alpine:init', () => {
                 });
                 this._userCallChannel.listen('.CallUpdated', (data) => {
                     this.handleCallUpdate(data);
+                });
+                // Signalling also comes down this channel, so a call still
+                // connects when the room channel is not subscribed.
+                this._userCallChannel.listen('.CallSignal', (data) => {
+                    if (data.to_user_id === currentUserId || data.to_user_id === 0) {
+                        this.handleSignal(data);
+                    }
                 });
             }
 
@@ -198,6 +213,7 @@ document.addEventListener('alpine:init', () => {
             this.callState = 'outgoing';
 
             this.startRingTimer();
+            this.startJoinPoll();
             this.acquireMedia(d.callType).then(() => {
                 // Wait for answer via broadcast
             });
@@ -281,15 +297,31 @@ document.addEventListener('alpine:init', () => {
             const uuid = this.incomingCall.callUuid;
             this.incomingCall = null;
 
-            // The microphone MUST be open before the server is told we answered.
-            // Answering triggers the caller's offer, and the answer we send back
-            // carries only the tracks this side had at that moment — so acquiring
-            // media afterwards produced a one-way call: the caller was heard, but
-            // nothing went back the other way. getUserMedia can take a while (or
-            // prompt), which is why this was intermittent.
-            await this.acquireMedia(this.callType);
+            // The microphone should be open before the server is told we
+            // answered. Answering triggers the caller's offer, and the answer we
+            // send back carries only the tracks this side had at that moment — so
+            // acquiring media afterwards produced a one-way call: the caller was
+            // heard, but nothing went back the other way.
+            //
+            // It must not be allowed to block forever, though. getUserMedia does
+            // not settle while a permission prompt sits unanswered, and on a
+            // domain the browser has never been granted the microphone on, that
+            // prompt appears exactly here — leaving the caller watching
+            // "Calling…" while this side had already pressed accept. After the
+            // grace period we answer anyway; _acquireMedia attaches the tracks
+            // and renegotiates if the stream turns up later.
+            await this.withTimeout(this.acquireMedia(this.callType), 8000);
 
-            this.$wire.answerCall(uuid);
+            try {
+                await this.$wire.answerCall(uuid);
+            } catch (e) {
+                // A failed round trip here used to be invisible on both sides:
+                // this side's incoming card was already gone, and the caller
+                // kept ringing until the 45s timeout.
+                console.error('[CallEngine] answerCall failed', e);
+                this.showError('Could not join the call. Check your connection and try again.');
+                this.cleanup();
+            }
         },
 
         onCallAnswered(detail) {
@@ -325,36 +357,7 @@ document.addEventListener('alpine:init', () => {
             if (data.user_id === currentUserId) return;
 
             if (data.action === 'joined') {
-                // Glare avoidance: when both peers receive each other's `joined`
-                // event ~simultaneously they would both create offers, racing on
-                // the same connection. We deterministically nominate the peer
-                // with the LOWER user id as the offerer (the one who joined
-                // first by id). The initiator of the call is always the offerer
-                // toward newcomers (callState === 'outgoing').
-                const isInitiator = (this.callState === 'outgoing');
-                const shouldOffer = isInitiator ? true : (currentUserId < data.user_id);
-
-                // Someone answered — transition to active
-                if (this.callState === 'outgoing') {
-                    this.callState = 'active';
-                    clearTimeout(this._ringTimeout);
-                    this.stopRingTimer();
-                    this.startCallTimer();
-
-                    // Refresh participants from Livewire
-                    this.$wire.call('refreshParticipants').then(() => {
-                        this.callParticipants = this.$wire.get('participants') || [];
-                    });
-
-                    // Create peer connection to the joined user
-                    this.createPeerConnection(data.user_id, data.user_name, shouldOffer);
-                } else if (this.callState === 'active') {
-                    // Additional person joining group call
-                    this.createPeerConnection(data.user_id, data.user_name, shouldOffer);
-                    this.$wire.call('refreshParticipants').then(() => {
-                        this.callParticipants = this.$wire.get('participants') || [];
-                    });
-                }
+                this.onPeerJoined(data.user_id, data.user_name);
             }
 
             if (data.action === 'declined') {
@@ -380,9 +383,109 @@ document.addEventListener('alpine:init', () => {
             }
         },
 
+        /**
+         * Someone is now in the call with us: open the peer connection and, if
+         * we were still ringing, start the call.
+         *
+         * Reached two ways — the CallUpdated 'joined' broadcast and the poll
+         * below, which reconciles with the server when that broadcast is lost.
+         * Both can arrive for the same person, and the broadcast now travels on
+         * two channels, so this has to be idempotent.
+         */
+        onPeerJoined(userId, userName) {
+            if (!userId || userId === currentUserId) return;
+            if (this._joinedPeers.includes(userId)) return;
+            if (this.callState !== 'outgoing' && this.callState !== 'active') return;
+
+            this._joinedPeers.push(userId);
+
+            // Glare avoidance: when both peers receive each other's `joined`
+            // ~simultaneously they would both create offers, racing on the same
+            // connection. The peer with the LOWER user id is deterministically
+            // nominated as the offerer, except that the initiator of the call is
+            // always the offerer toward newcomers.
+            const shouldOffer = this.callState === 'outgoing' ? true : (currentUserId < userId);
+
+            if (this.callState === 'outgoing') {
+                this.callState = 'active';
+                clearTimeout(this._ringTimeout);
+                this.stopRingTimer();
+                this.stopJoinPoll();
+                this.startCallTimer();
+            }
+
+            this.createPeerConnection(userId, userName, shouldOffer);
+
+            this.$wire.call('refreshParticipants').then(() => {
+                this.callParticipants = this.$wire.get('participants') || [];
+            }).catch(() => {});
+        },
+
+        /**
+         * While we are ringing, keep asking the server whether the other side
+         * picked up.
+         *
+         * The 'joined' broadcast is the normal path and this is the safety net.
+         * A websocket that dropped and reconnected mid-ring, a proxy that
+         * swallowed the frame, or a room channel that was never subscribed all
+         * end the same way: the callee is in the call and the caller still sees
+         * "Calling…" until it times out. The participant row is the truth, so
+         * poll it cheaply until the two agree.
+         */
+        startJoinPoll() {
+            this.stopJoinPoll();
+
+            this._joinPoll = setInterval(() => {
+                if (this.callState !== 'outgoing') {
+                    this.stopJoinPoll();
+                    return;
+                }
+
+                this.$wire.call('refreshParticipants').then(() => {
+                    const participants = this.$wire.get('participants') || [];
+                    this.callParticipants = participants;
+
+                    const joined = participants.find(p =>
+                        p.user_id !== currentUserId && p.status === 'joined'
+                    );
+
+                    if (joined) {
+                        console.warn('[CallEngine] joined event never arrived — reconciled from the server');
+                        this.onPeerJoined(joined.user_id, joined.name);
+                    }
+                }).catch(() => { /* a failed poll is retried on the next tick */ });
+            }, 3000);
+        },
+
+        stopJoinPoll() {
+            clearInterval(this._joinPoll);
+            this._joinPoll = null;
+        },
+
+        /**
+         * Resolve when the promise settles or when the grace period expires,
+         * whichever comes first. Never rejects: the caller carries on either way.
+         */
+        withTimeout(promise, ms) {
+            return Promise.race([
+                Promise.resolve(promise).catch(() => {}),
+                new Promise((resolve) => setTimeout(resolve, ms)),
+            ]);
+        },
+
         // ── WebRTC Signaling ──
         handleSignal(data) {
             const peerId = data.from_user_id;
+
+            // The same signal now arrives on two channels when both are
+            // subscribed. Applying an offer or an answer twice throws the peer
+            // connection out of state, so each one is handled once.
+            const key = [data.call_uuid, peerId, data.signal_type,
+                JSON.stringify(data.signal_data)].join('|');
+
+            if (this._seenSignals.includes(key)) return;
+            this._seenSignals.push(key);
+            if (this._seenSignals.length > 200) this._seenSignals.shift();
 
             if (data.signal_type === 'offer') {
                 this.handleOffer(peerId, data.signal_data);
@@ -783,6 +886,9 @@ document.addEventListener('alpine:init', () => {
 
             this.stopRingtone();
             this.stopRingTimer();
+            this.stopJoinPoll();
+            this._joinedPeers = [];
+            this._seenSignals = [];
             clearInterval(this._durationInterval);
             clearTimeout(this._ringTimeout);
 

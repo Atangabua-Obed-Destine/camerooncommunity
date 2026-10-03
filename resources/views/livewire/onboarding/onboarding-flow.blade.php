@@ -126,6 +126,7 @@
                         ['en' => '🏠 Housing & accommodation',            'fr' => '🏠 Logement & hébergement'],
                         ['en' => '🍲 Food & cultural events',             'fr' => '🍲 Cuisine & événements culturels'],
                         ['en' => '📦 Send a parcel home',                 'fr' => '📦 Envoyer un colis au pays'],
+                        ['en' => '🚗 Car pooling & rides',            'fr' => '🚗 Covoiturage & trajets'],
                     ],
                     // Round 2 — engagement style
                     [
@@ -202,8 +203,8 @@
                     <div class="text-4xl mb-3">🏠</div>
                     <h2 class="text-2xl font-bold mb-1" x-text="$store.lang.t('Your Communities', 'Vos Communautés')"></h2>
                     <p class="text-white/70 text-sm" x-text="$store.lang.t(
-                        'You\'ve been added to your national and regional rooms automatically, discover others below.',
-                        'Vous avez été automatiquement ajouté à vos salons national et régional, découvrez les autres ci-dessous.'
+                        'You\'ve been added to your national and regional rooms automatically.',
+                        'Vous avez été automatiquement ajouté à vos salons national et régional.'
                     )"></p>
                 </div>
             </div>

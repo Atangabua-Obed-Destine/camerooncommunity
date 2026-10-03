@@ -7118,3 +7118,39 @@
     user-select: none;
 }
 
+/* On a touch device the thread is not selectable text.
+ *
+ * A long press on a web page starts a native text selection: the blue
+ * highlight, the two drag handles, the system copy/share bar. In a chat that
+ * is pure interference — the gesture is meant to pick the message, and
+ * instead the user is left dragging handles around and dismissing a bar that
+ * covers the reaction row. This is also why the keyboard kept dropping.
+ *
+ * Keyed off the pointer rather than a width breakpoint: the old rule was
+ * applied at 767px and below, so a tablet or a large phone in landscape —
+ * still touch, still long-pressing — kept all of it. A mouse keeps normal
+ * selection, so copying a message on desktop still works.
+ */
+@media (hover: none) and (pointer: coarse) {
+    .yard-chat__messages,
+    .yard-ctx-backdrop,
+    .yard-sel-react,
+    .yard-sel-grid,
+    .yard-sel-bar {
+        -webkit-user-select: none;
+        user-select: none;
+        /* Stops the iOS "copy / look up" callout and Android's magnifier. */
+        -webkit-touch-callout: none;
+    }
+
+    /* Anything the user actually types into stays selectable. */
+    .yard-chat__messages input,
+    .yard-chat__messages textarea,
+    .yard-chat__messages [contenteditable='true'],
+    .yard-chat__messages .yard-selectable {
+        -webkit-user-select: text;
+        user-select: text;
+        -webkit-touch-callout: default;
+    }
+}
+
