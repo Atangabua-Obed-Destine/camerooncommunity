@@ -361,6 +361,25 @@ class AdminController extends Controller
         ]);
     }
 
+    /**
+     * Publish a test event on the health page's own channel.
+     *
+     * The server-side probe only proves PHP can hand an event to Reverb. This
+     * one is answered by the browser: if the page hears it, the whole chain —
+     * nginx, TLS, the websocket, the subscription — is working. If the publish
+     * succeeds and nothing arrives, the break is between Reverb and the
+     * browser, which is exactly the gap that is hard to see from a log.
+     */
+    public function healthPing(Request $request)
+    {
+        abort_unless(auth()->user()->can('view_system_health'), 403);
+
+        $token = (string) $request->input('token', '');
+        $probe = app(\App\Services\RealtimeProbe::class)->run('admin-health.' . auth()->id(), 'HealthPing');
+
+        return response()->json($probe + ['token' => $token]);
+    }
+
     /** Today's ERROR lines, grouped so repeats read as one problem. */
     private function recentLogErrors(int $limit = 8): array
     {
