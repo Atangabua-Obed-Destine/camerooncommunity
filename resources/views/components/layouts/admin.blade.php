@@ -51,10 +51,13 @@
                         ['route' => 'admin.tenants', 'icon' => '🏢', 'label_en' => 'Tenants', 'label_fr' => 'Tenants'],
                         ['route' => 'admin.ai', 'icon' => '🤖', 'label_en' => 'AI Management', 'label_fr' => 'Gestion IA'],
                         ['route' => 'admin.audit', 'icon' => '📋', 'label_en' => 'Audit Log', 'label_fr' => 'Journal d\'Audit'],
-                        ['route' => 'admin.analytics', 'icon' => '📈', 'label_en' => 'Analytics', 'label_fr' => 'Analytique'],                        ['route' => 'admin.sponsored-ads', 'icon' => '📢', 'label_en' => 'Sponsored Ads',   'label_fr' => 'Annonces Sponsorisées'],                    ];
+                        ['route' => 'admin.analytics', 'icon' => '📈', 'label_en' => 'Analytics', 'label_fr' => 'Analytique'],
+                        ['route' => 'admin.map', 'icon' => '🗺️', 'label_en' => 'Live Map', 'label_fr' => 'Carte en Direct', 'can' => 'view_user_location'],
+                        ['route' => 'admin.health', 'icon' => '🩺', 'label_en' => 'System Health', 'label_fr' => 'État du Système', 'can' => 'view_system_health'],                        ['route' => 'admin.sponsored-ads', 'icon' => '📢', 'label_en' => 'Sponsored Ads',   'label_fr' => 'Annonces Sponsorisées'],                    ];
                 @endphp
 
                 @foreach($navItems as $item)
+                @continue(isset($item['can']) && ! auth()->user()->can($item['can']))
                 <a href="{{ route($item['route']) }}"
                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors
                           {{ request()->routeIs($item['route'] . '*') ? 'bg-white/10 text-white font-semibold' : 'text-slate-400 hover:text-white hover:bg-white/5' }}">

@@ -16,6 +16,7 @@ use App\Services\ConnectionService;
 use App\Support\MarketplaceQueryBuilder;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -102,14 +103,155 @@ class SellerProfile extends Component
 
         try {
             app(ConnectionService::class)->request(auth()->user(), $this->user);
-            $this->dispatch('toast', type: 'success', message: app()->getLocale() === 'fr'
-                ? 'Demande de connexion envoyée.'
-                : 'Connection request sent.');
+            $this->toast('success', 'Connection request sent.', 'Demande de connexion envoyée.');
         } catch (\Throwable $e) {
             $this->dispatch('toast', type: 'error', message: $e->getMessage());
         }
 
-        unset($this->connection);
+        $this->refreshConnection();
+    }
+
+    /**
+     * The other side acted (accepted, cancelled, disconnected, blocked). The
+     * browser hears it over Echo and the view calls $refresh; this listener
+     * covers components dispatching it server-side, e.g. the Connections panel.
+     */
+    #[On('connection-updated')]
+    #[On('connection-state-changed')]
+    public function onConnectionChanged(): void
+    {
+        $this->refreshConnection();
+    }
+
+    /** Withdraw a request that has not been answered yet. */
+    public function cancelRequest(): void
+    {
+        if ($this->connectionState !== 'outgoing') {
+            return;
+        }
+
+        app(ConnectionService::class)->cancel(auth()->user(), (int) $this->user->id);
+        $this->toast('success', 'Request cancelled.', 'Demande annulée.');
+        $this->refreshConnection();
+    }
+
+    /** Accept a request this person sent us. */
+    public function acceptRequest(): void
+    {
+        if ($this->connectionState !== 'incoming') {
+            return;
+        }
+
+        app(ConnectionService::class)->accept(auth()->user(), (int) $this->user->id);
+        $this->toast('success', 'You are now connected.', 'Vous êtes maintenant connectés.');
+        $this->refreshConnection();
+        // accept() opens the one-to-one room, so the chat list has a new entry.
+        $this->dispatch('refreshRoomList');
+    }
+
+    /** Turn down a request without connecting. */
+    public function declineRequest(): void
+    {
+        if ($this->connectionState !== 'incoming') {
+            return;
+        }
+
+        app(ConnectionService::class)->decline(auth()->user(), (int) $this->user->id);
+        $this->toast('success', 'Request declined.', 'Demande refusée.');
+        $this->refreshConnection();
+    }
+
+    /** End an accepted connection. */
+    public function disconnect(): void
+    {
+        if ($this->connectionState !== 'connected') {
+            return;
+        }
+
+        app(ConnectionService::class)->disconnect(auth()->user(), (int) $this->user->id);
+        $this->toast('success', 'Disconnected.', 'Déconnecté.');
+        $this->refreshConnection();
+        $this->dispatch('refreshRoomList');
+    }
+
+    /** Lift a block this viewer placed. */
+    public function unblock(): void
+    {
+        if ($this->connectionState !== 'blocked-by-me') {
+            return;
+        }
+
+        app(ConnectionService::class)->unblock(auth()->user(), (int) $this->user->id);
+        $this->toast('success', 'Unblocked.', 'Débloqué.');
+        $this->refreshConnection();
+    }
+
+    /**
+     * Open the conversation. Messaging is for connected people only, so when
+     * they are not connected this says what to do instead of failing later in
+     * the Yard with a 403 the user never sees.
+     */
+    public function message()
+    {
+        if ($this->isSelf()) {
+            return null;
+        }
+
+        if ($this->connectionState !== 'connected') {
+            $this->toast(
+                'warning',
+                'Send a connection request first — you can message each other once it is accepted.',
+                'Envoyez d\'abord une demande de connexion : vous pourrez discuter une fois acceptée.'
+            );
+
+            return null;
+        }
+
+        $room = app(\App\Services\DirectMessageService::class)
+            ->findOrCreate(auth()->user(), (int) $this->user->id);
+
+        return redirect()->to(route('yard') . '?room=' . $room->id);
+    }
+
+    /**
+     * Drop every cached read of the relationship. Called after our own actions
+     * and when the other side acts, which arrives over Echo as
+     * 'connection-state-changed' and is bound to $refresh in the view.
+     */
+    protected function refreshConnection(): void
+    {
+        unset($this->connection, $this->connectionState, $this->dmRoomId);
+    }
+
+    protected function toast(string $type, string $en, string $fr): void
+    {
+        $this->dispatch('toast', type: $type, message: app()->getLocale() === 'fr' ? $fr : $en);
+    }
+
+    /**
+     * One word for the relationship, matching the vocabulary the Yard already
+     * uses: self | connected | outgoing | incoming | blocked-by-me |
+     * blocked-by-them | none. The whole action row is driven by this.
+     */
+    #[Computed]
+    public function connectionState(): string
+    {
+        if ($this->isSelf()) {
+            return 'self';
+        }
+
+        $c = $this->connection;
+
+        if (! $c) {
+            return 'none';
+        }
+
+        return match ($c->status) {
+            UserConnection::STATUS_ACCEPTED => 'connected',
+            UserConnection::STATUS_PENDING  => $c->requested_by === auth()->id() ? 'outgoing' : 'incoming',
+            UserConnection::STATUS_BLOCKED  => $c->requested_by === auth()->id() ? 'blocked-by-me' : 'blocked-by-them',
+            default                         => 'none',
+        };
     }
 
     /** True when the viewer is looking at their own profile. */

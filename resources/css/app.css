@@ -958,7 +958,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 5px;
     padding: 6px 14px;
     border-radius: 9999px;
     font-size: 0.85rem;
@@ -983,10 +983,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 22px;
+    /* No margin here: the pill is a flex row with its own gap, and the two
+       were stacking into an 8px gutter that made the badge look detached
+       from its label. */
+    min-width: 20px;
     height: 20px;
-    padding: 0 7px;
-    margin-left: 4px;
+    padding: 0 6px;
     border-radius: 9999px;
     font-size: 0.72rem;
     font-weight: 700;
@@ -1747,6 +1749,24 @@
     margin: 2px 0;
 }
 
+/* A system line naming a person opens their card. Inherits the pill's type so
+   it still reads as a quiet notice, with just enough affordance to invite the
+   tap. */
+.yard-chat__system-person {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--color-slate-400);
+    transition: color .15s;
+}
+.yard-chat__system-person:hover {
+    color: var(--color-cm-green);
+    text-decoration-color: currentColor;
+}
+
 /* Chat empty */
 .yard-chat__empty {
     flex: 1;
@@ -1824,6 +1844,19 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* The quote is a button now: it jumps to the message it quotes, so it has to
+   look like something you can press, and sit flush left like the old <div>. */
+.yard-msg__reply-preview--jump {
+    display: block;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s;
+}
+.yard-msg__reply-preview--jump:hover {
+    background: rgba(0,107,63,0.16);
 }
 
 /* Bubble */
@@ -7022,3 +7055,66 @@
         box-shadow: 0 6px 24px rgba(2, 25, 45, .35);
     }
 }
+/* ── Multi-select (WhatsApp-style), desktop and phone ──
+   The bar used to be inside the max-width:767px block, because selection was
+   a phone-only idea. Selecting works with a mouse too, so it lives out here
+   now; only its position is restated, since the mobile rules above already
+   describe the look. */
+.yard-sel-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 56px;
+    z-index: 1003;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 6px;
+    background: #fff;
+    border-bottom: 1px solid var(--color-slate-200);
+    box-shadow: 0 2px 10px rgba(2, 25, 45, .08);
+}
+
+.yard-sel-bar__btn {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 9999px;
+    color: var(--color-slate-700);
+    transition: background .15s;
+}
+.yard-sel-bar__btn:hover { background: var(--color-slate-100); }
+.yard-sel-bar__btn--danger { color: #e11d48; }
+.yard-sel-bar__count {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--color-slate-900);
+    min-width: 18px;
+}
+.yard-sel-bar__spacer { flex: 1; }
+
+/* A picked message. The tint runs the full width of the row, not just the
+   bubble, so a column of selected messages reads as one block the way it
+   does in WhatsApp. */
+.yard-msg:has(.yard-msg__bubble--picked) {
+    background: rgba(1, 80, 131, .10);
+    box-shadow: 0 0 0 100vmax rgba(1, 80, 131, .10);
+    clip-path: inset(0 -100vmax);
+}
+
+/* Fallback for browsers without :has() — the bubble itself still shows it. */
+.yard-msg__bubble--picked {
+    outline: 2px solid rgba(1, 80, 131, .45);
+    outline-offset: 2px;
+}
+
+/* While selecting, the whole thread is a set of targets: no text selection,
+   and a pointer that says "clickable". */
+.yard-chat__messages--selecting .yard-msg__bubble {
+    cursor: pointer;
+    user-select: none;
+}
+

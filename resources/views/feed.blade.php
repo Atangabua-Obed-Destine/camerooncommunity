@@ -26,19 +26,14 @@
              right-hand ads sidebar is hidden. --}}
         @include('partials.home-stories')
 
-        {{-- Quick shortcuts grid --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {{-- Quick shortcuts grid. Three across at every size: with the People
+             card gone, two columns would leave an orphan on the second row. --}}
+        <div class="grid grid-cols-3 gap-3 mb-6">
             <a href="{{ route('yard') }}" class="group rounded-xl bg-white border border-slate-200 p-4 hover:border-cm-green hover:shadow-md transition flex flex-col items-center gap-2">
                 <div class="h-12 w-12 rounded-full bg-cm-green/10 flex items-center justify-center text-cm-green">
                     <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.13 2 11.2c0 2.88 1.46 5.45 3.75 7.13V22l3.43-1.88c.9.25 1.85.38 2.82.38 5.52 0 10-4.13 10-9.2S17.52 2 12 2z"/></svg>
                 </div>
                 <span class="text-sm font-semibold text-slate-700" x-text="$store.lang.t('GoConnect', 'GoConnect')"></span>
-            </a>
-            <a href="{{ route('people') }}" class="group rounded-xl bg-white border border-slate-200 p-4 hover:border-cm-green hover:shadow-md transition flex flex-col items-center gap-2">
-                <div class="h-12 w-12 rounded-full bg-cm-yellow/20 flex items-center justify-center text-amber-600">
-                    <svg class="h-6 w-6" fill="currentColor" viewBox="0 0 24 24"><path d="M16 11c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                </div>
-                <span class="text-sm font-semibold text-slate-700" x-text="$store.lang.t('People', 'Personnes')"></span>
             </a>
             <a href="{{ auth()->user()?->profileUrl() ?? route('profile') }}" class="group rounded-xl bg-white border border-slate-200 p-4 hover:border-cm-green hover:shadow-md transition flex flex-col items-center gap-2">
                 <div class="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
@@ -53,6 +48,38 @@
                 <span class="text-sm font-semibold text-slate-700" x-text="$store.lang.t('Discover', 'Découvrir')"></span>
             </button>
         </div>
+
+        {{-- GoMarket shelf. The viewer's own region leads the list (see
+             HomeController::listingsNearUser); anything further afield only fills
+             the remaining slots, so what is for sale nearby is what they see
+             first. --}}
+        @if($nearbyListings->isNotEmpty())
+            <section class="mb-6">
+                <div class="flex items-end justify-between gap-3 mb-3">
+                    <div>
+                        <h2 class="text-lg font-extrabold text-slate-900">GoMarket</h2>
+                        @if($nearbyLabel)
+                            <p class="text-xs text-slate-500">
+                                <span x-data x-text="$store.lang.t('Near you in', 'Près de vous à')"></span>
+                                <span class="font-semibold text-slate-600">{{ $nearbyLabel }}</span>
+                            </p>
+                        @endif
+                    </div>
+                    <a href="{{ $nearbyRegion
+                            ? route('marketplace.index', ['region' => $nearbyRegion])
+                            : route('marketplace.index') }}"
+                       class="shrink-0 text-sm font-bold text-cm-green hover:underline">
+                        <span x-data x-text="$store.lang.t('See all', 'Voir tout')"></span> &rarr;
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                    @foreach($nearbyListings as $listing)
+                        <x-marketplace.listing-card :listing="$listing" />
+                    @endforeach
+                </div>
+            </section>
+        @endif
 
         {{-- Stats card --}}
         <div class="rounded-2xl bg-gradient-to-br from-cm-green to-emerald-700 text-white p-6 mb-6 shadow-md">

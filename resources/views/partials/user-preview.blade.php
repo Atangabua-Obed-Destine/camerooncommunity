@@ -16,9 +16,14 @@
     inside the chat panel is therefore confined to that panel and cannot dim the
     page or paint above the z-50 header. Teleporting escapes both.
 --}}
+{{-- Back closes this instead of leaving the page (see resources/js/overlay-history.js). --}}
 <div x-data="userPreview()"
+     x-overlay="isOpen"
      @open-user-preview.window="open($event.detail)"
      @open-user-photo.window="viewPhoto($event.detail?.url, $event.detail?.name, $event.detail?.bg)">
+
+    {{-- The photo viewer stacks on top of the card and unwinds first. --}}
+    <div x-overlay="photo.open" class="contents"></div>
     <template x-teleport="body">
         <div x-show="isOpen" x-cloak x-transition.opacity
              class="yard-user-profile-overlay"
@@ -94,14 +99,22 @@
                                         : $store.lang.t('Connect', 'Se connecter')"></span>
                                 </button>
 
-                                {{-- Waiting on them. Inline style because the --muted
-                                     modifier has no CSS rule, so it used to render as a
-                                     live-looking green button. --}}
-                                <div x-show="user.state === 'outgoing'"
-                                     class="yard-user-profile__dm-btn pointer-events-none"
-                                     style="background:#e2e8f0; color:#64748b; box-shadow:none;">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                    <span x-text="$store.lang.t('Request sent', 'Demande envoyée')"></span>
+                {{-- Waiting on them. The status is a chip, not a button: on a phone
+                     there is no hover, so a label that only changed on hover was
+                     invisible and the first tap cancelled by surprise. Cancelling
+                     is the quiet link underneath, like Disconnect. Inline style
+                     because the --muted modifier has no CSS rule. --}}
+                                <div x-show="user.state === 'outgoing'">
+                                    <div class="yard-user-profile__dm-btn pointer-events-none"
+                                         style="background:#e2e8f0; color:#64748b; box-shadow:none;">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l2 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                        <span x-text="$store.lang.t('Request sent', 'Demande envoyée')"></span>
+                                    </div>
+                                    <button type="button" :disabled="busy" @click="cancelRequest()"
+                                            class="mt-2 w-full text-center text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors"
+                                            x-text="busy
+                                                ? $store.lang.t('Cancelling…', 'Annulation…')
+                                                : $store.lang.t('Cancel request', 'Annuler la demande')"></button>
                                 </div>
 
                                 {{-- They asked you --}}
@@ -112,6 +125,12 @@
                                         ? $store.lang.t('Accepting...', 'Acceptation...')
                                         : $store.lang.t('Accept connection', 'Accepter la connexion')"></span>
                                 </button>
+
+                                {{-- Connected: ending it is deliberate and quiet, not a
+                                     button sitting next to Message waiting to be misclicked. --}}
+                                <button x-show="user.state === 'connected'" :disabled="busy" @click="disconnect()"
+                                        class="mt-2 w-full text-center text-xs font-semibold text-slate-400 hover:text-rose-600 transition-colors"
+                                        x-text="$store.lang.t('Disconnect', 'Se déconnecter')"></button>
 
                                 {{-- Blocked either way → no CTA --}}
                                 <div x-show="user.state === 'blocked-by-me' || user.state === 'blocked-by-them'"
@@ -381,6 +400,68 @@ if (typeof window.userPreview !== 'function') {
                     this.user.state = 'connected';
                     this.toast('success', this.$store.lang.t('Connected', 'Connecté'));
                     if (window.Livewire) window.Livewire.dispatch('refreshChat');
+                } catch (e) {
+                    this.toast('error', this.$store.lang.t('Network error', 'Erreur réseau'));
+                } finally {
+                    this.busy = false;
+                }
+            },
+
+            // Withdraw a request that has not been answered. The row goes back to
+            // 'none' locally so the card updates without a reload.
+            async cancelRequest() {
+                if (!this.user || this.busy) return;
+                this.busy = true;
+                try {
+                    const res = await fetch('{{ route('yard.connections.cancel') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': this.csrf(),
+                        },
+                        body: JSON.stringify({ user_id: this.user.id }),
+                    });
+                    if (!res.ok) throw new Error('cancel failed');
+                    this.user.state = 'none';
+                    this.toast('success', this.$store.lang.t('Request cancelled', 'Demande annulée'));
+                    if (window.Livewire) window.Livewire.dispatch('connection-updated', { userId: this.user.id, state: 'none' });
+                } catch (e) {
+                    this.toast('error', this.$store.lang.t('Network error', 'Erreur réseau'));
+                } finally {
+                    this.busy = false;
+                }
+            },
+
+            // End an accepted connection. Confirmed first: it also closes the door
+            // on messaging each other.
+            async disconnect() {
+                if (!this.user || this.busy) return;
+
+                const question = this.$store.lang.t(
+                    'Disconnect from this person? You will not be able to message each other.',
+                    'Vous déconnecter de cette personne ? Vous ne pourrez plus vous envoyer de messages.'
+                );
+                if (!window.confirm(question)) return;
+
+                this.busy = true;
+                try {
+                    const res = await fetch('{{ route('yard.connections.disconnect') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': this.csrf(),
+                        },
+                        body: JSON.stringify({ user_id: this.user.id }),
+                    });
+                    if (!res.ok) throw new Error('disconnect failed');
+                    this.user.state = 'none';
+                    this.toast('success', this.$store.lang.t('Disconnected', 'Déconnecté'));
+                    if (window.Livewire) {
+                        window.Livewire.dispatch('connection-updated', { userId: this.user.id, state: 'none' });
+                        window.Livewire.dispatch('refreshRoomList');
+                    }
                 } catch (e) {
                     this.toast('error', this.$store.lang.t('Network error', 'Erreur réseau'));
                 } finally {

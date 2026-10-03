@@ -34,6 +34,15 @@ class UpdateUserLocation
                     if ($country) {
                         app(LocationService::class)->handleUserLocation($user, $country, '', $region);
                     }
+
+                    // Same trail as the tracker's own reports; the service
+                    // filters out anything that is not a real move.
+                    app(\App\Services\LocationHistoryService::class)->record($user->fresh(), [
+                        'lat'     => (float) $lat,
+                        'lng'     => (float) $lng,
+                        'country' => $country ?: null,
+                        'region'  => $region ?: null,
+                    ], 'header', $request->ip());
                 }
             }
         }

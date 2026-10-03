@@ -104,6 +104,124 @@
                 </dl>
             </div>
 
+            {{-- Exact position and recent movement. Shown only to roles holding
+                 view_user_location; everyone else keeps the country/region card
+                 below, which is all moderation needs. --}}
+            @can('view_user_location')
+            <div class="bg-white rounded-xl border border-slate-100 shadow-sm lg:col-span-2">
+                <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide">Exact position</h2>
+                    <a href="{{ route('admin.users.locations', $user) }}"
+                       class="text-xs font-bold text-cm-green hover:underline">Full history &rarr;</a>
+                </div>
+
+                <div class="p-5 grid gap-5 md:grid-cols-2">
+                    <div>
+                        <dl class="space-y-2 text-sm">
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-slate-500">Coordinates</dt>
+                                <dd class="font-mono text-slate-800">
+                                    @if($user->current_lat && $user->current_lng)
+                                        {{ number_format((float) $user->current_lat, 5) }},
+                                        {{ number_format((float) $user->current_lng, 5) }}
+                                    @else
+                                        &mdash;
+                                    @endif
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-slate-500">Updated</dt>
+                                <dd class="text-slate-800">
+                                    {{ $user->location_updated_at?->diffForHumans() ?? 'never' }}
+                                </dd>
+                            </div>
+                            <div class="flex justify-between gap-4">
+                                <dt class="text-slate-500">Active location</dt>
+                                <dd class="text-slate-800">
+                                    {{ trim(collect([$user->active_region, $user->active_country])->filter()->join(', ')) ?: '—' }}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        @if($user->current_lat && $user->current_lng)
+                            <a href="https://www.openstreetmap.org/?mlat={{ $user->current_lat }}&mlon={{ $user->current_lng }}#map=14/{{ $user->current_lat }}/{{ $user->current_lng }}"
+                               target="_blank" rel="noopener"
+                               class="mt-3 inline-block text-xs font-semibold text-cm-green hover:underline">
+                                Open in OpenStreetMap
+                            </a>
+                        @endif
+                    </div>
+
+                    <div>
+                        <h3 class="text-xs uppercase tracking-wide text-slate-400 mb-2">Last movements</h3>
+                        @if($recentLocations->isEmpty())
+                            <p class="text-sm text-slate-500">
+                                Nothing recorded yet. Points appear once this member's device
+                                reports a position more than ~1 km from the last one.
+                            </p>
+                        @else
+                            <ol class="space-y-2">
+                                @foreach($recentLocations as $point)
+                                    <li class="flex items-start justify-between gap-3 text-sm">
+                                        <span class="text-slate-700">{{ $point->placeLabel() }}</span>
+                                        <span class="shrink-0 text-xs text-slate-400">{{ $point->created_at?->diffForHumans() }}</span>
+                                    </li>
+                                @endforeach
+                            </ol>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endcan
+
+            {{-- Account control. Suspension is enforced by EnsureUserActive on
+                 the member's next request. --}}
+            <div class="bg-white rounded-xl border border-slate-100 shadow-sm lg:col-span-2">
+                <div class="px-5 py-3 border-b border-slate-100">
+                    <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wide">Account control</h2>
+                </div>
+
+                <div class="p-5 flex flex-wrap items-center gap-3">
+                    @if($user->id !== auth()->id())
+                        <form method="POST" action="{{ route('admin.users.suspension', $user) }}"
+                              class="flex items-center gap-2"
+                              onsubmit="return confirm('{{ $user->is_active ? 'Suspend' : 'Restore' }} this account?')">
+                            @csrf
+                            @if($user->is_active)
+                                <input type="text" name="reason" placeholder="Reason (recorded)"
+                                       class="rounded-lg border-slate-300 text-sm focus:ring-cm-green focus:border-cm-green" />
+                            @endif
+                            <button class="rounded-lg px-4 py-2 text-sm font-semibold text-white
+                                   {{ $user->is_active ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700' }}">
+                                {{ $user->is_active ? 'Suspend account' : 'Restore account' }}
+                            </button>
+                        </form>
+
+                        <form method="POST" action="{{ route('admin.users.force-logout', $user) }}"
+                              onsubmit="return confirm('Sign this member out on all devices?')">
+                            @csrf
+                            <button class="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                                Force logout
+                            </button>
+                        </form>
+
+                        @can('impersonate_users')
+                            @unless($user->hasRole('admin') || $user->hasRole('super_admin'))
+                                <form method="POST" action="{{ route('admin.users.impersonate', $user) }}"
+                                      onsubmit="return confirm('Sign in as this member? Your session becomes theirs until you return, and both steps are logged.')">
+                                    @csrf
+                                    <button class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                                        View as this member
+                                    </button>
+                                </form>
+                            @endunless
+                        @endcan
+                    @else
+                        <p class="text-sm text-slate-500">These controls do not apply to your own account.</p>
+                    @endif
+                </div>
+            </div>
+
             {{-- Location & profile --}}
             <div class="bg-white rounded-xl border border-slate-100 shadow-sm">
                 <div class="px-5 py-3 border-b border-slate-100">

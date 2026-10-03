@@ -24,10 +24,40 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="w-44">
+                    <label class="text-xs font-medium text-slate-500 mb-1 block" x-text="$store.lang.t('Region', 'Région')"></label>
+                    <select name="region" class="w-full rounded-lg border-slate-300 text-sm focus:ring-cm-green focus:border-cm-green">
+                        <option value="">All</option>
+                        @foreach($regions as $r)
+                            <option value="{{ $r }}" @selected(request('region') === $r)>{{ $r }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- "Who has moved lately" is the question that brings an admin
+                     here during an incident. --}}
+                <div class="w-40">
+                    <label class="text-xs font-medium text-slate-500 mb-1 block">Moved</label>
+                    <select name="moved" class="w-full rounded-lg border-slate-300 text-sm focus:ring-cm-green focus:border-cm-green">
+                        <option value="">Any time</option>
+                        <option value="24h" @selected(request('moved') === '24h')>Last 24 hours</option>
+                        <option value="7d" @selected(request('moved') === '7d')>Last 7 days</option>
+                    </select>
+                </div>
+
+                <div class="w-36">
+                    <label class="text-xs font-medium text-slate-500 mb-1 block">Status</label>
+                    <select name="status" class="w-full rounded-lg border-slate-300 text-sm focus:ring-cm-green focus:border-cm-green">
+                        <option value="">All</option>
+                        <option value="active" @selected(request('status') === 'active')>Active</option>
+                        <option value="suspended" @selected(request('status') === 'suspended')>Suspended</option>
+                    </select>
+                </div>
+
                 <button type="submit" class="px-4 py-2 bg-cm-green text-white text-sm font-medium rounded-lg hover:bg-cm-green/90">
                     <span x-text="$store.lang.t('Filter', 'Filtrer')"></span>
                 </button>
-                @if(request()->hasAny(['search', 'country']))
+                @if(request()->hasAny(['search', 'country', 'region', 'moved', 'status']))
                     <a href="{{ route('admin.users') }}" class="px-4 py-2 text-slate-500 text-sm hover:text-slate-700">Clear</a>
                 @endif
             </form>
@@ -52,6 +82,7 @@
                             <th class="px-4 py-3 font-semibold text-slate-600">Email</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Country</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Region</th>
+                            <th class="px-4 py-3 font-semibold text-slate-600">Last seen</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Status</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Role</th>
                             <th class="px-4 py-3 font-semibold text-slate-600">Joined</th>
@@ -84,6 +115,12 @@
                             <td class="px-4 py-3 text-slate-600">{{ $user->email }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $user->current_country ?? '-' }}</td>
                             <td class="px-4 py-3 text-slate-600">{{ $user->current_region ?? '-' }}</td>
+                            <td class="px-4 py-3 text-slate-500 whitespace-nowrap">
+                                <div>{{ $user->last_active_at?->diffForHumans() ?? 'never' }}</div>
+                                @if($user->location_updated_at)
+                                    <div class="text-xs text-slate-400">moved {{ $user->location_updated_at->diffForHumans() }}</div>
+                                @endif
+                            </td>
                             <td class="px-4 py-3">
                                 @if($user->is_banned)
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">Banned</span>

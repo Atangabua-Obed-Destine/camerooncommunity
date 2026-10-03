@@ -101,6 +101,33 @@ class YardController extends Controller
     }
 
     /**
+     * Withdraw a connection request this user sent and has not had answered.
+     */
+    public function cancelConnection(Request $request)
+    {
+        $request->validate(['user_id' => 'required|integer|exists:users,id']);
+
+        app(\App\Services\ConnectionService::class)
+            ->cancel($request->user(), (int) $request->input('user_id'));
+
+        return response()->json(['status' => 'cancelled', 'state' => 'none']);
+    }
+
+    /**
+     * End an accepted connection. The conversation survives — only the
+     * connection goes, which is what stops either side sending anything new.
+     */
+    public function disconnectConnection(Request $request)
+    {
+        $request->validate(['user_id' => 'required|integer|exists:users,id']);
+
+        app(\App\Services\ConnectionService::class)
+            ->disconnect($request->user(), (int) $request->input('user_id'));
+
+        return response()->json(['status' => 'disconnected', 'state' => 'none']);
+    }
+
+    /**
      * Create or open existing Direct Message room between two users.
      */
     public function createDm(Request $request)
@@ -124,39 +151,9 @@ class YardController extends Controller
             ], 403);
         }
 
-        // Find existing DM between these two users
-        $existingRoom = YardRoom::where('room_type', RoomType::DirectMessage)
-            ->whereHas('members', fn ($q) => $q->where('user_id', $user->id))
-            ->whereHas('members', fn ($q) => $q->where('user_id', $targetId))
-            ->first();
-
-        if ($existingRoom) {
-            // slug and id both let callers outside the Yard navigate straight in,
-            // via /yard/room/{slug} or /yard?room={id}.
-            return response()->json(['room_id' => $existingRoom->id, 'slug' => $existingRoom->slug]);
-        }
-
-        $target = User::findOrFail($targetId);
-
-        $room = YardRoom::create([
-            'tenant_id' => $user->tenant_id,
-            'name' => ($user->username ?? $user->name) . ' & ' . ($target->username ?? $target->name),
-            'slug' => 'dm-' . Str::uuid()->toString(),
-            'country' => $user->current_country ?? 'Cameroon',
-            'room_type' => RoomType::DirectMessage,
-            'created_by' => $user->id,
-            'is_system_room' => false,
-            'members_count' => 2,
-        ]);
-
-        foreach ([$user->id, $targetId] as $memberId) {
-            YardRoomMember::create([
-                'tenant_id' => $user->tenant_id,
-                'room_id' => $room->id,
-                'user_id' => $memberId,
-                'role' => 'member',
-            ]);
-        }
+        // slug and id both let callers outside the Yard navigate straight in,
+        // via /yard/room/{slug} or /yard?room={id}.
+        $room = app(\App\Services\DirectMessageService::class)->findOrCreate($user, $targetId);
 
         return response()->json(['room_id' => $room->id, 'slug' => $room->slug]);
     }

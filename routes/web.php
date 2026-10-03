@@ -124,6 +124,8 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::get('/yard/users/search', [YardController::class, 'searchUsers'])->name('yard.users.search');
     Route::post('/yard/connections/request', [YardController::class, 'requestConnection'])->name('yard.connections.request');
     Route::post('/yard/connections/accept', [YardController::class, 'acceptConnection'])->name('yard.connections.accept');
+    Route::post('/yard/connections/cancel', [YardController::class, 'cancelConnection'])->name('yard.connections.cancel');
+    Route::post('/yard/connections/disconnect', [YardController::class, 'disconnectConnection'])->name('yard.connections.disconnect');
     Route::get('/yard/connections/state/{userId}', [YardController::class, 'connectionState'])
         ->whereNumber('userId')
         ->name('yard.connections.state');
@@ -136,29 +138,47 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
         ->whereNumber('userId')
         ->name('yard.contacts.nickname.get');
 
-    // TURN credentials (proxies Metered API — keeps secret server-side)
+    // TURN credentials (proxies Metered API — keeps secret server-side).
+    //
+    // This must always answer with a usable ICE list. Http::get throws on a DNS
+    // failure or timeout, and that uncaught exception turned the endpoint into a
+    // 500: the call engine then fell back to STUN only, which cannot connect two
+    // peers behind carrier NAT. The result is cached briefly because the engine
+    // asks for it on every page load.
     Route::get('/api/turn-credentials', function () {
+        $stunOnly = [['urls' => 'stun:stun.l.google.com:19302']];
+
         $domain = config('services.metered.domain');
         $key = config('services.metered.secret_key');
 
         if (! $domain || ! $key) {
-            return response()->json([
-                ['urls' => 'stun:stun.l.google.com:19302'],
-            ]);
+            return response()->json($stunOnly);
         }
 
-        $response = \Illuminate\Support\Facades\Http::get(
-            "https://{$domain}/api/v1/turn/credentials",
-            ['apiKey' => $key]
+        $servers = \Illuminate\Support\Facades\Cache::remember(
+            'turn_credentials',
+            now()->addMinutes(5),
+            function () use ($domain, $key, $stunOnly) {
+                try {
+                    $response = \Illuminate\Support\Facades\Http::timeout(5)->get(
+                        "https://{$domain}/api/v1/turn/credentials",
+                        ['apiKey' => $key]
+                    );
+
+                    if ($response->successful() && is_array($response->json())) {
+                        return $response->json();
+                    }
+
+                    \Log::warning('TURN credentials request failed', ['status' => $response->status()]);
+                } catch (\Throwable $e) {
+                    \Log::warning('TURN credentials unreachable: ' . $e->getMessage());
+                }
+
+                return $stunOnly;
+            }
         );
 
-        if ($response->successful()) {
-            return $response->json();
-        }
-
-        return response()->json([
-            ['urls' => 'stun:stun.l.google.com:19302'],
-        ]);
+        return response()->json($servers);
     })->name('api.turn-credentials');
 
     // Profile
@@ -296,11 +316,31 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
 });
 
 // ─── Admin Panel Routes ───
-Route::prefix('admin')->name('admin.')->middleware(['auth', 'verified', 'role:super_admin|admin'])->group(function () {
+// Leaving impersonation is not an admin route: by then you are signed in as
+// the member, so the admin role check would turn you away.
+Route::post('/impersonate/stop', [\App\Http\Controllers\Admin\AdminController::class, 'stopImpersonating'])
+    ->middleware('auth')
+    ->name('impersonate.stop');
+
+Route::prefix('admin')->name('admin.')
+    ->middleware(['auth', 'verified', 'role:super_admin|admin', \App\Http\Middleware\LogsAdminActions::class])
+    ->group(function () {
     Route::get('/', [\App\Http\Controllers\Admin\AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/users', [\App\Http\Controllers\Admin\AdminController::class, 'users'])->name('users');
     Route::get('/users/{user}', [\App\Http\Controllers\Admin\AdminController::class, 'showUser'])->name('users.show');
     Route::post('/users/{user}/toggle-admin', [\App\Http\Controllers\Admin\AdminController::class, 'toggleAdmin'])->name('users.toggle-admin');
+
+    // Where a member has been, and the live picture of everyone.
+    Route::get('/users/{user}/locations', [\App\Http\Controllers\Admin\AdminController::class, 'userLocations'])->name('users.locations');
+    Route::get('/map', [\App\Http\Controllers\Admin\AdminController::class, 'map'])->name('map');
+
+    // Account control.
+    Route::post('/users/{user}/suspension', [\App\Http\Controllers\Admin\AdminController::class, 'toggleSuspension'])->name('users.suspension');
+    Route::post('/users/{user}/force-logout', [\App\Http\Controllers\Admin\AdminController::class, 'forceLogout'])->name('users.force-logout');
+    Route::post('/users/{user}/impersonate', [\App\Http\Controllers\Admin\AdminController::class, 'impersonate'])->name('users.impersonate');
+
+    // Operational health.
+    Route::get('/health', [\App\Http\Controllers\Admin\AdminController::class, 'health'])->name('health');
     Route::get('/yard', [\App\Http\Controllers\Admin\AdminController::class, 'yard'])->name('yard');
     Route::get('/solidarity', [\App\Http\Controllers\Admin\AdminController::class, 'solidarity'])->name('solidarity');
     Route::post('/solidarity/{campaign}/approve', [\App\Http\Controllers\Admin\AdminController::class, 'approveCampaign'])->name('solidarity.approve');

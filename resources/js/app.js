@@ -1,5 +1,7 @@
 import './bootstrap';
 import './call-engine';
+// Registers the x-overlay directive: the back button closes popups.
+import './overlay-history';
 
 // Livewire v4 bundles Alpine + @alpinejs/persist internally.
 // We use alpine:init to register stores BEFORE Alpine.start().

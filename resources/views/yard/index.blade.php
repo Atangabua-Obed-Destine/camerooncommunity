@@ -1,7 +1,10 @@
 <x-layouts.app :yardMode="true">
     <x-slot:title>GoConnect | Cameroon Network</x-slot:title>
 
-    <div class="yard-container" x-data="yardApp(@js($activeRoom?->id), @js($activeRoom?->room_type?->value))" @room-selected.window="onRoomSelected($event.detail)" @room-deselected.window="onRoomSelected({ roomId: null })" @yard-back.window="goBack()" @yard-open-new-chat.window="openNewChat()" @toggle-room-info.window="toggleInfo()" @open-room-info.window="openInfo($event.detail?.roomId)" @room-type-changed.window="activeRoomType = $event.detail.roomType"
+    <div class="yard-container" x-data="yardApp(@js($activeRoom?->id), @js($activeRoom?->room_type?->value))"
+         {{-- The info panel is an overlay on a phone: Back should close it
+              before it closes the chat. --}}
+         x-overlay="showInfo" @room-selected.window="onRoomSelected($event.detail)" @room-deselected.window="onRoomSelected({ roomId: null })" @yard-back.window="goBack()" @yard-open-new-chat.window="openNewChat()" @toggle-room-info.window="toggleInfo()" @open-room-info.window="openInfo($event.detail?.roomId)" @room-type-changed.window="activeRoomType = $event.detail.roomType"
          @open-dm.window="startDmWith($event.detail.userId)"
          @connection-updated.window="syncConnectionState($event.detail)"
          @connection-failed.window="rollbackConnectionState($event.detail)"
@@ -610,6 +613,9 @@
                         this.isMobile = window.innerWidth < 768;
                     });
                     window.addEventListener('popstate', () => {
+                        // An open popup already consumed this press — closing the
+                        // chat as well would skip two steps at once.
+                        if (window.__cnOverlayConsumedPop) return;
                         if (! this.isMobile) return;
                         if (this.activeRoom) {
                             this.activeRoom = null;

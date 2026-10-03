@@ -577,9 +577,13 @@
          pick any seeded country/region.
          ═══════════════════════════════════════════════════════════ --}}
     @if($showLocationSwitcher)
+    {{-- Back closes this instead of leaving the Yard. --}}
     <div class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
-         x-data="{ entering: false }"
-         x-init="$nextTick(() => entering = true)"
+         x-data="{
+             entering: false,
+             init() { $nextTick(() => this.entering = true); window.cnOverlay?.open(this, () => $wire.closeLocationSwitcher()); },
+             destroy() { window.cnOverlay?.close(this); },
+         }"
          @keydown.escape.window="$wire.closeLocationSwitcher()">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"
              x-show="entering" x-transition.opacity

@@ -26,7 +26,8 @@
 @endonce
 
 <div class="cm-stories">
-    <div x-data="homeStories()" x-show="ads.length > 0" x-cloak class="mb-6">
+    {{-- Back closes this instead of leaving the page (see resources/js/overlay-history.js). --}}
+    <div x-data="homeStories()" x-overlay="viewing" x-show="ads.length > 0" x-cloak class="mb-6">
 
         {{-- Heading --}}
         <div class="flex items-center justify-between mb-3">

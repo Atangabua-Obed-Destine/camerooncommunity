@@ -2,7 +2,9 @@
     Discover Modal — animated, sliding hero + feature carousel.
     Triggered by `window.dispatchEvent(new CustomEvent('open-discover'))`.
 --}}
+{{-- Back closes this instead of leaving the page (see resources/js/overlay-history.js). --}}
 <div x-data="discoverModal()"
+     x-overlay="open"
      x-on:open-discover.window="openModal()"
      x-on:keydown.escape.window="open = false"
      x-cloak>
