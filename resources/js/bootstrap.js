@@ -26,7 +26,9 @@ window.Echo = new Echo({
     wsPort: echoSecure ? 443 : Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
     wssPort: echoSecure ? 443 : Number(import.meta.env.VITE_REVERB_PORT ?? 8080),
     forceTLS: echoSecure,
-    enabledTransports: echoSecure ? ['wss'] : ['ws'],
+    // Both names stay enabled and forceTLS picks the right one. Listing only
+    // one removed pusher's own fallback path for no benefit.
+    enabledTransports: ['ws', 'wss'],
 });
 
 // ── Echo cleanup ────────────────────────────────────────────────
