@@ -1754,52 +1754,10 @@
             };
         }
 
-        function lastSeen(isoDate) {
-            return {
-                label: '',
-                _interval: null,
-                init() {
-                    this._update(isoDate);
-                    this._interval = setInterval(() => this._update(isoDate), 30000);
-                },
-                destroy() {
-                    if (this._interval) clearInterval(this._interval);
-                },
-                _update(iso) {
-                    const date = new Date(iso);
-                    const now = new Date();
-                    const diff = now - date;
-                    const mins = Math.floor(diff / 60000);
-                    const hours = Math.floor(diff / 3600000);
-                    const days = Math.floor(diff / 86400000);
-                    const isEn = (this.$store?.lang?.current ?? 'en') === 'en';
-
-                    if (mins < 1) {
-                        this.label = isEn ? 'last seen just now' : 'vu il y a un instant';
-                    } else if (mins < 60) {
-                        this.label = isEn
-                            ? 'last seen ' + mins + ' min ago'
-                            : 'vu il y a ' + mins + ' min';
-                    } else if (hours < 24 && date.getDate() === now.getDate()) {
-                        const t = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        this.label = isEn
-                            ? 'last seen today at ' + t
-                            : 'vu aujourd\'hui à ' + t;
-                    } else if (days < 2) {
-                        const t = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        this.label = isEn
-                            ? 'last seen yesterday at ' + t
-                            : 'vu hier à ' + t;
-                    } else {
-                        const d = date.toLocaleDateString([], { day: 'numeric', month: 'short' });
-                        const t = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        this.label = isEn
-                            ? 'last seen ' + d + ' at ' + t
-                            : 'vu le ' + d + ' à ' + t;
-                    }
-                }
-            };
-        }
+        // lastSeen() now lives in resources/js/app.js as an Alpine.data
+        // component. It used to be defined here, inside the component, and a
+        // Livewire morph could initialise the status span before this script
+        // had run — "label is not defined" in the console, and no status.
 
         function chatUi() {
             return {

@@ -36,6 +36,52 @@ document.addEventListener('alpine:init', () => {
         }
     });
 
+    // "last seen 5 min ago" under a DM partner's name.
+    //
+    // Registered here rather than in the chat view: a component-local function
+    // can be outrun by a Livewire morph that re-inserts the element without
+    // re-running the script, and the span then fails with "label is not
+    // defined". Alpine's registry is available before any component mounts.
+    Alpine.data('lastSeen', (isoDate) => ({
+        label: '',
+        _interval: null,
+
+        init() {
+            this.refresh(isoDate);
+            // Keeps "2 min ago" honest while the chat stays open.
+            this._interval = setInterval(() => this.refresh(isoDate), 30000);
+        },
+
+        destroy() {
+            if (this._interval) clearInterval(this._interval);
+        },
+
+        refresh(iso) {
+            const date = new Date(iso);
+            if (isNaN(date.getTime())) { this.label = ''; return; }
+
+            const now = new Date();
+            const mins = Math.floor((now - date) / 60000);
+            const hours = Math.floor((now - date) / 3600000);
+            const days = Math.floor((now - date) / 86400000);
+            const isEn = (this.$store?.lang?.current ?? 'en') === 'en';
+            const time = () => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            if (mins < 1) {
+                this.label = isEn ? 'last seen just now' : 'vu il y a un instant';
+            } else if (mins < 60) {
+                this.label = isEn ? `last seen ${mins} min ago` : `vu il y a ${mins} min`;
+            } else if (hours < 24 && date.getDate() === now.getDate()) {
+                this.label = isEn ? `last seen today at ${time()}` : `vu aujourd'hui à ${time()}`;
+            } else if (days < 2) {
+                this.label = isEn ? `last seen yesterday at ${time()}` : `vu hier à ${time()}`;
+            } else {
+                const d = date.toLocaleDateString([], { day: 'numeric', month: 'short' });
+                this.label = isEn ? `last seen ${d} at ${time()}` : `vu le ${d} à ${time()}`;
+            }
+        },
+    }));
+
     // Live message-status store for WhatsApp-style ticks.
     // Keyed by message id → 'sending' | 'sent' | 'delivered' | 'read'.
     Alpine.store('msgStatus', {});
