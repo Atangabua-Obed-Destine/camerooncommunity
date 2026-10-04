@@ -372,6 +372,18 @@ class CallManager extends Component
             return;
         }
 
+        // Offers and answers are the two signals that decide whether a call
+        // ever carries audio, and the only trace of them was in whichever
+        // browser happened to be open. ICE candidates are left out: there are
+        // dozens per call and they say nothing the offer does not.
+        if ($signalType !== 'ice-candidate') {
+            \Log::info("Call signal: {$signalType}", [
+                'call' => $callUuid,
+                'from' => $user->id,
+                'to'   => $toUserId,
+            ]);
+        }
+
         $this->broadcastToOthers(new CallSignal(
             $call->tenant_id,
             $call->room_id,
