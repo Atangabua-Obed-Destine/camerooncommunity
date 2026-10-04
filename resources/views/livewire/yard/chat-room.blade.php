@@ -348,8 +348,12 @@
          :class="sel.on ? 'yard-chat__messages--selecting' : ''"
          x-ref="chatMessages"
          x-init="positioning = true; scrollToBottom()"
-         {{-- Selection is switched off in CSS by pointer type, not here by
-              width — see the (pointer: coarse) block in app.css. --}}
+         {{-- Selection is switched off in CSS — see the touch block in app.css.
+              This is the backstop: some browsers raise the native menu on a
+              long press even with selection disabled, and that menu eats the
+              gesture the reaction bar needs. Links keep their own menu, so
+              "copy link address" still works. --}}
+         @contextmenu="if (! $event.target.closest('a')) $event.preventDefault()"
          @scroll.passive="hovHide();
              // Telegram-style infinite scroll: when the user scrolls within
              // 80px of the top, auto-trigger loadMore (debounced via the flag).

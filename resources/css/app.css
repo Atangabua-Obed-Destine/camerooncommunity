@@ -2043,8 +2043,11 @@
     white-space: nowrap;
 }
 
-/* A mouse idea, and nothing else. */
-@media (hover: none) {
+/* A mouse idea, and nothing else.
+   The per-bubble chrome this replaced was also hidden below 768px, where
+   long-press is the way in; without the width here a narrow window shows a
+   hover toolbar the old design did not. */
+@media (hover: none), (max-width: 767px) {
     .yard-hov { display: none !important; }
 }
 
@@ -7159,12 +7162,17 @@
  * instead the user is left dragging handles around and dismissing a bar that
  * covers the reaction row. This is also why the keyboard kept dropping.
  *
- * Keyed off the pointer rather than a width breakpoint: the old rule was
- * applied at 767px and below, so a tablet or a large phone in landscape —
- * still touch, still long-pressing — kept all of it. A mouse keeps normal
- * selection, so copying a message on desktop still works.
+ * Both conditions, because neither covers the other. The pointer query
+ * catches a tablet or a large phone in landscape, which a 767px breakpoint
+ * misses. The breakpoint catches a narrow window on a machine that reports a
+ * mouse — a touchscreen laptop, a resized desktop window, device emulation
+ * without touch — where the pointer query reads "fine" and native long-press
+ * came back, taking the gesture before the reaction bar could open.
+ *
+ * On a wide screen with a mouse, selection stays as it is, so copying a
+ * message on desktop still works.
  */
-@media (hover: none) and (pointer: coarse) {
+@media (hover: none) and (pointer: coarse), (max-width: 767px) {
     .yard-chat__messages,
     .yard-ctx-backdrop,
     .yard-sel-react,
