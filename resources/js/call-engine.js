@@ -1,5 +1,5 @@
 // Bumped whenever this file changes, so a deployed browser can be identified.
-const ENGINE_BUILD = '2026-10-04.poll-trace';
+const ENGINE_BUILD = '2026-10-04.verify-answer';
 
 /**
  * Cameroon Network — WebRTC Call Engine (Alpine.js component)
@@ -345,7 +345,26 @@ document.addEventListener('alpine:init', () => {
 
             try {
                 await this.$wire.answerCall(uuid);
-                console.log('[CallEngine] server accepted the answer', uuid);
+
+                // "Resolved" is not the same as "ran". A middleware redirect
+                // makes Livewire resolve the promise without calling the
+                // method at all, and the call then sits ringing forever with
+                // nothing anywhere saying why. Ask the server what it thinks
+                // our status is before believing the answer took.
+                await this.$wire.call('refreshParticipants');
+                const after = this.$wire.get('participants') || [];
+                const me = after.find(p => p.user_id === currentUserId);
+
+                if (me && me.status === 'joined') {
+                    console.log('[CallEngine] server accepted the answer', uuid);
+                } else {
+                    console.error('[CallEngine] the request succeeded but the server did not ' +
+                        'record the answer — our status is', me ? me.status : '(not a participant)',
+                        '— something is intercepting the request before the component runs');
+                    this.showError('Could not join the call. Please reload the page and try again.');
+                    this.cleanup();
+                    return;
+                }
             } catch (e) {
                 // A failed round trip here used to be invisible on both sides:
                 // this side's incoming card was already gone, and the caller

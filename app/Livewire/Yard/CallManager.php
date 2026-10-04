@@ -162,6 +162,18 @@ class CallManager extends Component
     public function answerCall(string $callUuid): void
     {
         $user = Auth::user();
+
+        // First statement in the method on purpose. The callee's browser has
+        // reported a successful answer while the participant row stayed at
+        // "ringing" and nothing was logged — which is what a middleware
+        // redirect looks like from the outside: Livewire follows it, the
+        // promise resolves, and the method never runs. If this line is absent
+        // after an accept, the request never got here.
+        \Log::info('Call answer received', [
+            'call' => $callUuid,
+            'by'   => $user?->id,
+        ]);
+
         $call = YardCall::where('uuid', $callUuid)->firstOrFail();
 
         if (! $call->isActive()) {
