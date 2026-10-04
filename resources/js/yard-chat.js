@@ -112,16 +112,18 @@ document.addEventListener('alpine:init', () => {
                 },
                 destroy() {
                     if (this._statusPoll) clearInterval(this._statusPoll);
-                    if (window.Echo) {
-                        if (this._receiptsChannelName) {
-                            try { window.Echo.leave(this._receiptsChannelName); } catch (_) {}
-                            this._receiptsChannelName = null;
-                        }
-                        if (this._echoChannelName) {
-                            try { window.Echo.leave(this._echoChannelName); } catch (_) {}
-                            this._echoChannelName = null;
-                            this._echoChannel = null;
-                        }
+                    clearTimeout(this._syncTimer);
+
+                    // Release our own handlers only. The call engine listens on
+                    // the room channel too, and leaving it outright used to take
+                    // its listeners down with ours.
+                    if (this._receiptsChannelName) {
+                        window.cnRealtime?.release(this._receiptsChannelName, this);
+                        this._receiptsChannelName = null;
+                    }
+                    if (this._echoChannelName) {
+                        window.cnRealtime?.release(this._echoChannelName, this);
+                        this._echoChannelName = null;
                     }
                 },
 
@@ -147,17 +149,21 @@ document.addEventListener('alpine:init', () => {
                 },
 
                 subscribeReceipts(channelName) {
-                    if (!window.Echo || !channelName) return;
-                    if (this._receiptsChannelName === channelName) return;
+                    if (! channelName) return;
 
-                    if (this._receiptsChannelName) {
-                        window.Echo.leave(this._receiptsChannelName);
+                    // Asking the registry rather than trusting a local flag: the
+                    // flag said "subscribed" while the channel had been torn down
+                    // underneath us, and ticks then stopped advancing for good.
+                    if (window.cnRealtime?.holds(channelName, this)) return;
+
+                    if (this._receiptsChannelName && this._receiptsChannelName !== channelName) {
+                        window.cnRealtime?.release(this._receiptsChannelName, this);
                     }
-                    this._receiptsChannelName = channelName;
 
                     const self = this;
-                    window.Echo.channel(channelName)
-                        .listen('.MessageDelivered', (e) => {
+
+                    const ok = window.cnRealtime?.join(channelName, this, {
+                        '.MessageDelivered': (e) => {
                             // Sender side: a recipient confirmed delivery.
                             // Only upgrade to 'delivered' if ALL recipients have delivered.
                             if (!e || !e.message_id) return;
@@ -168,8 +174,8 @@ document.addEventListener('alpine:init', () => {
                             } else if (!cur) {
                                 store[e.message_id] = 'sent';
                             }
-                        })
-                        .listen('.MessageRead', (e) => {
+                        },
+                        '.MessageRead': (e) => {
                             // Sender side: recipient(s) opened the room and read.
                             if (!e || !e.message_ids) return;
                             const store = window.Alpine.store('msgStatus');
@@ -181,7 +187,10 @@ document.addEventListener('alpine:init', () => {
                                     store[id] = 'delivered';
                                 }
                             }
-                        });
+                        },
+                    });
+
+                    if (ok) this._receiptsChannelName = channelName;
                 },
 
                 // ── Context Menu state ──
@@ -654,17 +663,20 @@ document.addEventListener('alpine:init', () => {
                 },
 
                 subscribeEcho(channelName) {
-                    // No room or same channel — skip
-                    if (!channelName || channelName === this._echoChannelName) return;
+                    if (! channelName) return;
 
-                    // Unsubscribe from previous channel
-                    if (this._echoChannelName && window.Echo) {
-                        window.Echo.leave(this._echoChannelName);
+                    // The registry is the source of truth, not a local flag. The
+                    // flag said we were still subscribed while the call engine's
+                    // Echo.leave() had destroyed the shared channel, so this
+                    // returned early and the thread never received another
+                    // message — with the socket still connected.
+                    if (window.cnRealtime?.holds(channelName, this)) return;
+
+                    if (this._echoChannelName && this._echoChannelName !== channelName) {
+                        window.cnRealtime?.release(this._echoChannelName, this);
                     }
 
-                    this._echoChannelName = channelName;
-
-                    if (!window.Echo) {
+                    if (! window.Echo) {
                         console.warn('Laravel Echo not available');
                         return;
                     }
@@ -672,21 +684,21 @@ document.addEventListener('alpine:init', () => {
                     const component = this.$wire;
                     const self = this;
 
-                    this._echoChannel = window.Echo.channel(channelName)
-                        .listen('.MessageSent', (e) => {
+                    const ok = window.cnRealtime?.join(channelName, this, {
+                        '.MessageSent': (e) => {
                             self.onMessageBroadcast(e);
-                        })
-                        .listen('.MessageDeleted', (e) => {
+                        },
+                        '.MessageDeleted': (e) => {
                             component.onMessageDeleted(e);
-                        })
-                        .listen('.UserTyping', (e) => {
+                        },
+                        '.UserTyping': (e) => {
                             self.onTypingReceived(e);
-                        })
-                        .listen('.JoinRequestReceived', (e) => {
+                        },
+                        '.JoinRequestReceived': (e) => {
                             // Refresh room-info panel so admin sees the pending request
                             window.dispatchEvent(new CustomEvent('join-request-received', { detail: e }));
-                        })
-                        .listen('.room.updated', (e) => {
+                        },
+                        '.room.updated': (e) => {
                             // Membership / avatar / name change in this room.
                             // Refresh both the chat header (member count, avatar)
                             // and the room-info side panel (member roster).
@@ -704,7 +716,10 @@ document.addEventListener('alpine:init', () => {
                             } catch (err) {
                                 console.warn('room.updated handler failed', err);
                             }
-                        });
+                        },
+                    });
+
+                    if (ok) this._echoChannelName = channelName;
                 },
 
                 // Raise the curtain while a room opens, and never leave it up: a

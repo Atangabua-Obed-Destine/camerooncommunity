@@ -1,5 +1,8 @@
 import './bootstrap';
 import './call-engine';
+// Reference-counted Echo channels. The chat and the call engine share the
+// room channel, and Echo.leave() destroys a channel for everyone holding it.
+import './realtime-channels';
 // Registers the x-overlay directive: the back button closes popups.
 import './overlay-history';
 // The Yard chat room's Alpine components. Bundled rather than inlined in the

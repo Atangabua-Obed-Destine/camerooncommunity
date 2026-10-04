@@ -112,22 +112,24 @@ document.addEventListener('alpine:init', () => {
                 const userCallChannel = `tenant.${tenantId}.user.${currentUserId}.calls`;
                 console.log('[CallEngine] listening for calls on', userCallChannel);
                 this._userCallChannelName = userCallChannel;
-                this._userCallChannel = window.Echo.channel(userCallChannel);
-                this._userCallChannel.listen('.CallStarted', (data) => {
-                    console.log('[CallEngine] CallStarted on user channel', data);
-                    if (data.initiated_by !== currentUserId) {
-                        this.handleIncomingCall(data);
-                    }
-                });
-                this._userCallChannel.listen('.CallUpdated', (data) => {
-                    this.handleCallUpdate(data);
-                });
-                // Signalling also comes down this channel, so a call still
-                // connects when the room channel is not subscribed.
-                this._userCallChannel.listen('.CallSignal', (data) => {
-                    if (data.to_user_id === currentUserId || data.to_user_id === 0) {
-                        this.handleSignal(data);
-                    }
+
+                window.cnRealtime?.join(userCallChannel, this, {
+                    '.CallStarted': (data) => {
+                        console.log('[CallEngine] CallStarted on user channel', data);
+                        if (data.initiated_by !== currentUserId) {
+                            this.handleIncomingCall(data);
+                        }
+                    },
+                    '.CallUpdated': (data) => {
+                        this.handleCallUpdate(data);
+                    },
+                    // Signalling also comes down this channel, so a call still
+                    // connects when the room channel is not subscribed.
+                    '.CallSignal': (data) => {
+                        if (data.to_user_id === currentUserId || data.to_user_id === 0) {
+                            this.handleSignal(data);
+                        }
+                    },
                 });
             }
 
@@ -152,8 +154,11 @@ document.addEventListener('alpine:init', () => {
         },
 
         unsubscribeRoom() {
-            if (this._echoChannel && this._echoChannelName && window.Echo) {
-                try { window.Echo.leave(this._echoChannelName); } catch (_) {}
+            // Release our handlers only. The chat thread listens on this same
+            // channel, and Echo.leave() took its listeners down with ours —
+            // which is why messages stopped arriving after a room switch.
+            if (this._echoChannelName) {
+                window.cnRealtime?.release(this._echoChannelName, this);
             }
             this._echoChannel = null;
             this._echoChannelName = null;
@@ -161,33 +166,32 @@ document.addEventListener('alpine:init', () => {
 
         subscribeToRoom(roomId) {
             const channelName = `tenant.${tenantId}.room.${roomId}`;
-            // Same room — no-op.
-            if (this._echoChannelName === channelName) return;
-            // Different room — leave the previous one before subscribing.
-            this.unsubscribeRoom();
 
-            if (window.Echo) {
-                console.log('[CallEngine] subscribing to room channel', channelName);
-                this._echoChannelName = channelName;
-                this._echoChannel = window.Echo.channel(channelName);
-                this._echoChannel._roomId = roomId;
+            if (window.cnRealtime?.holds(channelName, this)) return;
 
-                this._echoChannel.listen('.CallStarted', (data) => {
+            if (this._echoChannelName && this._echoChannelName !== channelName) {
+                this.unsubscribeRoom();
+            }
+
+            console.log('[CallEngine] subscribing to room channel', channelName);
+
+            const ok = window.cnRealtime?.join(channelName, this, {
+                '.CallStarted': (data) => {
                     if (data.initiated_by !== currentUserId) {
                         this.handleIncomingCall(data);
                     }
-                });
-
-                this._echoChannel.listen('.CallSignal', (data) => {
+                },
+                '.CallSignal': (data) => {
                     if (data.to_user_id === currentUserId || data.to_user_id === 0) {
                         this.handleSignal(data);
                     }
-                });
-
-                this._echoChannel.listen('.CallUpdated', (data) => {
+                },
+                '.CallUpdated': (data) => {
                     this.handleCallUpdate(data);
-                });
-            }
+                },
+            });
+
+            if (ok) this._echoChannelName = channelName;
         },
 
         async fetchTurnServers() {
