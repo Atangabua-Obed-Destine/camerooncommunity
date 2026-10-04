@@ -96,10 +96,12 @@ class CheckTurnCredentials extends Command
         $this->newLine();
 
         $this->line(match ($response->status()) {
-            401, 403 => '  401/403 means the key was not accepted. Check that the key in .env is '
-                . 'the TURN API key from this exact app (' . $domain . ') in the Metered dashboard, '
-                . 'that it has not been rotated, and — if the config is cached — that the cache was '
-                . 'rebuilt after the key changed: php artisan config:cache',
+            401, 403 => '  401/403 means the key was not accepted. If a freshly regenerated key is '
+                . 'also refused, the credentials API wants a different key than the account secret '
+                . 'on the Developers page — and the quicker way through is to stop asking for '
+                . 'credentials at all: create a fixed TURN credential in the dashboard and put its '
+                . 'username and password in TURN_USERNAME / TURN_PASSWORD, with the relay URLs in '
+                . 'TURN_URLS. Those are used directly, no API call involved.',
             404      => '  404 usually means METERED_DOMAIN is wrong; it is the app subdomain, '
                 . 'something like yourapp.metered.live.',
             429      => '  429 is the free tier running out. The account needs topping up.',
