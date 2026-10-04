@@ -97,14 +97,11 @@ class CreateTurnCredential extends Command
 
         if ($apiKey) {
             $this->newLine();
-            $this->line('This credential also carries its own apiKey, which is what');
-            $this->line('GET /turn/credentials wants. Setting it keeps the fetch-on-demand');
-            $this->line('path working as well:');
+            $this->line('This credential carries its own apiKey, which is what the');
+            $this->line('fetch-on-demand path wants. It goes in its own variable, beside');
+            $this->line('the account secret rather than over it:');
             $this->newLine();
-            $this->line('METERED_SECRET_KEY=' . $apiKey);
-            $this->newLine();
-            $this->warn('Careful: that replaces the account secret key, which is what THIS');
-            $this->warn('command needs. Keep the original somewhere before overwriting it.');
+            $this->line('METERED_API_KEY=' . $apiKey);
         }
 
         $this->newLine();

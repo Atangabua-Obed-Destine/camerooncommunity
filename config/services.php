@@ -39,9 +39,24 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    /*
+     * Metered uses two different keys, and sending one where the other is
+     * expected produces "Invalid API Key" against a key the dashboard is
+     * displaying — which costs an afternoon to work out.
+     *
+     *   secret_key  the account key on the Developers page. Creates and
+     *               removes credentials: POST /turn/credential?secretKey=
+     *   api_key     belongs to one credential, and is returned when that
+     *               credential is created. Fetches relay addresses:
+     *               GET /turn/credentials?apiKey=
+     *
+     * api_key falls back to secret_key only so an older .env keeps behaving
+     * as it did.
+     */
     'metered' => [
         'domain' => env('METERED_DOMAIN'),
         'secret_key' => env('METERED_SECRET_KEY'),
+        'api_key' => env('METERED_API_KEY') ?: env('METERED_SECRET_KEY'),
     ],
 
     /*

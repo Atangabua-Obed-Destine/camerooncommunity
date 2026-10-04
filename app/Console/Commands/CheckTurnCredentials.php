@@ -45,12 +45,19 @@ class CheckTurnCredentials extends Command
         }
 
         $domain = config('services.metered.domain');
-        $key = config('services.metered.secret_key');
+        $key = config('services.metered.api_key');
 
         if (! $domain || ! $key) {
-            $this->warn('Metered is not configured (METERED_DOMAIN / METERED_SECRET_KEY).');
+            $this->warn('Metered is not configured (METERED_DOMAIN / METERED_API_KEY).');
 
             return $static ? self::SUCCESS : self::FAILURE;
+        }
+
+        // With a relay configured, this path is a convenience rather than
+        // something calls depend on. Saying so keeps a red block from becoming
+        // background noise that hides a real failure later.
+        if ($static) {
+            $this->line('(not required — the relay above is what the browser uses)');
         }
 
         $this->info('Metered');
@@ -96,12 +103,10 @@ class CheckTurnCredentials extends Command
         $this->newLine();
 
         $this->line(match ($response->status()) {
-            401, 403 => '  401/403 means the key was not accepted. If a freshly regenerated key is '
-                . 'also refused, the credentials API wants a different key than the account secret '
-                . 'on the Developers page — and the quicker way through is to stop asking for '
-                . 'credentials at all: create a fixed TURN credential in the dashboard and put its '
-                . 'username and password in TURN_USERNAME / TURN_PASSWORD, with the relay URLs in '
-                . 'TURN_URLS. Those are used directly, no API call involved.',
+            401, 403 => '  401/403 here means METERED_API_KEY is not a credential\'s key. It is '
+                . 'not the account secret from the Developers page — that one creates credentials '
+                . 'and belongs in METERED_SECRET_KEY. Run calls:turn-credential and use the apiKey '
+                . 'it prints, or ignore this entirely and rely on TURN_URLS.',
             404      => '  404 usually means METERED_DOMAIN is wrong; it is the app subdomain, '
                 . 'something like yourapp.metered.live.',
             429      => '  429 is the free tier running out. The account needs topping up.',

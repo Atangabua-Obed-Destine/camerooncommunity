@@ -1,5 +1,5 @@
 // Bumped whenever this file changes, so a deployed browser can be identified.
-const ENGINE_BUILD = '2026-10-04.accept-trace';
+const ENGINE_BUILD = '2026-10-04.signal-trace';
 
 /**
  * Cameroon Network — WebRTC Call Engine (Alpine.js component)
@@ -246,6 +246,13 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            // The same call arrives on both the user channel and the room
+            // channel, so without this the card is built twice and the
+            // ringtone restarts on top of itself.
+            if (this.incomingCall && this.incomingCall.callUuid === data.call_uuid) {
+                return;
+            }
+
             console.log('[CallEngine] ringing — showing the incoming card', data.call_uuid);
 
             this.incomingCall = {
@@ -422,6 +429,8 @@ document.addEventListener('alpine:init', () => {
             if (this._joinedPeers.includes(userId)) return;
             if (this.callState !== 'outgoing' && this.callState !== 'active') return;
 
+            console.log('[CallEngine] peer joined:', userId, '— leaving', this.callState);
+
             this._joinedPeers.push(userId);
 
             // Glare avoidance: when both peers receive each other's `joined`
@@ -502,6 +511,8 @@ document.addEventListener('alpine:init', () => {
         handleSignal(data) {
             const peerId = data.from_user_id;
 
+            console.log('[CallEngine] signal in:', data.signal_type, 'from', peerId);
+
             // The same signal now arrives on two channels when both are
             // subscribed. Applying an offer or an answer twice throws the peer
             // connection out of state, so each one is handled once.
@@ -526,6 +537,9 @@ document.addEventListener('alpine:init', () => {
 
         createPeerConnection(peerId, peerName, createOffer = false) {
             if (this.peers[peerId]) return;
+
+            console.log('[CallEngine] opening peer connection to', peerId,
+                createOffer ? '(we offer)' : '(we answer)');
 
             const pc = new RTCPeerConnection({ iceServers: this.iceServers });
             this.peers[peerId] = pc;
@@ -617,13 +631,14 @@ document.addEventListener('alpine:init', () => {
                 }).then(offer => {
                     return pc.setLocalDescription(offer);
                 }).then(() => {
+                    console.log('[CallEngine] signal out: offer to', peerId);
                     this.$wire.sendSignal(
                         this.callUuid,
                         peerId,
                         'offer',
                         { sdp: pc.localDescription.toJSON() }
                     );
-                }).catch(err => console.error('Offer error:', err));
+                }).catch(err => console.error('[CallEngine] could not build an offer:', err));
             }
         },
 
