@@ -110,6 +110,14 @@ class CheckTurnCredentials extends Command
         });
 
         $this->newLine();
+        if ($static) {
+            $this->newLine();
+            $this->info('  Calls still work: the relay configured above is served to the browser');
+            $this->info('  ahead of anything the provider returns, so this refusal costs nothing.');
+
+            return self::SUCCESS;
+        }
+
         $this->line('  Independent of the provider, TURN_URLS / TURN_USERNAME / TURN_PASSWORD in .env');
         $this->line('  point the app at any other relay, including a coturn on this server.');
 
