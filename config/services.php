@@ -44,6 +44,24 @@ return [
         'secret_key' => env('METERED_SECRET_KEY'),
     ],
 
+    /*
+     * A relay of your own, or any provider with fixed credentials.
+     *
+     * Calls between two networks need TURN, and depending on one hosted
+     * account for that means the day it answers 401 every such call stops
+     * working with no way to intervene from here. Set TURN_URLS (comma
+     * separated) and these are used directly — a coturn on the same VPS, or
+     * another provider — alongside whatever Metered returns.
+     */
+    'turn' => [
+        'urls' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('TURN_URLS', ''))
+        ))),
+        'username' => env('TURN_USERNAME'),
+        'password' => env('TURN_PASSWORD'),
+    ],
+
     'google' => [
         'client_id'     => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
