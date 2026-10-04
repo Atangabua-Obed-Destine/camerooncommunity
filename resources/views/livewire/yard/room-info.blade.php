@@ -1,4 +1,5 @@
-<div class="yard-room-info" wire:poll.30s
+{{-- Polled only while on screen: this panel sits hidden on every room. --}}
+<div class="yard-room-info" @if($visible) wire:poll.30s @endif
      x-data="{ joinToast: null }"
      @if($room && $room->created_by === auth()->id())
      x-on:join-request-received.window="

@@ -1,5 +1,33 @@
 import './bootstrap';
 import './call-engine';
+/**
+ * Keep aborted Livewire requests out of the console.
+ *
+ * Livewire rejects a request that got no response with
+ * {status: null, body: null, json: null, errors: null}. That is what an
+ * aborted request looks like — a poll superseded by a newer one, or one
+ * in flight when its component left the page. Nothing catches it, so it
+ * surfaced as "Uncaught (in promise)" with a stack full of livewire.js,
+ * burying the errors that do matter.
+ *
+ * Only that exact shape is swallowed, and it still goes to the console as a
+ * quiet note. A failure with a status, a body or errors is a real one and is
+ * left alone.
+ */
+window.addEventListener('unhandledrejection', (event) => {
+    const r = event.reason;
+
+    const isAbortedLivewireRequest = r
+        && typeof r === 'object'
+        && 'status' in r && 'body' in r && 'json' in r && 'errors' in r
+        && r.status === null && r.body === null && r.json === null && r.errors === null;
+
+    if (isAbortedLivewireRequest) {
+        event.preventDefault();
+        console.debug('[livewire] a request was dropped before it answered (usually a superseded poll)');
+    }
+});
+
 // Reference-counted Echo channels. The chat and the call engine share the
 // room channel, and Echo.leave() destroys a channel for everyone holding it.
 import './realtime-channels';

@@ -47,7 +47,15 @@
         </div>
 
         {{-- Messages --}}
-        <div class="flex-1 overflow-y-auto p-4 space-y-4" id="kamer-messages" wire:poll.keep-alive>
+        {{-- Polled only while the panel is open.
+             This panel is rendered on every page and merely hidden, so an
+             unconditional wire:poll.keep-alive meant a Livewire round trip
+             every couple of seconds from every open tab, background tabs
+             included — competing with the chat's own requests for the same
+             PHP workers, which is why the Yard got slower the longer it was
+             left open. --}}
+        <div class="flex-1 overflow-y-auto p-4 space-y-4" id="kamer-messages"
+             @if($isOpen) wire:poll.5s @endif>
             @foreach($messages as $i => $msg)
                 @if($msg['role'] === 'assistant')
                     {{-- Kamer message --}}
