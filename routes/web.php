@@ -148,11 +148,25 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::get('/api/turn-credentials', function () {
         $stunOnly = [['urls' => 'stun:stun.l.google.com:19302']];
 
+        // A relay configured here is used whatever the provider does. It goes
+        // first so the browser tries it before anything that may be refusing
+        // credentials today.
+        $static = [];
+        $staticUrls = config('services.turn.urls');
+
+        if (! empty($staticUrls)) {
+            $static[] = array_filter([
+                'urls' => $staticUrls,
+                'username' => config('services.turn.username'),
+                'credential' => config('services.turn.password'),
+            ], fn ($v) => $v !== null && $v !== '');
+        }
+
         $domain = config('services.metered.domain');
         $key = config('services.metered.secret_key');
 
         if (! $domain || ! $key) {
-            return response()->json($stunOnly);
+            return response()->json(array_merge($static, $stunOnly));
         }
 
         $servers = \Illuminate\Support\Facades\Cache::remember(
@@ -178,7 +192,9 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
             }
         );
 
-        return response()->json($servers);
+        // $servers already includes the STUN fallback when the provider is
+        // unavailable; a configured relay is added in front of it either way.
+        return response()->json(array_merge($static, $servers));
     })->name('api.turn-credentials');
 
     // Profile

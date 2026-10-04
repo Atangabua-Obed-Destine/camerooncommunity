@@ -1,5 +1,5 @@
 // Bumped whenever this file changes, so a deployed browser can be identified.
-const ENGINE_BUILD = '2026-10-03.answer-path';
+const ENGINE_BUILD = '2026-10-04.accept-trace';
 
 /**
  * Cameroon Network — WebRTC Call Engine (Alpine.js component)
@@ -246,6 +246,8 @@ document.addEventListener('alpine:init', () => {
                 return;
             }
 
+            console.log('[CallEngine] ringing — showing the incoming card', data.call_uuid);
+
             this.incomingCall = {
                 callUuid: data.call_uuid,
                 callId: data.call_id,
@@ -295,7 +297,16 @@ document.addEventListener('alpine:init', () => {
 
         // ── Accept call ──
         async accept() {
-            if (!this.incomingCall) return;
+            // Logged because the server records a call starting and then, when
+            // this never runs, records nothing at all — and from the caller's
+            // side a card that was never tapped looks exactly like an answer
+            // that was lost on the way.
+            console.log('[CallEngine] accept pressed', this.incomingCall?.callUuid);
+
+            if (!this.incomingCall) {
+                console.warn('[CallEngine] accept ignored: no incoming call on this engine');
+                return;
+            }
 
             this.stopRingtone();
             this.callerName = this.incomingCall.callerName;
@@ -323,8 +334,11 @@ document.addEventListener('alpine:init', () => {
             // and renegotiates if the stream turns up later.
             await this.withTimeout(this.acquireMedia(this.callType), 8000);
 
+            console.log('[CallEngine] media ready, telling the server we answered', uuid);
+
             try {
                 await this.$wire.answerCall(uuid);
+                console.log('[CallEngine] server accepted the answer', uuid);
             } catch (e) {
                 // A failed round trip here used to be invisible on both sides:
                 // this side's incoming card was already gone, and the caller
