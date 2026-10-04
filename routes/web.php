@@ -163,7 +163,7 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
         }
 
         $domain = config('services.metered.domain');
-        $key = config('services.metered.secret_key');
+        $key = config('services.metered.api_key');
 
         if (! $domain || ! $key) {
             return response()->json(array_merge($static, $stunOnly));

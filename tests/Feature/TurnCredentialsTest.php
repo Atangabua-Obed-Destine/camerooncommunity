@@ -43,7 +43,10 @@ class TurnCredentialsTest extends TestCase
     public function test_a_configured_relay_is_served_even_when_the_provider_refuses(): void
     {
         $this->useStaticRelay();
-        config(['services.metered.domain' => 'example.metered.live', 'services.metered.secret_key' => 'bad']);
+        config([
+            'services.metered.domain' => 'example.metered.live',
+            'services.metered.api_key' => 'bad',
+        ]);
 
         Http::fake(['*' => Http::response(['error' => 'Invalid API Key'], 401)]);
 
@@ -64,7 +67,7 @@ class TurnCredentialsTest extends TestCase
         // Order matters: the browser tries them in sequence, and the relay is
         // the only entry that can carry media when both peers are behind NAT.
         $this->useStaticRelay();
-        config(['services.metered.domain' => null, 'services.metered.secret_key' => null]);
+        config(['services.metered.domain' => null, 'services.metered.api_key' => null]);
 
         $servers = $this->actingAs($this->createUser())
             ->getJson(route('api.turn-credentials'))
@@ -80,7 +83,7 @@ class TurnCredentialsTest extends TestCase
         config([
             'services.turn.urls' => [],
             'services.metered.domain' => 'example.metered.live',
-            'services.metered.secret_key' => 'good',
+            'services.metered.api_key' => 'good',
         ]);
 
         Http::fake(['*' => Http::response([
@@ -95,6 +98,28 @@ class TurnCredentialsTest extends TestCase
         $this->assertSame('turn:provider.example:80', $servers[0]['urls']);
     }
 
+    public function test_the_account_secret_alone_does_not_drive_the_fetch_path(): void
+    {
+        // The two keys are different things. Sending the account secret as
+        // apiKey is what produced "Invalid API Key" against a key the
+        // dashboard was displaying, so the fetch path must not reach for it.
+        config([
+            'services.turn.urls' => [],
+            'services.metered.domain' => 'example.metered.live',
+            'services.metered.api_key' => null,
+            'services.metered.secret_key' => 'the-account-secret',
+        ]);
+
+        Http::fake(['*' => Http::response(['error' => 'Invalid API Key'], 401)]);
+
+        $this->actingAs($this->createUser())
+            ->getJson(route('api.turn-credentials'))
+            ->assertOk()
+            ->assertJsonFragment(['urls' => 'stun:stun.l.google.com:19302']);
+
+        Http::assertNothingSent();
+    }
+
     public function test_a_provider_outage_never_breaks_the_endpoint(): void
     {
         // Http::get throws on DNS failure; an uncaught throw here turned the
@@ -102,7 +127,7 @@ class TurnCredentialsTest extends TestCase
         config([
             'services.turn.urls' => [],
             'services.metered.domain' => 'example.metered.live',
-            'services.metered.secret_key' => 'good',
+            'services.metered.api_key' => 'good',
         ]);
 
         Http::fake(fn () => throw new \RuntimeException('getaddrinfo failed'));
