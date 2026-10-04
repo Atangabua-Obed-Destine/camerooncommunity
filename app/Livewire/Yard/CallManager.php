@@ -165,6 +165,13 @@ class CallManager extends Component
         $call = YardCall::where('uuid', $callUuid)->firstOrFail();
 
         if (! $call->isActive()) {
+            // Worth a line of its own: from the caller's side this is
+            // indistinguishable from the answer never arriving.
+            \Log::info('Call answer rejected: no longer active', [
+                'call' => $callUuid,
+                'by' => $user->id,
+                'status' => $call->status,
+            ]);
             $this->dispatch('call-error', message: 'This call has already ended.');
             return;
         }
@@ -213,6 +220,18 @@ class CallManager extends Component
             $user->username ?? $user->name,
             'joined',
         ));
+
+        // The counterpart to 'Call initiated'. Without it the log went quiet
+        // after a call started and there was no way to tell whether the callee
+        // pressed accept, whether the request reached us, or whether the
+        // answer went out — which is exactly the question when the caller sits
+        // on "Calling…" forever.
+        \Log::info('Call answered', [
+            'call' => (string) $call->uuid,
+            'room' => $call->room_id,
+            'by' => $user->id,
+            'joined' => collect($this->participants)->where('status', 'joined')->pluck('user_id')->all(),
+        ]);
 
         $this->dispatch('call-answered', [
             'callUuid' => $call->uuid,

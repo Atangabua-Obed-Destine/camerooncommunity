@@ -214,9 +214,18 @@ class ChatRoom extends Component
         // the list can be 50 messages long.
         $translateTo = $this->autoTranslateLang;
 
-        return $query->orderByDesc('created_at')
+        $messages = $query->orderByDesc('created_at')
             ->limit($this->perPage)
-            ->get()
+            ->get();
+
+        // Every author's saved nickname in one query, before the view asks for
+        // them one at a time.
+        \App\Models\UserContactName::prime(
+            (int) auth()->id(),
+            $messages->pluck('user_id')->filter()->unique()->all()
+        );
+
+        return $messages
             ->reverse()
             ->values()
             ->map(function (YardMessage $m) use ($translateTo) {
