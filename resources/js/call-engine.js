@@ -1,5 +1,5 @@
 // Bumped whenever this file changes, so a deployed browser can be identified.
-const ENGINE_BUILD = '2026-10-04.signal-trace';
+const ENGINE_BUILD = '2026-10-04.poll-trace';
 
 /**
  * Cameroon Network — WebRTC Call Engine (Alpine.js component)
@@ -479,6 +479,12 @@ document.addEventListener('alpine:init', () => {
                     const participants = this.$wire.get('participants') || [];
                     this.callParticipants = participants;
 
+                    // Printed every tick while ringing. If the other side shows
+                    // as joined here and the call still does not start, the
+                    // fault is below this line rather than in the broadcast.
+                    console.log('[CallEngine] ringing — server says:',
+                        participants.map(p => `${p.user_id}:${p.status}`).join(' '));
+
                     const joined = participants.find(p =>
                         p.user_id !== currentUserId && p.status === 'joined'
                     );
@@ -487,7 +493,11 @@ document.addEventListener('alpine:init', () => {
                         console.warn('[CallEngine] joined event never arrived — reconciled from the server');
                         this.onPeerJoined(joined.user_id, joined.name);
                     }
-                }).catch(() => { /* a failed poll is retried on the next tick */ });
+                }).catch((e) => {
+                    // Swallowing this made a poll that never worked look
+                    // identical to one that found nothing.
+                    console.error('[CallEngine] the ringing poll failed:', e);
+                });
             }, 3000);
         },
 
