@@ -1,3 +1,6 @@
+// Bumped whenever this file changes, so a deployed browser can be identified.
+const ENGINE_BUILD = '2026-10-03.answer-path';
+
 /**
  * Cameroon Network — WebRTC Call Engine (Alpine.js component)
  * Handles peer connections, media streams, and signaling via Livewire + Echo.
@@ -89,7 +92,15 @@ document.addEventListener('alpine:init', () => {
 
             // Subscribe to user-specific call channel so we receive
             // incoming calls regardless of which room is currently open
-            console.log('[CallEngine] init', { userId: currentUserId, tenantId, echo: !!window.Echo });
+            // A build marker. Assets are rebuilt on the server, so the first
+            // question when calls misbehave in production is always whether the
+            // browser is running the code that was just deployed.
+            console.log('[CallEngine] init', {
+                build: ENGINE_BUILD,
+                userId: currentUserId,
+                tenantId,
+                echo: !!window.Echo,
+            });
 
             if (!window.Echo || !tenantId || !currentUserId) {
                 console.error('[CallEngine] Cannot receive calls: missing ' +

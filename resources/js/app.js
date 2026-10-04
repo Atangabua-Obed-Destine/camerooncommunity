@@ -2,6 +2,10 @@ import './bootstrap';
 import './call-engine';
 // Registers the x-overlay directive: the back button closes popups.
 import './overlay-history';
+// The Yard chat room's Alpine components. Bundled rather than inlined in the
+// Blade view: Livewire re-sends a component's HTML on every round trip, and
+// this is 66 KB of it.
+import './yard-chat';
 
 // Livewire v4 bundles Alpine + @alpinejs/persist internally.
 // We use alpine:init to register stores BEFORE Alpine.start().

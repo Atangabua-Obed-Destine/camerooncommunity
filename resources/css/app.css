@@ -2015,6 +2015,39 @@
     color: #334155;
 }
 
+/* ── Shared hover toolbar ──
+   One element for the whole thread, moved over whichever bubble has the
+   mouse. Fixed to the viewport because the thread scrolls underneath it. */
+.yard-hov {
+    position: fixed;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+.yard-hov--own { align-items: flex-end; }
+
+.yard-hov__row {
+    display: flex;
+    gap: 4px;
+}
+
+.yard-hov__emojis {
+    display: flex;
+    gap: 2px;
+    background: #fff;
+    border-radius: 20px;
+    padding: 4px 6px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.15);
+    white-space: nowrap;
+}
+
+/* A mouse idea, and nothing else. */
+@media (hover: none) {
+    .yard-hov { display: none !important; }
+}
+
 /* ── Legacy chevron (keep for compat) ── */
 .yard-msg__chevron {
     position: absolute;

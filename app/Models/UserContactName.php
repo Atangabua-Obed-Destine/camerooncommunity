@@ -59,6 +59,35 @@ class UserContactName extends Model
     }
 
     /**
+     * Load every nickname this viewer has for a set of people, in one query,
+     * into the same per-request cache nickname() reads.
+     *
+     * nickname() already avoids repeating itself for the same person, but a
+     * room with six people talking still meant six round trips before the
+     * first message rendered. Contacts with no nickname are cached as the
+     * empty sentinel so they are not looked up again either.
+     */
+    public static function prime(int $ownerId, array $contactIds): void
+    {
+        $store = Cache::driver('array');
+
+        $missing = array_values(array_filter(
+            array_unique($contactIds),
+            fn ($id) => $store->get("ucn.{$ownerId}.{$id}") === null
+        ));
+
+        if ($missing === []) {
+            return;
+        }
+
+        $found = static::nicknamesFor($ownerId, $missing);
+
+        foreach ($missing as $id) {
+            $store->put("ucn.{$ownerId}.{$id}", $found[$id] ?? '', 60);
+        }
+    }
+
+    /**
      * Convenience: prefer nickname, fall back to username, then name.
      */
     public static function displayName(int $ownerId, ?User $other): string
