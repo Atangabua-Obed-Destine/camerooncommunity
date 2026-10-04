@@ -1317,9 +1317,15 @@ class ChatRoom extends Component
             }
         }
 
+        // Marking read used to be a second round trip 1.5s later, on the
+        // reasoning that the room list needed a moment to show the unread
+        // badge. It never did: RoomList suppresses the badge for the room that
+        // is already open. So that was a second full re-render of the thread
+        // per message, bought for nothing.
+        $this->markAsRead();
+
         $this->dispatch('message-sent');
-        // markAsRead still runs separately via delayedMarkRead, so RoomList has a
-        // moment to show the unread badge first.
+        $this->dispatch('room-updated');
     }
 
     /**

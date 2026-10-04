@@ -56,6 +56,12 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.data('chatUi', (cfg = {}) => {
             return {
+                // Messages painted straight from a broadcast, waiting for the
+                // server refresh to replace them with the real thing.
+                incoming: [],
+                _syncTimer: null,
+                _lastBroadcast: null,
+
                 typingUsers: [],
                 lightboxOpen: false,
                 lightboxSrc: '',
@@ -579,6 +585,74 @@ document.addEventListener('alpine:init', () => {
                     }
                 },
 
+                /**
+                 * A message arrived. Show it now; tell the server later.
+                 *
+                 * Asking Livewire to re-render costs the whole thread — around
+                 * 190 KB — and it used to happen twice per message, once to
+                 * receive it and again to mark it read. On a phone that is the
+                 * difference between a message landing instantly and landing
+                 * two seconds later, and in a lively room the round trips pile
+                 * up behind each other.
+                 *
+                 * So the bubble is painted straight from the broadcast, the way
+                 * our own messages already are while they send, and the server
+                 * refresh is coalesced: one for a burst of messages instead of
+                 * two per message. The refresh replaces these bubbles with the
+                 * real ones, which carry reactions, receipts and the rest.
+                 */
+                onMessageBroadcast(e) {
+                    this._lastBroadcast = e;
+
+                    const text = typeof e.content === 'string' ? e.content : '';
+                    const plain = e.message_type === 'text' && text !== '';
+
+                    if (plain && e.user_id !== cfg.userId) {
+                        this.incoming.push({
+                            key: e.id,
+                            name: e.user_name || '',
+                            initial: (e.user_name || '?').charAt(0).toUpperCase(),
+                            avatar: e.user_avatar ? `${cfg.storageUrl}/${e.user_avatar}` : null,
+                            text,
+                        });
+                        this.scrollToBottom();
+                    }
+
+                    // Anything we cannot paint ourselves — media, a poll, a
+                    // system notice — needs the server now rather than in a
+                    // moment, because nothing is on screen for it.
+                    this.syncMessages(! plain);
+                },
+
+                /**
+                 * Pull the authoritative thread from the server.
+                 *
+                 * Coalesced: a burst of messages produces one refresh. `now`
+                 * skips the wait when there is nothing on screen to cover it.
+                 */
+                syncMessages(now = false) {
+                    clearTimeout(this._syncTimer);
+
+                    const run = () => {
+                        this._syncTimer = null;
+                        this.$wire.call('onMessageReceived', this._lastBroadcast || {})
+                            .then(() => {
+                                // Held briefly: dropping them in the same frame
+                                // as the morph makes the thread flicker.
+                                setTimeout(() => { this.incoming = []; }, 120);
+                                this.scrollToBottom();
+                            })
+                            .catch(() => {
+                                // The painted bubbles stay rather than vanishing
+                                // on a failed refresh; the next one clears them.
+                            });
+                    };
+
+                    if (now) { run(); return; }
+
+                    this._syncTimer = setTimeout(run, 700);
+                },
+
                 subscribeEcho(channelName) {
                     // No room or same channel — skip
                     if (!channelName || channelName === this._echoChannelName) return;
@@ -600,13 +674,7 @@ document.addEventListener('alpine:init', () => {
 
                     this._echoChannel = window.Echo.channel(channelName)
                         .listen('.MessageSent', (e) => {
-                            // One call: the server marks delivery inside
-                            // onMessageReceived, so we no longer fire a second
-                            // request (and a second full re-render) for it.
-                            component.onMessageReceived(e);
-                            self.scrollToBottom();
-                            // Delay markAsRead so RoomList has time to show the unread badge first
-                            setTimeout(() => component.delayedMarkRead(), 1500);
+                            self.onMessageBroadcast(e);
                         })
                         .listen('.MessageDeleted', (e) => {
                             component.onMessageDeleted(e);

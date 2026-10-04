@@ -1,5 +1,8 @@
 <div class="yard-room-list"
-     x-on:yard-search.window="$wire.set('search', $event.detail.query)">
+     x-on:yard-search.window="$wire.set('search', $event.detail.query)"
+     {{-- Unread counts and previews go stale while the socket is down, since
+          the events that would have updated them are not replayed. --}}
+     x-on:realtime-reconnected.window="$wire.call('refreshRooms')">
     @php
         $sections = [
             'national' => ['label_en' => 'National', 'label_fr' => 'National'],

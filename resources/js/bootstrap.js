@@ -94,3 +94,32 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') reconnectEcho();
 });
 
+/**
+ * Catch up on whatever was missed while the socket was down.
+ *
+ * A dropped connection loses events outright — they are not replayed on
+ * reconnect — so a phone that slept through a conversation came back showing
+ * a thread that had stopped mid-sentence, and stayed that way until the user
+ * reloaded. Anything that renders live state listens for this and refetches.
+ */
+function announceReconnect() {
+    window.dispatchEvent(new CustomEvent('realtime-reconnected'));
+}
+
+const connection = window.Echo?.connector?.pusher?.connection;
+
+if (connection) {
+    let wasConnected = connection.state === 'connected';
+
+    connection.bind('state_change', ({ current }) => {
+        if (current === 'connected') {
+            // Only after a real gap: the first connect of a page load has
+            // nothing to catch up on.
+            if (! wasConnected) announceReconnect();
+            wasConnected = true;
+        } else if (current === 'unavailable' || current === 'disconnected' || current === 'failed') {
+            wasConnected = false;
+        }
+    });
+}
+

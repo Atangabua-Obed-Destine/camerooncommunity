@@ -5,6 +5,7 @@
              ? 'tenant.' . app('currentTenant')?->id . '.user.' . auth()->id() . '.receipts'
              : null,
          'messageStatuses' => $messageStatuses ?? [],
+         'storageUrl' => asset('storage'),
      ]))"
      x-on:message-sent.window="setTimeout(() => { optimistic = optimistic.filter(o => o.kind !== 'text' && o.kind !== undefined); scrollToBottom(); }, 350)"
      x-on:media-sent.window="setTimeout(() => {
@@ -19,6 +20,9 @@
      x-on:room-selected.window="beginPositioning()"
      x-on:focus-edit-input.window="$nextTick(() => { if($refs.editInput) $refs.editInput.focus() })"
      x-on:echo-subscribe.window="subscribeEcho($event.detail.channel)"
+     {{-- The socket dropped and came back: events sent in the gap are gone for
+          good, so pull the thread fresh rather than leaving it mid-sentence. --}}
+     x-on:realtime-reconnected.window="syncMessages(true)"
      x-on:messages-prepended.window="
          // Use a double rAF so layout has settled (images, lazy content) before
          // we measure scrollHeight. Otherwise the anchor jumps when assets load.
@@ -831,6 +835,35 @@
                 <p x-text="$store.lang.t('No messages yet. Say hello!', 'Aucun message. Dites bonjour !')"></p>
             </div>
         @endforelse
+
+        {{-- Messages that have just arrived, painted from the broadcast.
+             The server refresh replaces them a moment later with the real
+             bubbles, which carry reactions, receipts, replies and the rest.
+             Without this the thread stands still until a ~190 KB re-render
+             comes back, which on a phone is the whole difference between
+             "instant" and "slow". --}}
+        <template x-for="im in incoming" :key="'in-' + im.key">
+            <div class="yard-msg">
+                <div class="yard-msg__avatar">
+                    <template x-if="im.avatar">
+                        <img :src="im.avatar" alt="" class="w-full h-full rounded-full object-cover">
+                    </template>
+                    <template x-if="! im.avatar">
+                        <span x-text="im.initial"></span>
+                    </template>
+                </div>
+                <div class="yard-msg__content items-start">
+                    <span class="yard-msg__sender" x-text="im.name"></span>
+                    <div class="yard-msg__row">
+                        <div class="yard-msg__content">
+                            <div class="yard-msg__bubble yard-msg__bubble--other">
+                                <p class="yard-msg__text whitespace-pre-wrap" x-text="im.text"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
 
         {{-- Optimistic messages (shown instantly, before server responds) --}}
         <template x-for="om in optimistic" :key="om.id">
