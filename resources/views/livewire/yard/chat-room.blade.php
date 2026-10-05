@@ -354,7 +354,7 @@
               gesture the reaction bar needs. Links keep their own menu, so
               "copy link address" still works. --}}
          @contextmenu="if (! $event.target.closest('a')) $event.preventDefault()"
-         @scroll.passive="hovHide();
+         @scroll.passive="hovHide(); trackBottom($el);
              // Telegram-style infinite scroll: when the user scrolls within
              // 80px of the top, auto-trigger loadMore (debounced via the flag).
              (() => {
@@ -919,6 +919,31 @@
             </div>
         </template>
     </div>
+
+    {{-- Jump to the newest message.
+         Appears once the thread is scrolled away from the bottom, and counts
+         what has arrived since. Reading older messages should not be
+         interrupted by the view jumping, so arrivals no longer scroll the
+         thread while the reader is up here — they add to this badge
+         instead. --}}
+    <button type="button"
+            x-show="! atBottom"
+            x-cloak
+            x-transition:enter="transition ease-out duration-150"
+            x-transition:enter-start="opacity-0 translate-y-1"
+            x-transition:leave="transition ease-in duration-100"
+            x-transition:leave-end="opacity-0 translate-y-1"
+            @click="jumpToLatest()"
+            class="yard-jump"
+            :aria-label="newSinceScroll > 0
+                ? $store.lang.t('Jump to new messages', 'Aller aux nouveaux messages')
+                : $store.lang.t('Jump to latest', 'Aller au dernier message')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/>
+        </svg>
+        <span x-show="newSinceScroll > 0" x-cloak class="yard-jump__badge"
+              x-text="newSinceScroll > 99 ? '99+' : newSinceScroll"></span>
+    </button>
 
     {{-- ── Typing indicator ── --}}
     <div class="yard-chat__typing" x-show="typingUsers.length > 0" x-transition x-cloak>

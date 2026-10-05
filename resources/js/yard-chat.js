@@ -62,6 +62,11 @@ document.addEventListener('alpine:init', () => {
                 _syncTimer: null,
                 _lastBroadcast: null,
 
+                // Whether the thread is parked at the newest message, and what
+                // has arrived since it stopped being.
+                atBottom: true,
+                newSinceScroll: 0,
+
                 typingUsers: [],
                 lightboxOpen: false,
                 lightboxSrc: '',
@@ -654,6 +659,10 @@ document.addEventListener('alpine:init', () => {
                     const text = typeof e.content === 'string' ? e.content : '';
                     const plain = e.message_type === 'text' && text !== '';
 
+                    if (e.user_id !== cfg.userId && ! this.atBottom) {
+                        this.newSinceScroll++;
+                    }
+
                     if (plain && e.user_id !== cfg.userId) {
                         this.incoming.push({
                             key: e.id,
@@ -662,7 +671,7 @@ document.addEventListener('alpine:init', () => {
                             avatar: e.user_avatar ? `${cfg.storageUrl}/${e.user_avatar}` : null,
                             text,
                         });
-                        this.scrollToBottom();
+                        this.scrollIfFollowing();
                     }
 
                     // Anything we cannot paint ourselves — media, a poll, a
@@ -687,7 +696,7 @@ document.addEventListener('alpine:init', () => {
                                 // Held briefly: dropping them in the same frame
                                 // as the morph makes the thread flicker.
                                 setTimeout(() => { this.incoming = []; }, 120);
-                                this.scrollToBottom();
+                                this.scrollIfFollowing();
                             })
                             .catch(() => {
                                 // The painted bubbles stay rather than vanishing
@@ -777,8 +786,52 @@ document.addEventListener('alpine:init', () => {
                     this.$nextTick(() => {
                         const el = this.$refs.chatMessages;
                         if (el) el.scrollTop = el.scrollHeight;
+                        this.atBottom = true;
+                        this.newSinceScroll = 0;
                         this.endPositioning();
                     });
+                },
+
+                /**
+                 * Is the newest message on screen?
+                 *
+                 * A margin, not an exact match: sub-pixel heights and the
+                 * composer's own growth mean scrollTop rarely lands exactly at
+                 * the end, and a jump button that shows while the reader is
+                 * plainly at the bottom is worse than none.
+                 */
+                trackBottom(el) {
+                    const distance = el.scrollHeight - el.scrollTop - el.clientHeight;
+                    const wasAtBottom = this.atBottom;
+
+                    this.atBottom = distance < 120;
+
+                    // Reaching the bottom is itself an acknowledgement.
+                    if (this.atBottom && ! wasAtBottom) {
+                        this.newSinceScroll = 0;
+                    }
+                },
+
+                /** The button: back to the newest message, counter cleared. */
+                jumpToLatest() {
+                    const el = this.$refs.chatMessages;
+
+                    if (el) {
+                        el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                    }
+
+                    this.atBottom = true;
+                    this.newSinceScroll = 0;
+                },
+
+                /**
+                 * Follow the conversation only when already following it.
+                 *
+                 * Scrolling on every arrival pulled the thread out from under
+                 * anyone reading back through it.
+                 */
+                scrollIfFollowing() {
+                    if (this.atBottom) this.scrollToBottom();
                 },
 
                 /**
