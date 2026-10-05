@@ -188,6 +188,56 @@
             </div>
         </div>
 
+        {{-- Voice calling --}}
+        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📞</span>
+                    <h2 class="font-semibold text-slate-700">Calls</h2>
+                </div>
+            </div>
+            <div class="p-5 space-y-4">
+                <form method="POST" action="{{ route('admin.settings.update') }}">
+                    @csrf
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                        <div>
+                            <label class="text-sm font-medium text-slate-700">Voice Calling</label>
+                            <p class="text-xs text-slate-400 mt-0.5">
+                                When disabled, the call buttons stay where members expect them but open a
+                                “coming soon” notice instead of placing a call. Calls already in progress are
+                                unaffected. Leave this off until a call reliably connects end to end — a button
+                                that starts a call nobody can answer is worse than one that explains itself.
+                            </p>
+                        </div>
+                        <div class="md:col-span-2 flex items-center gap-4">
+                            @php $callsOn = \App\Services\SiteSettings::callsEnabled(); @endphp
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="hidden" name="settings[calls_enabled]" value="0">
+                                <input type="checkbox" name="settings[calls_enabled]" value="1"
+                                       {{ $callsOn ? 'checked' : '' }}
+                                       class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-cm-green rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:border-slate-300 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cm-green"></div>
+                                <span class="ml-3 text-sm text-slate-600">{{ $callsOn ? 'Enabled' : 'Disabled' }}</span>
+                            </label>
+                            <button type="submit" class="px-4 py-2 bg-cm-green text-white text-sm font-semibold rounded-lg hover:bg-cm-green/90 transition-colors whitespace-nowrap">Save</button>
+                        </div>
+                    </div>
+                </form>
+
+                @if(! $callsOn)
+                <div class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+                    <span>ℹ️</span>
+                    <span>Calling is off. Members see “Calls are not available right now” when they tap a call button.</span>
+                </div>
+                @else
+                <div class="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                    <span>⚠️</span>
+                    <span>Calling needs a working TURN relay to connect members on different networks — check <code>php artisan calls:turn-check</code> before announcing it.</span>
+                </div>
+                @endif
+            </div>
+        </div>
+
         {{-- Email Verification --}}
         <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
             <div class="px-5 py-3 bg-slate-50 border-b border-slate-200">
