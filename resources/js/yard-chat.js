@@ -577,9 +577,10 @@ document.addEventListener('alpine:init', () => {
                     window.dispatchEvent(new CustomEvent('open-forward', {
                         detail: { msgIds: [...this.sel.ids] },
                     }));
-                    // Keep the selection until the forward modal has used it.
-                    this.sel.on = false;
-                    this.ctxClose();
+                    // The modal copied the ids out of the event above, so the
+                    // selection can go completely. Hiding only the toolbar left
+                    // the messages highlighted with no way to act on them.
+                    this.selClear();
                 },
 
                 selDelete() {

@@ -7237,6 +7237,8 @@
 .yard-sel-bar__btn:hover { background: var(--color-slate-100); }
 .yard-sel-bar__btn--danger { color: #e11d48; }
 .yard-sel-bar__count {
+    /* The cancel button used to sit to its left and provide this gap. */
+    margin-left: 10px;
     font-size: 1.05rem;
     font-weight: 700;
     color: var(--color-slate-900);

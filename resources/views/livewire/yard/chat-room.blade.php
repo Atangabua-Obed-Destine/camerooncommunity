@@ -1732,8 +1732,7 @@
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
          class="yard-sel-bar" @pointerdown="keepKeyboard($event)" @click.stop
-         @clear-selection.window="selClear()"
-         @keydown.escape.window="selClear()">
+         @clear-selection.window="selClear()">
 
         {{-- No cancel button: selection is left by unpicking the messages, by
              Escape, or by the back gesture, which the overlay stack handles. --}}
@@ -1842,7 +1841,10 @@
          history.back() once too often — which navigates out of the room and
          back to the chat list, exactly when picking a message. --}}
     <div wire:ignore x-overlay="lightboxOpen" class="contents"></div>
-    <div wire:ignore x-overlay="sel.on" class="contents"></div>
+    {{-- selClear(), not "sel.on = false". The default close only hides the
+         toolbar, leaving the messages highlighted with nothing to act on
+         them — the two must always appear and disappear together. --}}
+    <div wire:ignore x-overlay="sel.on" x-overlay-close="selClear()" class="contents"></div>
 
     {{-- Everything else back should peel off before it leaves the room, the
          way WhatsApp does: the reaction bar, a reply being composed, and an
