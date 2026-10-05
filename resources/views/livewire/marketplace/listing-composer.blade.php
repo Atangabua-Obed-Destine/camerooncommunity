@@ -21,7 +21,7 @@
 
 {{-- Facebook-Marketplace-style "Item for sale" create flow: a scrollable form
      on the left, a live preview of the listing on the right. --}}
-<div class="lg:h-full bg-slate-100"
+<div class="lg:h-full max-w-full bg-slate-100"
      wire:poll.20s="autosaveDraft"
      x-data="{ more: false, pi: 0, lb: false, limgs: @js(collect($previewMedia)->pluck('url')->values()) }"
      x-on:keydown.escape.window="lb = false">
@@ -56,10 +56,15 @@
         </div>
     </div>
 @else
-    <div class="lg:h-full lg:flex">
+    {{-- min-w-0 on both panes. A flex item defaults to min-width:auto, so it
+         refuses to shrink below its own content: the preview card wants up to
+         672px, and between the form pane and the icon rail there is less than
+         that, so the row grew wider than the window and the whole page slid
+         sideways. --}}
+    <div class="lg:h-full lg:flex lg:min-w-0">
 
     {{-- ═══════════════ LEFT · FORM ═══════════════ --}}
-    <aside class="w-full lg:w-[416px] xl:w-[440px] bg-white lg:h-full lg:overflow-y-auto border-r border-slate-200 flex flex-col">
+    <aside class="w-full lg:w-[416px] xl:w-[440px] lg:shrink-0 min-w-0 bg-white lg:h-full lg:overflow-y-auto border-r border-slate-200 flex flex-col">
 
         {{-- Header --}}
         <div class="sticky top-0 z-10 bg-white/95 backdrop-blur px-4 sm:px-5 pt-4 pb-3 border-b border-slate-100">
@@ -603,10 +608,10 @@
     </aside>
 
     {{-- ═══════════════ RIGHT · LIVE PREVIEW ═══════════════ --}}
-    <section class="flex-1 lg:h-full lg:overflow-y-auto px-4 lg:px-10 py-5 lg:py-8">
+    <section class="flex-1 min-w-0 lg:h-full lg:overflow-y-auto px-4 lg:px-10 py-5 lg:py-8">
         <div class="text-sm font-bold text-slate-500 mb-3">{{ $lang === 'fr' ? 'Aperçu' : 'Preview' }}</div>
 
-        <div class="max-w-2xl bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
+        <div class="w-full max-w-2xl bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden">
             {{-- Image --}}
             <div class="relative bg-[#18191a] aspect-[4/3] flex items-center justify-center">
                 @if (! empty($previewMedia))
@@ -693,7 +698,7 @@
             </div>
         </div>
 
-        <p class="max-w-2xl mt-3 text-[12px] text-slate-400">
+        <p class="w-full max-w-2xl mt-3 text-[12px] text-slate-400">
             {{ $lang === 'fr'
                 ? 'Ceci est un aperçu. Votre annonce ressemblera à ceci sur GoMarket.'
                 : 'This is a preview. Your listing will look like this on GoMarket.' }}
