@@ -95,7 +95,7 @@
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <div class="w-8 h-8 rounded-full bg-cm-green/10 flex items-center justify-center text-cm-green font-bold text-xs">
-                                        {{ strtoupper(substr($user->name, 0, 2)) }}
+                                        <x-user-avatar :user="$user" size="w-full h-full" text="text-xs" letters="2" />
                                     </div>
                                     <div>
                                         <p class="font-medium text-slate-900">{{ $user->name }}</p>

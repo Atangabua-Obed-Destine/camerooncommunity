@@ -46,7 +46,7 @@
                 @forelse($recentUsers as $user)
                 <div class="flex items-center gap-3">
                     <div class="w-9 h-9 rounded-full bg-cm-green/10 flex items-center justify-center text-xs font-bold text-cm-green">
-                        {{ strtoupper(substr($user->name, 0, 1)) }}
+                        <x-user-avatar :user="$user" size="w-full h-full" text="text-xs" />
                     </div>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-slate-900 truncate">{{ $user->name }}</p>

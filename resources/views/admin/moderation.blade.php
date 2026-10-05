@@ -17,7 +17,7 @@
                 <div class="flex items-start gap-4">
                     {{-- User Avatar --}}
                     <div class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-500 font-bold text-sm shrink-0">
-                        {{ strtoupper(substr($message->user?->name ?? '?', 0, 2)) }}
+                        <x-user-avatar :user="$message->user" size="w-full h-full" text="text-xs" letters="2" />
                     </div>
 
                     <div class="flex-1 min-w-0">

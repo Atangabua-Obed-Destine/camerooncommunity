@@ -177,9 +177,7 @@
                     @auth
                     <div x-data="{ open: false }" class="relative ml-1">
                         <button @click="open = !open" class="flex items-center gap-2 rounded-full p-1 hover:bg-white/10 transition-colors">
-                            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-cm-yellow text-sm font-bold text-cm-green">
-                                {{ substr(auth()->user()->name ?? 'U', 0, 1) }}
-                            </div>
+                            <x-user-avatar size="h-8 w-8" ring="ring-2 ring-white/25" />
                             <svg class="hidden sm:block h-4 w-4 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
                         </button>
                         {{-- z-50 matters: the nav tab links below are positioned and come

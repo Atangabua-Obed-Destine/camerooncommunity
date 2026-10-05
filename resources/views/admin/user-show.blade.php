@@ -19,7 +19,7 @@
                         @if($user->avatar)
                             <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
                         @else
-                            {{ strtoupper(substr($user->name, 0, 2)) }}
+                            <x-user-avatar :user="$user" size="w-full h-full" letters="2" />
                         @endif
                     </div>
 

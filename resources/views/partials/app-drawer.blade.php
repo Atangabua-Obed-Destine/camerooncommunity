@@ -115,13 +115,7 @@
 
                     <a href="{{ auth()->user()?->profileUrl() ?? route('profile') }}"
                        class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-semibold text-slate-700 transition-colors hover:bg-slate-100">
-                        <span class="flex h-[22px] w-[22px] shrink-0 items-center justify-center overflow-hidden rounded-full bg-cm-yellow text-[11px] font-extrabold text-cm-green-dark">
-                            @if(auth()->user()->avatar)
-                                <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="" class="h-full w-full object-cover">
-                            @else
-                                {{ strtoupper(substr(auth()->user()->username ?? auth()->user()->name ?? 'U', 0, 1)) }}
-                            @endif
-                        </span>
+                        <x-user-avatar size="h-[22px] w-[22px]" text="text-[11px]" />
                         <span class="truncate">{{ auth()->user()->username ?? auth()->user()->name }}</span>
                     </a>
 

@@ -70,9 +70,7 @@
             {{-- User info --}}
             <div class="p-3 border-t border-white/10">
                 <div class="flex items-center gap-3 px-3 py-2">
-                    <div class="w-8 h-8 rounded-full bg-cm-green/30 flex items-center justify-center text-xs font-bold text-cm-green">
-                        {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                    </div>
+                    <x-user-avatar size="w-8 h-8" text="text-xs" />
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-medium text-white truncate">{{ auth()->user()->name }}</p>
                         <p class="text-[10px] text-slate-400">{{ auth()->user()->getRoleNames()->first() ?? 'Admin' }}</p>
