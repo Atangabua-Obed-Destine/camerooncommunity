@@ -75,5 +75,24 @@
                 .then(function (registration) { registration.update(); })
                 .catch(function () { /* Non-fatal: the app works fine without it. */ });
         });
+
+        // Reload once when a new service worker takes over.
+        //
+        // The worker already calls skipWaiting() and claim(), so a new build is
+        // picked up quickly — but a page that is ALREADY open keeps running the
+        // JavaScript it loaded with. An installed app is rarely closed, so it
+        // sat on an old bundle for days while a freshly opened browser tab had
+        // the new one: the same device behaving two different ways.
+        // Only when one worker REPLACES another. The event also fires the
+        // first time a worker takes control of a page that had none, and
+        // reloading there would bounce every first-time visitor.
+        var hadController = !! navigator.serviceWorker.controller;
+        var reloading = false;
+
+        navigator.serviceWorker.addEventListener('controllerchange', function () {
+            if (! hadController || reloading) return;
+            reloading = true;
+            window.location.reload();
+        });
     }
 </script>

@@ -1814,9 +1814,17 @@
          globally, and is opened with $dispatch('open-user-preview', { id }). --}}
 
     {{-- ── Image Lightbox ── --}}
-    {{-- An open photo, and selection mode, both answer the back button. --}}
-    <div x-overlay="lightboxOpen" class="contents"></div>
-    <div x-overlay="sel.on" class="contents"></div>
+    {{-- An open photo, and selection mode, both answer the back button.
+
+         wire:ignore matters here. These register a history entry when they
+         open and step over it when they close, and the pairing has to hold.
+         Livewire morphs this component on every arriving message; without
+         wire:ignore the morph destroys and recreates the directive mid-
+         selection, the pushed entry is orphaned and a later close calls
+         history.back() once too often — which navigates out of the room and
+         back to the chat list, exactly when picking a message. --}}
+    <div wire:ignore x-overlay="lightboxOpen" class="contents"></div>
+    <div wire:ignore x-overlay="sel.on" class="contents"></div>
 
     <div x-show="lightboxOpen" x-transition.opacity @click="lightboxOpen = false"
          class="yard-lightbox" x-cloak>
