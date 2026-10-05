@@ -82,6 +82,16 @@ class PwaController extends Controller
             'lang'             => app()->getLocale(),
             'dir'              => 'ltr',
             'categories'       => ['social', 'shopping', 'lifestyle'],
+            // Lets the page ask the browser whether this very app is already
+            // installed, through navigator.getInstalledRelatedApps(). Without
+            // it a normal tab cannot tell — display-mode only says whether
+            // THIS window is the installed app, so someone browsing in Chrome
+            // with the app on their home screen looks exactly like someone who
+            // has never installed it.
+            'related_applications' => [
+                ['platform' => 'webapp', 'url' => $base . 'manifest.webmanifest'],
+            ],
+            'prefer_related_applications' => false,
             'icons' => [
                 ['src' => $icon('icon-192.png'),          'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
                 ['src' => $icon('icon-512.png'),          'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],

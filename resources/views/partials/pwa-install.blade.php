@@ -10,7 +10,48 @@
      landing page already has the App Store / Google Play badges. It is checked in
      JS rather than with md:hidden because the inline display:flex below would beat
      a Tailwind class. --}}
-<div x-data="pwaInstall()" x-show="show && isMobile" x-cloak x-transition.opacity
+{{-- The Alpine component wraps both panels. The banner below is hidden once
+     the app is installed, so the "already installed" notice cannot live inside
+     it — it would be hidden in exactly the case it exists for. --}}
+<div x-data="pwaInstall()">
+
+{{-- Already installed. Shown when someone taps an install button on a device
+     that already has the app. --}}
+<div x-show="alreadyInstalled" x-cloak x-transition.opacity
+     x-overlay="alreadyInstalled"
+     @keydown.escape.window="alreadyInstalled = false"
+     style="position:fixed; inset:0; z-index:90; display:flex; align-items:center; justify-content:center; padding:16px;">
+
+    <div @click="alreadyInstalled = false"
+         style="position:absolute; inset:0; background:rgba(2,25,45,0.55);"></div>
+
+    <div style="position:relative; width:100%; max-width:340px; background:#ffffff; border-radius:18px;
+                box-shadow:0 18px 44px rgba(2,25,45,0.32); padding:22px; text-align:center;">
+
+        <img src="{{ asset('icons/icon-192.png') }}" alt=""
+             style="width:56px; height:56px; border-radius:14px; margin:0 auto 12px;">
+
+        <div style="font-weight:800; font-size:1rem; color:#0f172a;">
+            <span x-text="$store.lang.t('Already installed', 'Déjà installée')"></span>
+        </div>
+
+        <div style="font-size:0.84rem; color:#64748b; margin-top:6px; line-height:1.45;">
+            <span x-text="$store.lang.t(
+                'CM Network is already on this device. Open it from your home screen.',
+                'CM Network est déjà sur cet appareil. Ouvrez-la depuis votre écran d'accueil.'
+            )"></span>
+        </div>
+
+        <button type="button" @click="alreadyInstalled = false"
+                style="margin-top:18px; width:100%; background:#015083; color:#ffffff; border:0; cursor:pointer;
+                       font-family:inherit; font-size:0.86rem; font-weight:700;
+                       padding:11px 18px; border-radius:9999px;">
+            <span x-text="$store.lang.t('Got it', 'Compris')"></span>
+        </button>
+    </div>
+</div>
+
+<div x-show="show && isMobile" x-cloak x-transition.opacity
      style="position:fixed; left:0; right:0; bottom:0; z-index:70; display:flex; justify-content:center; padding:12px; pointer-events:none;">
 
     <div style="pointer-events:auto; width:100%; max-width:460px; background:#ffffff; border-radius:16px;
@@ -66,7 +107,11 @@
     </div>
 </div>
 
+{{-- close the pwaInstall() wrapper --}}
+</div>
+
 @once
+
 <script>
     function pwaInstall() {
         return {
@@ -80,9 +125,40 @@
             // one was also set on install, which kept the banner hidden after an uninstall.
             snoozedAt: window.Alpine.$persist(0).as('cc_pwa_snoozed_at'),
 
+            // The "it is already installed" notice.
+            alreadyInstalled: false,
+
+            // Set once the browser confirms the app is on this device. Kept
+            // apart from the getter below, which only says whether THIS window
+            // is the installed app.
+            knownInstalled: false,
+
             get installed() {
                 return window.matchMedia('(display-mode: standalone)').matches
-                    || window.navigator.standalone === true;
+                    || window.navigator.standalone === true
+                    || this.knownInstalled;
+            },
+
+            /**
+             * Ask the browser whether this app is already on the device.
+             *
+             * display-mode answers a different question — whether the current
+             * window is the installed app — so somebody browsing in Chrome with
+             * the app already on their home screen looked identical to somebody
+             * who had never installed it.
+             *
+             * Chromium only, and only over https; elsewhere this stays false and
+             * the install flow behaves exactly as before.
+             */
+            async detectInstalled() {
+                if (! navigator.getInstalledRelatedApps) return;
+
+                try {
+                    const apps = await navigator.getInstalledRelatedApps();
+                    this.knownInstalled = apps.length > 0;
+                } catch (_) {
+                    // Not available in this context; nothing is lost.
+                }
             },
 
             get snoozed() {
@@ -100,13 +176,18 @@
                     mq.addListener((e) => { this.isMobile = e.matches; });
                 }
 
+                // Registered before the installed check below. It used to sit
+                // after it, so on a device that already had the app there was
+                // no listener at all: tapping "Download Our App" did nothing,
+                // with no prompt and no explanation.
+                window.addEventListener('pwa-open-install', () => this.open());
+
+                this.detectInstalled();
+
                 if (this.installed) return;
 
                 const ua = navigator.userAgent;
                 this.ios = /iphone|ipad|ipod/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
-
-                // "Download Our App" buttons open the install flow directly, ignoring the snooze.
-                window.addEventListener('pwa-open-install', () => this.open());
 
                 if (this.ios) {
                     // No beforeinstallprompt on iOS, ever — show the manual path,
@@ -127,6 +208,7 @@
                 window.addEventListener('appinstalled', () => {
                     this.canPrompt = false;
                     this.show = false;
+                    this.knownInstalled = true;
                 });
             },
 
@@ -143,6 +225,13 @@
             // Called from "Download Our App": the browser's own install prompt when it has one,
             // otherwise the banner with the manual steps.
             open() {
+                // Already on the device: say so, rather than opening an install
+                // flow that has nothing to install.
+                if (this.installed) {
+                    this.alreadyInstalled = true;
+                    return;
+                }
+
                 if (window.__pwaDeferredPrompt) {
                     this.install();
                     return;
