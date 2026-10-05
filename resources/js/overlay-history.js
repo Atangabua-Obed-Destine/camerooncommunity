@@ -58,9 +58,23 @@ function popOverlay(id) {
     }
 }
 
+/** Tell other popstate listeners this one is ours, for the current tick. */
+function claimPop() {
+    window.__cnOverlayConsumedPop = true;
+    setTimeout(() => { window.__cnOverlayConsumedPop = false; }, 0);
+}
+
 window.addEventListener('popstate', () => {
     if (pendingBacks > 0) {
         pendingBacks--;
+
+        // Claimed here too. This pop is the one WE asked for, stepping over
+        // the entry an overlay pushed when it opened — nobody pressed
+        // anything. Without the claim the Yard's own popstate listener read
+        // it as a back press and closed the room, so dismissing a selected
+        // message dropped the user back to the chat list.
+        claimPop();
+
         return;
     }
 
@@ -68,9 +82,8 @@ window.addEventListener('popstate', () => {
     if (! top) return;
 
     // Tell anything else listening (the Yard closes its chat panel on back)
-    // that this press has been spent. Cleared on the next tick.
-    window.__cnOverlayConsumedPop = true;
-    setTimeout(() => { window.__cnOverlayConsumedPop = false; }, 0);
+    // that this press has been spent.
+    claimPop();
 
     unwinding = true;
     try {
