@@ -141,8 +141,13 @@
         </div>
 
         <div class="yard-chat__header-actions">
-            {{-- Voice Call (always visible) --}}
-            <button class="yard-chat__header-btn" @click="$dispatch('initiate-call', { roomId: {{ $room->id }}, type: 'voice' })" title="Voice Call">
+            {{-- Voice Call. While calling is switched off the button stays
+                 where people expect it and explains itself, rather than
+                 disappearing or starting a call that cannot connect. --}}
+            @php $callsOn = \App\Services\SiteSettings::callsEnabled(); @endphp
+            <button class="yard-chat__header-btn"
+                    @click="@if($callsOn) $dispatch('initiate-call', { roomId: {{ $room->id }}, type: 'voice' }) @else callsNotice = true @endif"
+                    title="Voice Call">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/></svg>
             </button>
             {{-- Video calling is disabled; only voice is offered. --}}
@@ -489,7 +494,7 @@
                         <button class="yard-call-log__callback"
                                 {{-- Always voice: video calling is disabled, even when the
                                      log being answered is an old video call. --}}
-                                @click="$dispatch('initiate-call', { roomId: {{ $msg->room_id }}, type: 'voice' })"
+                                @click="@if(\App\Services\SiteSettings::callsEnabled()) $dispatch('initiate-call', { roomId: {{ $msg->room_id }}, type: 'voice' }) @else callsNotice = true @endif"
                                 title="{{ $callLogType === 'video' ? 'Video call' : 'Voice call' }}">
                             @if($callLogType === 'video')
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="m15.75 10.5 4.72-4.72a.75.75 0 0 1 1.28.53v11.38a.75.75 0 0 1-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 0 0 2.25-2.25v-9a2.25 2.25 0 0 0-2.25-2.25h-9A2.25 2.25 0 0 0 2.25 7.5v9a2.25 2.25 0 0 0 2.25 2.25z"/></svg>
@@ -918,6 +923,35 @@
                 </div>
             </div>
         </template>
+    </div>
+
+    {{-- Calls are off for now.
+         Opened by the call buttons, and by the server when a request gets
+         through from a browser running older code. --}}
+    <div x-show="callsNotice" x-cloak x-overlay="callsNotice"
+         @calls-unavailable.window="callsNotice = true"
+         @keydown.escape.window="callsNotice = false"
+         class="fixed inset-0 z-[120] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" @click="callsNotice = false"></div>
+
+        <div class="relative w-full max-w-xs rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <div class="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-slate-100 text-slate-500">
+                <svg class="h-7 w-7" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25z"/>
+                    <path stroke-linecap="round" d="M3 3l18 18"/>
+                </svg>
+            </div>
+
+            <h3 class="text-base font-bold text-slate-900"
+                x-text="$store.lang.t('Calls are not available right now', 'Les appels ne sont pas disponibles pour le moment')"></h3>
+
+            <p class="mt-1.5 text-sm text-slate-500"
+               x-text="$store.lang.t('Calling is coming soon.', 'La fonction d'appel arrive bientôt.')"></p>
+
+            <button type="button" @click="callsNotice = false"
+                    class="mt-5 w-full rounded-xl bg-cm-green py-2.5 text-sm font-bold text-white transition hover:bg-cm-green/90"
+                    x-text="$store.lang.t('Close', 'Fermer')"></button>
+        </div>
     </div>
 
     {{-- Jump to the newest message.

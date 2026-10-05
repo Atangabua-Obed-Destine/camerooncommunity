@@ -7,6 +7,22 @@ use Illuminate\Support\Facades\Cache;
 
 class SiteSettings
 {
+    /**
+     * Whether voice calling is offered.
+     *
+     * A platform setting rather than a constant so it can be turned back on
+     * from the admin panel the day calls connect reliably, without a deploy.
+     * Off until then: a button that starts a call which never connects is
+     * worse than one that says the feature is not ready.
+     */
+    public static function callsEnabled(): bool
+    {
+        return filter_var(
+            \App\Models\PlatformSetting::getValue('calls_enabled', false),
+            FILTER_VALIDATE_BOOLEAN
+        );
+    }
+
     protected static array $defaults = [
         'site_name' => 'Cameroon Network',
         'site_logo' => null,

@@ -67,6 +67,9 @@ document.addEventListener('alpine:init', () => {
                 atBottom: true,
                 newSinceScroll: 0,
 
+                // The "calls are not available yet" notice.
+                callsNotice: false,
+
                 typingUsers: [],
                 lightboxOpen: false,
                 lightboxSrc: '',

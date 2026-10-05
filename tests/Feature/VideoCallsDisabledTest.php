@@ -19,6 +19,11 @@ class VideoCallsDisabledTest extends TestCase
     {
         parent::setUp();
         $this->setUpTenancy();
+
+        // These cover call mechanics, which still have to work the day
+        // calling is switched back on. The feature switch is exercised by
+        // CallsDisabledTest.
+        \App\Models\PlatformSetting::setValue('calls_enabled', true);
     }
 
     private function roomWith($me, $them): YardRoom

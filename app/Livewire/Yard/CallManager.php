@@ -44,6 +44,14 @@ class CallManager extends Component
 
     public function initiateCall(int $roomId, string $type): void
     {
+        // Checked here too, not only in the view. A browser running yesterday's
+        // JavaScript would otherwise still create a call row and ring someone.
+        if (! \App\Services\SiteSettings::callsEnabled()) {
+            $this->dispatch('calls-unavailable');
+
+            return;
+        }
+
         $user = Auth::user();
         $room = YardRoom::findOrFail($roomId);
 
