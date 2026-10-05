@@ -240,10 +240,10 @@
             {{-- ─── Tags ─── --}}
             <div>
                 <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Mots-clés (aide à la recherche)' : 'Product tags (helps search)' }}</span>
-                <div class="mt-1 flex gap-2">
+                <div class="mt-1 flex gap-2 min-w-0">
                     <input type="text" wire:model="tagInput" wire:keydown.enter.prevent="addTag" maxlength="20"
                            placeholder="{{ $lang === 'fr' ? 'Ajouter…' : 'Add a tag…' }}"
-                           class="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
+                           class="flex-1 min-w-0 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder-slate-400 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none">
                     <button type="button" wire:click="addTag" class="px-4 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold">＋</button>
                 </div>
                 @if (count($tags))
@@ -261,8 +261,12 @@
             {{-- ─── Price ─── --}}
             <div>
                 <span class="text-[13px] font-semibold text-slate-700">{{ $lang === 'fr' ? 'Prix' : 'Price' }}</span>
-                <div class="mt-1 flex gap-2">
-                    <div class="flex-1 flex rounded-lg border border-slate-300 focus-within:border-cm-green focus-within:ring-1 focus-within:ring-cm-green transition {{ in_array($priceType, ['free','contact']) ? 'opacity-50 pointer-events-none' : '' }}">
+                {{-- Wraps, and both halves may shrink. A <select> takes its
+                     minimum width from its longest option and will not go below
+                     it, so "Fixed price" pushed this row past the edge of the
+                     form and scrolled the whole page sideways. --}}
+                <div class="mt-1 flex flex-wrap gap-2">
+                    <div class="flex-1 basis-40 min-w-0 flex rounded-lg border border-slate-300 focus-within:border-cm-green focus-within:ring-1 focus-within:ring-cm-green transition {{ in_array($priceType, ['free','contact']) ? 'opacity-50 pointer-events-none' : '' }}">
                         <input type="number" min="0" step="any" wire:model.live.debounce.400ms="price"
                                placeholder="0"
                                class="flex-1 min-w-0 border-0 rounded-l-lg px-3 py-2.5 text-[15px] text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-0">
@@ -305,7 +309,7 @@
                             </div>
                         </div>
                     </div>
-                    <select wire:model.live="priceType" class="rounded-lg border border-slate-300 px-2 py-2.5 text-sm text-slate-700 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none cursor-pointer">
+                    <select wire:model.live="priceType" class="min-w-0 flex-1 basis-32 rounded-lg border border-slate-300 px-2 py-2.5 text-sm text-slate-700 focus:border-cm-green focus:ring-1 focus:ring-cm-green focus:outline-none cursor-pointer">
                         @foreach ($this->priceTypeOptions() as $o)
                             <option value="{{ $o['v'] }}">{{ $lang === 'fr' ? $o['fr'] : $o['l'] }}</option>
                         @endforeach
@@ -545,11 +549,11 @@
                     </div>
 
                     <div class="flex gap-2 mt-2">
-                        <button type="button" @click="useCurrentLoc()" class="flex-1 flex items-center justify-center gap-1.5 text-sm text-cm-green hover:text-cm-green/80 font-bold py-2 bg-cm-green/10 rounded-lg transition">
+                        <button type="button" @click="useCurrentLoc()" class="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-sm text-cm-green hover:text-cm-green/80 font-bold py-2 bg-cm-green/10 rounded-lg transition">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
                             <span>{{ $lang === 'fr' ? 'Position actuelle' : 'Current Location' }}</span>
                         </button>
-                        <button type="button" @click="mapOpen = true; initPickerMap()" class="flex-1 flex items-center justify-center gap-1.5 text-sm text-slate-700 hover:bg-slate-200 font-bold py-2 bg-slate-100 rounded-lg transition">
+                        <button type="button" @click="mapOpen = true; initPickerMap()" class="flex-1 min-w-0 flex items-center justify-center gap-1.5 text-sm text-slate-700 hover:bg-slate-200 font-bold py-2 bg-slate-100 rounded-lg transition">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
                             <span>{{ $lang === 'fr' ? 'Choisir sur la carte' : 'Choose on map' }}</span>
                         </button>
