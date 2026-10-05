@@ -7107,32 +7107,41 @@
 .yard-sel-grid  { display: none; }
 .yard-sel-bar   { display: none; }
 
-@media (max-width: 767px) {
-    .yard-sel-react {
-        position: fixed;
-        z-index: 1002;
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        padding: 6px 8px;
-        background: #fff;
-        border-radius: 9999px;
-        box-shadow: 0 8px 28px rgba(2, 25, 45, .28);
-        user-select: none;
-    }
+/* The reaction row and the “more emoji” grid, at any width.
+ *
+ * These lived inside the phone breakpoint, back when picking a message was a
+ * phone-only idea — the selection toolbar was moved out for that reason and
+ * these were left behind. A long press on a touchscreen laptop, or in the
+ * installed app on a window wider than 767px, then selected the message and
+ * offered nothing to do with it: highlighted, with no reactions. Selection is
+ * not about screen width, so neither is its UI. */
+.yard-sel-react {
+    position: fixed;
+    z-index: 1002;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+    background: #fff;
+    border-radius: 9999px;
+    box-shadow: 0 8px 28px rgba(2, 25, 45, .28);
+    user-select: none;
+}
 
-    .yard-sel-grid {
-        position: fixed;
-        z-index: 1002;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        max-width: min(300px, calc(100vw - 32px));
-        padding: 10px;
-        background: #fff;
-        border-radius: 16px;
-        box-shadow: 0 10px 30px rgba(2, 25, 45, .3);
-    }
+.yard-sel-grid {
+    position: fixed;
+    z-index: 1002;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-width: min(300px, calc(100vw - 32px));
+    padding: 10px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(2, 25, 45, .3);
+}
+
+@media (max-width: 767px) {
 
     /* Sits over the chat header, like WhatsApp's selection toolbar. */
     .yard-sel-bar {
