@@ -1082,6 +1082,9 @@
              WhatsApp-style Media Preview Overlay
              Shows selected image/document before sending with caption
              ══════════════════════════════════════════════════════════════ --}}
+        {{-- Back discards the pending media rather than leaving the room. --}}
+        <div wire:ignore x-overlay="preview.active" x-overlay-close="closePreview()" class="contents"></div>
+
         <div x-show="preview.active" x-transition.opacity.duration.200ms
              class="yard-media-preview" x-cloak @click.self="closePreview()">
 
@@ -1206,6 +1209,7 @@
             <div class="yard-chat__input-pill">
                 {{-- Attachment button --}}
                 <div x-data="{ open: false }" class="relative">
+                    <div wire:ignore x-overlay="open" class="contents"></div>
                     <button type="button" @click="open = !open" class="yard-chat__pill-btn"
                             x-bind:class="open && 'yard-chat__pill-btn--active'">
                         <svg class="w-5 h-5 transition-transform duration-200" :class="open && 'rotate-45'" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
@@ -1255,6 +1259,7 @@
 
                 {{-- Emoji button --}}
                 <div class="relative">
+                    <div wire:ignore x-overlay="emojiOpen" class="contents"></div>
                     <button type="button" @click="emojiOpen = !emojiOpen" class="yard-chat__pill-btn">😊</button>
                     <div x-show="emojiOpen" @click.away="emojiOpen = false" x-transition
                          class="yard-emoji-picker">
@@ -1838,6 +1843,17 @@
          back to the chat list, exactly when picking a message. --}}
     <div wire:ignore x-overlay="lightboxOpen" class="contents"></div>
     <div wire:ignore x-overlay="sel.on" class="contents"></div>
+
+    {{-- Everything else back should peel off before it leaves the room, the
+         way WhatsApp does: the reaction bar, a reply being composed, and an
+         open search. Each is a separate press, topmost first. The last two
+         are Livewire state, so they name the method that closes them rather
+         than having false assigned to the expression that reveals them. --}}
+    <div wire:ignore x-overlay="ctx.open" x-overlay-close="ctxClose()" class="contents"></div>
+    <div wire:ignore x-overlay="$wire.replyToId !== null"
+         x-overlay-close="$wire.cancelReply()" class="contents"></div>
+    <div wire:ignore x-overlay="$wire.searchActive"
+         x-overlay-close="$wire.toggleSearch()" class="contents"></div>
 
     <div x-show="lightboxOpen" x-transition.opacity @click="lightboxOpen = false"
          class="yard-lightbox" x-cloak>

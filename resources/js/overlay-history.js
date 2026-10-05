@@ -99,6 +99,14 @@ document.addEventListener('alpine:init', () => {
 
     Alpine.directive('overlay', (el, { expression }, { effect, evaluateLater, evaluate, cleanup }) => {
         const isOpen = evaluateLater(expression);
+
+        // Some states cannot be closed by assigning false to the expression
+        // that reveals them — a Livewire property needs its own method, and a
+        // reply is cancelled rather than unset. Those name the action here:
+        //
+        //     x-overlay="$wire.replyToId !== null" x-overlay-close="$wire.cancelReply()"
+        const closeExpression = el.getAttribute('x-overlay-close') || `${expression} = false`;
+
         const id = {};
         let wasOpen = false;
 
@@ -109,7 +117,7 @@ document.addEventListener('alpine:init', () => {
                 wasOpen = open;
 
                 if (open) {
-                    pushOverlay({ id, close: () => evaluate(`${expression} = false`) });
+                    pushOverlay({ id, close: () => evaluate(closeExpression) });
                 } else {
                     popOverlay(id);
                 }
