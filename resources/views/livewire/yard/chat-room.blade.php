@@ -511,7 +511,22 @@
             {{-- Normal message --}}
             @else
                 @php $isOwn = $msg->user_id === auth()->id(); @endphp
-                <div class="yard-msg {{ $isOwn ? 'yard-msg--own' : '' }}" id="msg-{{ $msg->id }}" wire:key="msg-{{ $msg->id }}">
+                {{-- The row, not the bubble, is what you press.
+                     WhatsApp lets you tap anywhere along a message's line to
+                     pick it, and long-press anywhere to start picking. Hanging
+                     those off the bubble alone meant aiming at the text, which
+                     on a short message is a very small target.
+
+                     The message's details live here too, written once: they
+                     used to be spelled out again in every handler. --}}
+                <div class="yard-msg {{ $isOwn ? 'yard-msg--own' : '' }}" id="msg-{{ $msg->id }}" wire:key="msg-{{ $msg->id }}"
+                     x-data="{ d: { msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }} } }"
+                     :class="{ 'yard-msg--picked-row': selHas({{ $msg->id }}) }"
+                     @click="if (sel.on) { $event.preventDefault(); $event.stopPropagation(); selToggle(d); }"
+                     @touchstart.passive="lpStart($event, d)"
+                     @touchmove.passive="lpMove($event)"
+                     @touchend="lpEnd($event)"
+                     @touchcancel.passive="lpCancel()">
 
                     {{-- Avatar (other users only) --}}
                     @unless($isOwn)
@@ -581,20 +596,12 @@
                              chevron, the plus in the emoji row — so the text of
                              each message travelled five times over. --}}
                         <div class="yard-msg__bubble {{ $isOwn ? 'yard-msg__bubble--own' : 'yard-msg__bubble--other' }}"
-                             x-data="{ d: { msgId: {{ $msg->id }}, isOwn: {{ $isOwn ? 'true' : 'false' }}, msgType: '{{ $msg->message_type->value }}', content: {{ json_encode($msg->content ?? '') }}, isPinned: {{ $msg->is_pinned ? 'true' : 'false' }} } }"
                              :class="{
                                  'yard-msg__bubble--selected': ctx.open && ctx.msgId === {{ $msg->id }} && sel.ids.length === 1,
                                  'yard-msg__bubble--picked': selHas({{ $msg->id }}),
                              }"
-                             {{-- While selecting, a plain click picks the message instead of
-                                  doing whatever it would normally do. --}}
-                             @click="if (sel.on) { $event.preventDefault(); $event.stopPropagation(); selToggle(d); }"
                              @mouseenter="hovShow($el, d)" @mouseleave="hovLeave()"
                              @pointerdown="keepKeyboard($event)"
-                             @touchstart.passive="lpStart($event, d)"
-                             @touchmove.passive="lpMove($event)"
-                             @touchend="lpEnd($event)"
-                             @touchcancel.passive="lpCancel()"
                              @contextmenu.prevent="ctxOpen({ ...d, x: $event.clientX, y: $event.clientY })">
 
                             {{-- Forwarded label --}}
@@ -1471,10 +1478,9 @@
          display:none on phones outright. Twenty-five messages meant well over
          100 KB of HTML nobody could see, plus the Alpine state to go with it.
          The same toolbar now follows the mouse. --}}
-    <div x-show="hov.open" x-cloak
+    <div x-show="hov.open" x-cloak x-ref="hoverBar"
          class="yard-hov"
          :class="hov.own ? 'yard-hov--own' : ''"
-         :style="{ top: hov.y + 'px', left: hov.x + 'px' }"
          @mouseenter="hovKeep()" @mouseleave="hovLeave()">
 
         <div x-show="hov.pick" x-cloak class="yard-hov__emojis">

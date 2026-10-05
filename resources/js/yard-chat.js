@@ -197,6 +197,7 @@ document.addEventListener('alpine:init', () => {
                 // The shared hover toolbar: which bubble it is over, and where.
                 hov: { open: false, pick: false, own: false, x: 0, y: 0, d: null },
                 _hovTimer: null,
+                _hoverBarHome: null,
 
                 ctx: {
                     open: false,
@@ -226,13 +227,27 @@ document.addEventListener('alpine:init', () => {
 
                     clearTimeout(this._hovTimer);
 
-                    const r = el.getBoundingClientRect();
+                    // Moved into the bubble rather than positioned over it.
+                    // Viewport coordinates drifted the moment anything scrolled
+                    // or reflowed, which is how the bar ended up sitting on top
+                    // of the message instead of beside it. Inside the bubble,
+                    // ordinary absolute positioning puts it where the old
+                    // per-bubble buttons were, and it cannot come adrift.
+                    const bar = this.$refs.hoverBar;
+
+                    if (bar && bar.parentElement !== el) {
+                        // Remember where it lives, so it can be put back. A
+                        // Livewire morph that replaces the hovered bubble would
+                        // otherwise take the only copy of the bar with it, and
+                        // hovering would do nothing for the rest of the session.
+                        this._hoverBarHome ??= bar.parentElement;
+                        el.appendChild(bar);
+                    }
+
                     this.hov.d = detail;
                     this.hov.own = !! detail.isOwn;
                     this.hov.open = true;
                     this.hov.pick = false;
-                    this.hov.y = r.top;
-                    this.hov.x = detail.isOwn ? Math.max(4, r.left - 70) : r.right + 8;
                 },
 
                 /**
@@ -244,6 +259,7 @@ document.addEventListener('alpine:init', () => {
                     this._hovTimer = setTimeout(() => {
                         this.hov.open = false;
                         this.hov.pick = false;
+                        this.parkHoverBar();
                     }, 180);
                 },
 
@@ -255,6 +271,16 @@ document.addEventListener('alpine:init', () => {
                     clearTimeout(this._hovTimer);
                     this.hov.open = false;
                     this.hov.pick = false;
+                    this.parkHoverBar();
+                },
+
+                /** Return the bar to the component root, out of the morph's way. */
+                parkHoverBar() {
+                    const bar = this.$refs.hoverBar;
+
+                    if (bar && this._hoverBarHome && bar.parentElement !== this._hoverBarHome) {
+                        this._hoverBarHome.appendChild(bar);
+                    }
                 },
 
                 hovReact(em) {
@@ -265,10 +291,18 @@ document.addEventListener('alpine:init', () => {
                 /** Hand off to the full menu, anchored where the toolbar is. */
                 hovMore() {
                     const d = this.hov.d;
-                    const x = this.hov.x;
-                    const y = this.hov.y;
+                    const bar = this.$refs.hoverBar;
+                    const r = bar?.parentElement?.getBoundingClientRect();
+
                     this.hovHide();
-                    if (d) this.ctxOpen({ ...d, x, y });
+
+                    if (d) {
+                        this.ctxOpen({
+                            ...d,
+                            x: r ? r.left : 0,
+                            y: r ? r.bottom : 0,
+                        });
+                    }
                 },
 
                 ctxOpen(detail) {
@@ -350,7 +384,11 @@ document.addEventListener('alpine:init', () => {
                 lpMove(e) {
                     if (!this._lpTimer) return;
                     const t = e.touches ? e.touches[0] : e;
-                    if (Math.abs(t.clientX - this._lpX) > 10 || Math.abs(t.clientY - this._lpY) > 10) {
+                    // A thumb moves while it presses. 10px cancelled perfectly
+                    // deliberate long presses, which is why the reaction bar
+                    // only showed up sometimes; a scroll is a much larger,
+                    // mostly vertical movement than this.
+                    if (Math.abs(t.clientX - this._lpX) > 16 || Math.abs(t.clientY - this._lpY) > 24) {
                         this.lpCancel();
                     }
                 },

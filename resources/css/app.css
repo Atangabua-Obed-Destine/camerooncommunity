@@ -2019,14 +2019,25 @@
    One element for the whole thread, moved over whichever bubble has the
    mouse. Fixed to the viewport because the thread scrolls underneath it. */
 .yard-hov {
-    position: fixed;
+    /* Absolute inside the hovered bubble, which is position:relative — the
+       same placement the per-bubble buttons had, so it lands beside the
+       message instead of over it, and follows it on scroll for free. */
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 6px);
+    transform: translateY(-50%);
     z-index: 30;
     display: flex;
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
 }
-.yard-hov--own { align-items: flex-end; }
+/* Own messages sit on the right, so their bar goes to their left. */
+.yard-hov--own {
+    left: auto;
+    right: calc(100% + 6px);
+    align-items: flex-end;
+}
 
 .yard-hov__row {
     display: flex;
@@ -2034,6 +2045,9 @@
 }
 
 .yard-hov__emojis {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
     display: flex;
     gap: 2px;
     background: #fff;
@@ -7167,6 +7181,14 @@
    bubble, so a column of selected messages reads as one block the way it
    does in WhatsApp. */
 .yard-msg:has(.yard-msg__bubble--picked) {
+    background: rgba(1, 80, 131, .10);
+    box-shadow: 0 0 0 100vmax rgba(1, 80, 131, .10);
+    clip-path: inset(0 -100vmax);
+}
+
+/* Explicit row tint for the same reason, now that the row carries the class
+   itself: :has() support is not universal and the row is the tap target. */
+.yard-msg--picked-row {
     background: rgba(1, 80, 131, .10);
     box-shadow: 0 0 0 100vmax rgba(1, 80, 131, .10);
     clip-path: inset(0 -100vmax);
