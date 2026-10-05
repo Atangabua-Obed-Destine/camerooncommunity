@@ -75,6 +75,19 @@ class FeedBrowse extends Component
     #[Url(except: '')]
     public ?int $radius = null;
 
+    /**
+     * Where the viewer is, for ordering and distances — not a filter.
+     *
+     * Deliberately not in the URL: these describe the viewer, not a choice
+     * they made, and writing them to ?loc= made an automatic pin
+     * indistinguishable from a deliberate one.
+     */
+    public ?float $homeLat = null;
+
+    public ?float $homeLng = null;
+
+    public string $homeRegion = '';
+
     public function mount(?string $slug = null): void
     {
         if ($slug) {
@@ -85,18 +98,22 @@ class FeedBrowse extends Component
             }
         }
 
-        // Default the location pin to the viewer's own location so the feed
-        // opens centred on them — just like Facebook Marketplace.
-        if ($this->locLat === null && ($u = auth()->user())) {
+        // Remember where the viewer is, but do not filter by it. The feed
+        // used to pin itself to their location on open, which wrote ?loc= into
+        // the URL and — once a pin with no radius came to mean that region —
+        // quietly hid the rest of the country. Somebody in Centre could not see
+        // a listing in Littoral without first noticing a filter they never set.
+        //
+        // The whole market shows by default; their own area simply comes first.
+        if ($u = auth()->user()) {
+            $this->homeRegion = (string) ($u->current_region ?? '');
+
             if ($u->current_lat !== null && $u->current_lng !== null) {
-                $this->locLat = (float) $u->current_lat;
-                $this->locLng = (float) $u->current_lng;
-            } elseif ($u->current_region) {
-                $c = \App\Support\CameroonGeo::centroidForRegion((string) $u->current_region);
-                if ($c) { $this->locLat = $c['lat']; $this->locLng = $c['lng']; }
-            }
-            if ($this->locLabel === '') {
-                $this->locLabel = $u->current_city ?: ($u->current_region ?: '');
+                $this->homeLat = (float) $u->current_lat;
+                $this->homeLng = (float) $u->current_lng;
+            } elseif ($this->homeRegion !== '') {
+                $c = \App\Support\CameroonGeo::centroidForRegion($this->homeRegion);
+                if ($c) { $this->homeLat = $c['lat']; $this->homeLng = $c['lng']; }
             }
         }
     }
@@ -194,15 +211,25 @@ class FeedBrowse extends Component
 
         MarketplaceQueryBuilder::applyRadius($q, $this->locLat, $this->locLng, $this->radius);
 
+        // Nothing chosen: keep the whole market, lead with what is nearby.
+        // Once an area is picked, the radius filter above has already narrowed
+        // it and ordering by region would say nothing.
+        if ($this->locLabel === '' && $this->homeRegion !== '') {
+            MarketplaceQueryBuilder::applyLocalFirst($q, $this->homeRegion);
+        }
+
         $page = $q->paginate($this->perPage);
 
-        // Annotate each card with an approximate distance from the viewer's pin
-        // (region-centroid based — see App\Support\CameroonGeo). FB shows this.
-        if ($this->locLat !== null && $this->locLng !== null) {
+        // "12 km away" is measured from wherever the viewer is, whether or not
+        // they have narrowed the feed.
+        $fromLat = $this->locLat ?? $this->homeLat;
+        $fromLng = $this->locLng ?? $this->homeLng;
+
+        if ($fromLat !== null && $fromLng !== null) {
             foreach ($page as $listing) {
                 $c = \App\Support\CameroonGeo::centroidForRegion((string) $listing->region);
                 $listing->distance_km = $c
-                    ? \App\Support\CameroonGeo::haversineKm($this->locLat, $this->locLng, $c['lat'], $c['lng'])
+                    ? \App\Support\CameroonGeo::haversineKm($fromLat, $fromLng, $c['lat'], $c['lng'])
                     : null;
             }
         }

@@ -122,6 +122,47 @@ class MarketplaceQueryBuilder
         });
     }
 
+    /**
+     * Float a region's listings to the top without excluding anything else.
+     *
+     * This is the difference between "near me" as a sort and as a filter. The
+     * feed opens showing the whole market — a thin market is worse than a
+     * distant one — but what is nearby comes first, and narrowing to one area
+     * stays something the viewer chooses.
+     *
+     * Ordering is applied before the chosen sort so it wins, and the sort
+     * decides the run within each group.
+     */
+    public static function applyLocalFirst(Builder $q, string $region): Builder
+    {
+        $key = \App\Support\CameroonGeo::matchRegion($region);
+
+        if ($key === '') {
+            return $q;
+        }
+
+        $aliases = \App\Support\CameroonGeo::aliasesFor([$key]);
+
+        if ($aliases === []) {
+            return $q;
+        }
+
+        $when = implode(' OR ', array_fill(0, count($aliases), 'LOWER(region) LIKE ?'));
+        $bindings = array_map(fn ($a) => '%' . mb_strtolower($a) . '%', $aliases);
+
+        // Unshifted rather than appended: a sort is already on the builder by
+        // the time we get here, and an appended ordering would never be read.
+        $query = $q->getQuery();
+        $existing = $query->orders ?? [];
+        $query->orders = [];
+
+        $q->orderByRaw("CASE WHEN {$when} THEN 0 ELSE 1 END", $bindings);
+
+        $query->orders = array_merge($query->orders, $existing);
+
+        return $q;
+    }
+
     /** Apply one of the supported sort strategies to a builder. */
     public static function applySort(Builder $q, string $sort): Builder
     {
