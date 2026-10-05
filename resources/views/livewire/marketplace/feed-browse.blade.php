@@ -35,8 +35,8 @@
      x-on:mp-close-listing.window="closeItem()">
 
     {{-- ─── Mobile sticky bar with title + filters trigger ─── --}}
-    <div class="lg:hidden sticky top-0 z-30 bg-cm-bar-gradient border-b border-cm-bar-deep px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
-        <h1 class="text-lg font-extrabold text-white truncate">
+    <div class="mp-topbar lg:hidden sticky top-0 z-30 px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm">
+        <h1 class="mp-topbar__title text-lg font-extrabold truncate">
             @if ($this->activeCategory)
                 <span class="mr-1">{{ $this->activeCategory->icon }}</span>{{ $this->activeCategory->localizedName() }}
             @else
@@ -45,7 +45,7 @@
         </h1>
         <div class="flex items-center gap-1.5">
             <button type="button" @click="filtersOpen = true"
-                    class="inline-flex items-center gap-1.5 bg-white/15 hover:bg-white/25 text-white font-semibold text-xs rounded-full px-3 py-1.5 transition">
+                    class="mp-topbar__btn inline-flex items-center gap-1.5 font-semibold text-xs rounded-full px-3 py-1.5 transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M3 4h18M6 12h12M10 20h4"/></svg>
                 <span x-data x-text="$store.lang.t('Filters','Filtres')"></span>
             </button>
