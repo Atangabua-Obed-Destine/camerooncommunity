@@ -127,6 +127,37 @@ class ChatRealtimeCostTest extends TestCase
             ->assertSee('Arrived after the room opened');
     }
 
+    public function test_the_root_x_data_does_not_change_between_renders(): void
+    {
+        // Livewire re-initialises an Alpine component when its x-data
+        // attribute changes, which wipes everything the component holds: the
+        // selection, its counter, the toolbar, the jump-to-latest state. Tick
+        // statuses used to sit in there and change on every receipt, so a
+        // selection emptied itself seconds after it was made.
+        $me   = $this->createUser(['username' => 'me5']);
+        $them = $this->createUser(['username' => 'them5']);
+        $room = $this->roomWith($me, $them);
+
+        $component = Livewire::actingAs($me)->test(ChatRoom::class, ['room' => $room]);
+
+        $before = $this->rootXData($component->html());
+
+        // A message arriving changes the statuses, and used to change x-data.
+        $message = $this->messageFrom($them, $room, 'Changes the tick statuses');
+        $component->call('onMessageReceived', ['id' => $message->id, 'user_id' => $them->id]);
+
+        $this->assertSame($before, $this->rootXData($component->html()));
+    }
+
+    private function rootXData(string $html): string
+    {
+        preg_match('/x-data="(chatUi\([^"]*)"/', $html, $m);
+
+        $this->assertNotEmpty($m, 'The chat root should carry an x-data of chatUi(...).');
+
+        return $m[1];
+    }
+
     public function test_an_unknown_message_id_does_not_break_the_refresh(): void
     {
         // Broadcasts can name a message this viewer cannot see — deleted, or

@@ -104,9 +104,11 @@ document.addEventListener('alpine:init', () => {
                 // morph strips attributes the server did not send).
 
                 init() {
-                    // Hydrate the global msgStatus store with server-computed statuses
-                    // so ticks render correctly on first paint and after Livewire updates.
-                    this.hydrateStatuses();
+                    // Tick statuses are hydrated by a keyed element in the view,
+                    // which re-runs whenever they actually change. They are
+                    // deliberately not part of this component's x-data: that
+                    // attribute must stay byte-identical across renders or the
+                    // morph re-initialises everything held here.
 
                     // Subscribe ONCE to this user's private receipts channel for tick updates.
                     if (cfg.receiptsChannel) {
@@ -135,9 +137,15 @@ document.addEventListener('alpine:init', () => {
                     }
                 },
 
-                hydrateStatuses() {
-                    if (cfg.messageStatuses && Object.keys(cfg.messageStatuses).length) {
-                    const initial = cfg.messageStatuses;
+                /**
+                 * Merge server-computed tick statuses into the shared store.
+                 *
+                 * Called from the view with the current set, on first paint and
+                 * again whenever they change.
+                 */
+                hydrateStatuses(statuses) {
+                    if (statuses && Object.keys(statuses).length) {
+                    const initial = statuses;
                     if (window.Alpine && window.Alpine.store) {
                         const store = window.Alpine.store('msgStatus');
                         for (const id in initial) {

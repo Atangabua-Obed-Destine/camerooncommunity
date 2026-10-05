@@ -1,13 +1,19 @@
 {{-- Read once per render: the call buttons appear in the header and again
      on every call log, and this is a database lookup. --}}
 @php $callsOn = \App\Services\SiteSettings::callsEnabled(); @endphp
+{{-- Only values that never change within a session belong in this
+     attribute. Anything that varies per render rewrites the x-data string,
+     and Livewire's morph then re-initialises the Alpine component — wiping
+     the selection, the counter, the jump-to-latest state, everything. Tick
+     statuses used to live here and change on every receipt, which is exactly
+     why a selection emptied itself and the toolbar vanished on its own. They
+     are hydrated below instead. --}}
 <div class="yard-chat"
      x-data="chatUi(@js([
          'userId' => auth()->id(),
          'receiptsChannel' => auth()->check()
              ? 'tenant.' . app('currentTenant')?->id . '.user.' . auth()->id() . '.receipts'
              : null,
-         'messageStatuses' => $messageStatuses ?? [],
          'storageUrl' => asset('storage'),
      ]))"
      x-on:message-sent.window="setTimeout(() => { optimistic = optimistic.filter(o => o.kind !== 'text' && o.kind !== undefined); scrollToBottom(); }, 350)"
@@ -349,6 +355,14 @@
             </div>
         </div>
     </div>
+
+    {{-- Tick statuses, hydrated without touching the root's x-data.
+         The key is a digest of the statuses themselves: unchanged, Livewire
+         leaves the node alone; changed, it replaces the node and Alpine runs
+         x-init again. Either way the component above keeps its state. --}}
+    <div class="hidden"
+         wire:key="msg-statuses-{{ md5(json_encode($messageStatuses ?? [])) }}"
+         x-init="hydrateStatuses(@js($messageStatuses ?? []))"></div>
 
     {{-- ── Messages Area ── --}}
     <div class="yard-chat__messages" id="chat-messages"
@@ -1713,12 +1727,11 @@
          x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100"
          class="yard-sel-bar" @pointerdown="keepKeyboard($event)" @click.stop
-         @clear-selection.window="selClear()">
+         @clear-selection.window="selClear()"
+         @keydown.escape.window="selClear()">
 
-        <button type="button" class="yard-sel-bar__btn" @click="selClear()"
-                :aria-label="$store.lang.t('Cancel selection', 'Annuler la sélection')">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        {{-- No cancel button: selection is left by unpicking the messages, by
+             Escape, or by the back gesture, which the overlay stack handles. --}}
         <span class="yard-sel-bar__count" x-text="sel.ids.length"></span>
         <span class="yard-sel-bar__spacer"></span>
 
