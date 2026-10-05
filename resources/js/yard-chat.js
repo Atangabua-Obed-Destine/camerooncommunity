@@ -215,6 +215,10 @@ document.addEventListener('alpine:init', () => {
                 _hovTimer: null,
                 _hoverBarHome: null,
 
+                // The pending click-eater's cleanup, so a second long press
+                // cancels the first rather than stacking another listener.
+                _clickEater: null,
+
                 ctx: {
                     open: false,
                     moreEmojis: false,
@@ -422,20 +426,47 @@ document.addEventListener('alpine:init', () => {
                     this.lpCancel();
                 },
 
-                // Belt and braces for browsers that emit the click anyway: eat the
-                // very next one, then stop listening.
+                /**
+                 * Eat the click a long press leaves behind, and only that one.
+                 *
+                 * Lifting the finger fires a click wherever it was, which by
+                 * then is on top of the reaction bar that just opened.
+                 *
+                 * The timer belongs to this call, not to the component. It
+                 * used to be a single shared property, so two presses close
+                 * together left the first call's expiry clearing the second
+                 * call's timer: that listener was never removed on time and
+                 * sat on the document waiting to eat a real tap. Each
+                 * overlapping press leaked another, which is why selecting
+                 * worked at first and then needed three or four presses to
+                 * register anything.
+                 *
+                 * The window is short for the same reason — the synthetic
+                 * click follows within a frame or two, and anything later is
+                 * the user tapping deliberately.
+                 */
                 swallowNextClick() {
+                    // At most one in flight. Two overlapping eaters would take
+                    // two taps between them, and the user feels every one.
+                    if (this._clickEater) this._clickEater();
+
+                    let timer = null;
+
+                    const cleanup = () => {
+                        document.removeEventListener('click', eat, true);
+                        clearTimeout(timer);
+                        if (this._clickEater === cleanup) this._clickEater = null;
+                    };
+
                     const eat = (ev) => {
                         ev.preventDefault();
                         ev.stopPropagation();
                         cleanup();
                     };
-                    const cleanup = () => {
-                        document.removeEventListener('click', eat, true);
-                        clearTimeout(this._lpClickTimer);
-                    };
+
                     document.addEventListener('click', eat, true);
-                    this._lpClickTimer = setTimeout(cleanup, 700);
+                    this._clickEater = cleanup;
+                    timer = setTimeout(cleanup, 350);
                 },
 
                 lpCancel() {
