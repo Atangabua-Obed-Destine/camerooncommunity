@@ -55,6 +55,27 @@ class PwaInstalledDetectionTest extends TestCase
         $this->assertStringContainsString('getInstalledRelatedApps', $html);
     }
 
+    public function test_every_ios_browser_gets_the_ios_steps(): void
+    {
+        // Chrome and Firefox on iOS are WebKit underneath and install the same
+        // way. Excluding them sent their users the Android instructions, which
+        // name a menu their phone does not have.
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('crios|fxios|edgios', $html);
+        $this->assertStringContainsString('Add to Home Screen', $html);
+    }
+
+    public function test_an_in_app_browser_is_called_out(): void
+    {
+        // Links arrive through Facebook, Instagram and TikTok more often than
+        // through Safari, and those browsers have no Add to Home Screen at all.
+        $html = $this->get('/')->assertOk()->getContent();
+
+        $this->assertStringContainsString('FBAN', $html);
+        $this->assertStringContainsString('Open in Safari', $html);
+    }
+
     public function test_the_install_listener_is_registered_before_the_installed_check(): void
     {
         // The listener used to sit after an early return, so on a device that

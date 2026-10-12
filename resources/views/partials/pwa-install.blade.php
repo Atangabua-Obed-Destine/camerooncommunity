@@ -75,7 +75,12 @@
                     style="flex-shrink:0; background:#015083; color:#ffffff; border:0; cursor:pointer;
                            font-family:inherit; font-size:0.82rem; font-weight:700;
                            padding:9px 18px; border-radius:9999px;">
-                <span x-text="$store.lang.t('Install', 'Installer')"></span>
+                {{-- iOS has no install prompt to fire, so the button opens the
+                     steps instead. Saying "Install" there promises a tap that
+                     does the job and leaves people waiting for something. --}}
+                <span x-text="canPrompt
+                    ? $store.lang.t('Install', 'Installer')
+                    : $store.lang.t('How to install', 'Comment installer')"></span>
             </button>
 
             <button type="button" @click="dismiss()"
@@ -90,16 +95,54 @@
              browsers when the prompt isn't available, e.g. unsupported or not yet eligible). --}}
         <div x-show="howTo" x-cloak x-transition
              style="border-top:1px solid #e2e8f0; background:#f8fafc; padding:12px 14px; font-size:0.8rem; color:#334155; line-height:1.5;">
-            <div style="display:flex; align-items:center; gap:8px;">
+            {{-- An app's own browser has no "Add to Home Screen" in its Share
+                 sheet at all, so the steps below are impossible until the page
+                 is opened in Safari. Said first, and on its own. --}}
+            <div x-show="inApp" x-cloak
+                 style="display:flex; align-items:flex-start; gap:8px; margin-bottom:10px;
+                        background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:9px 10px;">
+                <span style="flex-shrink:0;">⚠️</span>
+                <span x-text="$store.lang.t(
+                    'You are in an app\'s browser, which cannot install. Tap ⋯ and choose Open in Safari first.',
+                    'Vous êtes dans le navigateur d\'une application, qui ne peut pas installer. Touchez ⋯ puis Ouvrir dans Safari.')"></span>
+            </div>
+
+            {{-- iPhone: Share is the square-with-an-arrow in the toolbar, and
+                 the option sits well down the list, which is where people give
+                 up. Numbered, and both are named. --}}
+            <div x-show="ios" x-cloak style="display:flex; flex-direction:column; gap:7px;">
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                    <span style="flex-shrink:0; font-weight:700; color:#015083;">1.</span>
+                    <span style="display:flex; align-items:center; gap:6px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#015083" stroke-width="1.9"
+                             stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                            <path d="M12 16V3"/><path d="M8 7l4-4 4 4"/>
+                            <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
+                        </svg>
+                        <span x-text="$store.lang.t(
+                            'Tap Share at the bottom of Safari',
+                            'Touchez Partager en bas de Safari')"></span>
+                    </span>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                    <span style="flex-shrink:0; font-weight:700; color:#015083;">2.</span>
+                    <span x-text="$store.lang.t(
+                        'Scroll down the list and tap Add to Home Screen',
+                        'Faites défiler la liste et touchez Sur l\'écran d\'accueil')"></span>
+                </div>
+                <div style="display:flex; align-items:flex-start; gap:8px;">
+                    <span style="flex-shrink:0; font-weight:700; color:#015083;">3.</span>
+                    <span x-text="$store.lang.t('Tap Add', 'Touchez Ajouter')"></span>
+                </div>
+            </div>
+
+            <div x-show="! ios" x-cloak style="display:flex; align-items:center; gap:8px;">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#015083" stroke-width="1.9"
                      stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
                     <path d="M12 16V3"/><path d="M8 7l4-4 4 4"/>
                     <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/>
                 </svg>
-                <span x-show="ios" x-text="$store.lang.t(
-                    'Tap Share, then choose Add to Home Screen.',
-                    'Touchez Partager, puis Sur l\'écran d\'accueil.')"></span>
-                <span x-show="!ios" x-text="$store.lang.t(
+                <span x-text="$store.lang.t(
                     'Open your browser menu (⋮), then choose Install app or Add to Home screen.',
                     'Ouvrez le menu du navigateur (⋮), puis Installer l\'application ou Ajouter à l\'écran d\'accueil.')"></span>
             </div>
@@ -117,6 +160,7 @@
         return {
             show: false,
             ios: false,
+            inApp: false,
             howTo: false,
             canPrompt: false,
             // Phones only. 767px is the same breakpoint the Yard uses for mobile.
@@ -187,7 +231,21 @@
                 if (this.installed) return;
 
                 const ua = navigator.userAgent;
-                this.ios = /iphone|ipad|ipod/i.test(ua) && !/crios|fxios|edgios/i.test(ua);
+
+                // Every browser on iOS is WebKit underneath and installs the
+                // same way — Share, then Add to Home Screen. Excluding Chrome
+                // and Firefox here sent their users the Android instructions,
+                // telling them to look for a ⋮ menu that does not exist on
+                // their phone.
+                this.ios = /iphone|ipad|ipod/i.test(ua)
+                    || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+
+                // An app's built-in browser cannot add anything to the home
+                // screen: the option is simply missing from its Share sheet.
+                // Links reach people through Facebook, Instagram and TikTok
+                // more often than through Safari, so without saying this they
+                // follow correct instructions and find nothing.
+                this.inApp = /FBAN|FBAV|FB_IAB|Instagram|TikTok|Line\/|MicroMessenger|LinkedInApp|Snapchat/i.test(ua);
 
                 if (this.ios) {
                     // No beforeinstallprompt on iOS, ever — show the manual path,
