@@ -129,6 +129,48 @@ return [
         'DE' => ['Bavaria', 'Berlin', 'North Rhine-Westphalia', 'Baden-Württemberg', 'Hesse', 'Lower Saxony'],
         'US' => ['Northeast', 'Southeast', 'Midwest', 'Southwest', 'West Coast'],
         'CA' => ['Ontario', 'Quebec', 'British Columbia', 'Alberta'],
+        // China's 34 province-level divisions. Added because a user in
+        // Beijing reached us with a country and no region at all: Nominatim's
+        // address object for the four municipalities carries no 'state', and
+        // its 'city' is a district ("Dongcheng District"), which would make a
+        // regional room per city district.
+        'CN' => [
+            'Anhui', 'Beijing', 'Chongqing', 'Fujian', 'Gansu', 'Guangdong',
+            'Guangxi', 'Guizhou', 'Hainan', 'Hebei', 'Heilongjiang', 'Henan',
+            'Hong Kong', 'Hubei', 'Hunan', 'Inner Mongolia', 'Jiangsu', 'Jiangxi',
+            'Jilin', 'Liaoning', 'Macau', 'Ningxia', 'Qinghai', 'Shaanxi',
+            'Shandong', 'Shanghai', 'Shanxi', 'Sichuan', 'Taiwan', 'Tianjin',
+            'Tibet', 'Xinjiang', 'Yunnan', 'Zhejiang',
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | ISO 3166-2 subdivision code -> readable name
+    |--------------------------------------------------------------------------
+    |
+    | The last resort when reverse geocoding returns a country but no region
+    | name. Nominatim answers with ISO3166-2-lvl4 for essentially every
+    | address, even where 'state', 'region', 'state_district' and 'county' are
+    | all absent — Beijing being the case that prompted this.
+    |
+    | Keyed by ISO code rather than by country, so another country can be
+    | added here without touching any code.
+    |
+    */
+    'iso_subdivisions' => [
+        'CN-AH' => 'Anhui',        'CN-BJ' => 'Beijing',      'CN-CQ' => 'Chongqing',
+        'CN-FJ' => 'Fujian',       'CN-GS' => 'Gansu',        'CN-GD' => 'Guangdong',
+        'CN-GX' => 'Guangxi',      'CN-GZ' => 'Guizhou',      'CN-HI' => 'Hainan',
+        'CN-HE' => 'Hebei',        'CN-HL' => 'Heilongjiang', 'CN-HA' => 'Henan',
+        'CN-HK' => 'Hong Kong',    'CN-HB' => 'Hubei',        'CN-HN' => 'Hunan',
+        'CN-NM' => 'Inner Mongolia', 'CN-JS' => 'Jiangsu',    'CN-JX' => 'Jiangxi',
+        'CN-JL' => 'Jilin',        'CN-LN' => 'Liaoning',     'CN-MO' => 'Macau',
+        'CN-NX' => 'Ningxia',      'CN-QH' => 'Qinghai',      'CN-SN' => 'Shaanxi',
+        'CN-SD' => 'Shandong',     'CN-SH' => 'Shanghai',     'CN-SX' => 'Shanxi',
+        'CN-SC' => 'Sichuan',      'CN-TW' => 'Taiwan',       'CN-TJ' => 'Tianjin',
+        'CN-XZ' => 'Tibet',        'CN-XJ' => 'Xinjiang',     'CN-YN' => 'Yunnan',
+        'CN-ZJ' => 'Zhejiang',
     ],
 
     /*

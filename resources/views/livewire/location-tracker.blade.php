@@ -165,22 +165,39 @@
                 const geo = await resp.json();
                 const addr = geo.address || {};
                 const country = addr.country || '';
-                let region = addr.state || '';
-                
-                // For UK, map the state to ITL region (or keep as-is if already an ITL region)
-                // Otherwise, don't send city — only country and region
+
+                // Several keys, not just 'state'. China's municipalities come
+                // back with no 'state' at all — a user in Beijing had a country
+                // and no region, so no regional room was ever made for them.
+                // The ISO code travels too: it is the only region-level signal
+                // some addresses carry, and the server maps it to a name.
+                const region = addr.state
+                    || addr.region
+                    || addr.state_district
+                    || addr.county
+                    || '';
+
                 return {
-                    lat:     pos.coords.latitude,
-                    lng:     pos.coords.longitude,
-                    country: country,
-                    region:  region,
+                    lat:       pos.coords.latitude,
+                    lng:       pos.coords.longitude,
+                    country:   country,
+                    region:    region,
+                    isoRegion: addr['ISO3166-2-lvl4'] || '',
                 };
             } catch { return null; }
         };
 
         const detectByIP = async () => {
             try {
-                const resp = await fetch('https://ipapi.co/json/', { timeout: 5000 });
+                // AbortController, because fetch has no 'timeout' option: the
+                // one that used to be passed here was simply ignored, so a
+                // provider that accepted the connection and never answered
+                // left this hanging on the browser's own default.
+                const ctrl = new AbortController();
+                const abortAt = setTimeout(() => ctrl.abort(), 5000);
+
+                const resp = await fetch('https://ipapi.co/json/', { signal: ctrl.signal })
+                    .finally(() => clearTimeout(abortAt));
                 if (!resp.ok) return null;
                 const data = await resp.json();
                 if (data.error) return null;
@@ -274,6 +291,7 @@
                         lng: result.lng,
                         country: result.country,
                         region: result.region,
+                        isoRegion: result.isoRegion || '',
                         city: ''
                     })
                 }).then(resp => resp.json())
@@ -337,14 +355,23 @@
                 return { ok: false, reason: map[err && err.code] || 'unavailable' };
             }
 
-            let country = '', region = '';
+            let country = '', region = '', isoRegion = '';
             try {
                 const resp = await fetch(
                     `https://nominatim.openstreetmap.org/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&format=json&accept-language=en`
                 );
                 const geo = await resp.json();
-                country = (geo.address || {}).country || '';
-                region  = (geo.address || {}).state   || '';
+                const addr = geo.address || {};
+
+                country = addr.country || '';
+                // Same chain as the automatic path above; they used to read
+                // different keys and so disagreed about the same user.
+                region = addr.state
+                    || addr.region
+                    || addr.state_district
+                    || addr.county
+                    || '';
+                isoRegion = addr['ISO3166-2-lvl4'] || '';
             } catch (_) { /* handled below */ }
 
             if (!country) return { ok: false, reason: 'no-fix' };
@@ -367,6 +394,7 @@
                     lng: pos.coords.longitude,
                     country,
                     region,
+                    isoRegion,
                     city: '',
                 }),
             }).catch(() => {});

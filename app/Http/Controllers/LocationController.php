@@ -21,6 +21,10 @@ class LocationController extends Controller
             'lng' => 'required|numeric|min:-180|max:180',
             'country' => 'required|string|max:100',
             'region' => 'nullable|string|max:100',
+            // ISO 3166-2 subdivision code (e.g. CN-BJ). Sent so a region
+            // can be named without a second geocode, for the addresses
+            // where the geocoder gives a code but no name.
+            'isoRegion' => 'nullable|string|max:10',
             'city' => 'nullable|string|max:100',
         ]);
 
@@ -49,7 +53,9 @@ class LocationController extends Controller
         }
 
         // Handle location assignment (bootstrap or prompt)
-        app(LocationService::class)->handleUserLocation($user, $country, '', $region, $lat, $lng);
+        app(LocationService::class)->handleUserLocation(
+            $user, $country, '', $region, $lat, $lng, $validated['isoRegion'] ?? null
+        );
         $user->refresh();
 
         // Append to the member's trail. The service decides whether this is a

@@ -32,7 +32,7 @@ class LocationService
      * When UK is detected with generic "England" region, uses coordinates to
      * reverse-geocode to a specific ITL region via Nominatim.
      */
-    public function handleUserLocation(User $user, string $country, string $city, ?string $region = null, ?float $lat = null, ?float $lng = null): array
+    public function handleUserLocation(User $user, string $country, string $city, ?string $region = null, ?float $lat = null, ?float $lng = null, ?string $isoRegion = null): array
     {
         $countryChanged = $user->current_country !== $country;
 
@@ -64,6 +64,18 @@ class LocationService
             }
 
             $region = $normalized;
+        }
+
+        // Everyone else. The geocoder answered with a country but no region:
+        // Nominatim gives no 'state' at all for China's municipalities, so a
+        // user in Beijing arrived here with country "China" and nothing else,
+        // and a blank region means no regional room is ever created for them.
+        //
+        // Left until last so the UK keeps its own mapping, which deliberately
+        // returns null when a place is outside the twelve ITL1 regions.
+        if (! $region) {
+            $region = $this->resolveRegionName($isoRegion)
+                ?: (($lat && $lng) ? $this->resolveRegionFromCoordinates($lat, $lng) : null);
         }
 
         $user->updateQuietly([
@@ -148,7 +160,57 @@ class LocationService
      * "edinburgh" entries in our map, so we also include a "City of"-stripped
      * variant for each candidate.
      */
-    private function reverseGeocodeCandidates(float $lat, float $lng): array
+    /**
+     * Map an ISO 3166-2 subdivision code to a readable region name.
+     *
+     * The last resort, and the only signal present for some places: Nominatim
+     * returns ISO3166-2-lvl4 for essentially every address, including the ones
+     * where every name key is missing.
+     */
+    private function resolveRegionName(?string $isoRegion): ?string
+    {
+        if (! $isoRegion) {
+            return null;
+        }
+
+        $map = config('cameroon.iso_subdivisions', []);
+
+        return $map[strtoupper(trim($isoRegion))] ?? null;
+    }
+
+    /**
+     * Ask the geocoder what region a coordinate sits in.
+     *
+     * Tried in order of how specific the answer is, stopping at the first one
+     * that names something. 'city' is deliberately not in the list: for
+     * Beijing it reads "Dongcheng District", and a regional room per city
+     * district is worse than none at all.
+     */
+    private function resolveRegionFromCoordinates(float $lat, float $lng): ?string
+    {
+        $address = $this->reverseGeocodeAddress($lat, $lng);
+
+        if ($address === []) {
+            return null;
+        }
+
+        foreach (['state', 'region', 'state_district', 'county'] as $key) {
+            $value = trim((string) ($address[$key] ?? ''));
+
+            if ($value !== '') {
+                return mb_substr($value, 0, 100);
+            }
+        }
+
+        return $this->resolveRegionName($address['ISO3166-2-lvl4'] ?? null);
+    }
+
+    /**
+     * One reverse-geocode request, shared by everything that needs an address.
+     *
+     * @return array<string, string>
+     */
+    private function reverseGeocodeAddress(float $lat, float $lng): array
     {
         try {
             $response = \Illuminate\Support\Facades\Http::timeout(5)
@@ -167,7 +229,23 @@ class LocationService
                 return [];
             }
 
-            $address = $response->json('address') ?? [];
+            return $response->json('address') ?? [];
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::debug('Nominatim reverse-geocoding failed', [
+                'lat' => $lat,
+                'lng' => $lng,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return [];
+    }
+
+    private function reverseGeocodeCandidates(float $lat, float $lng): array
+    {
+        $address = $this->reverseGeocodeAddress($lat, $lng);
+
+        if ($address !== []) {
             $raw = array_filter([
                 $address['city']           ?? null,
                 $address['town']           ?? null,
@@ -194,12 +272,6 @@ class LocationService
             ]);
 
             return array_values(array_unique($candidates));
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::debug('Nominatim reverse-geocoding failed', [
-                'lat' => $lat,
-                'lng' => $lng,
-                'error' => $e->getMessage()
-            ]);
         }
 
         return [];
