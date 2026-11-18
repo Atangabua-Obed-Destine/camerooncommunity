@@ -225,5 +225,10 @@
     "That is you.": "C’est vous.",
     "That is no longer possible.": "Ce n’est plus possible.",
     "You must connect with this user before you can message them.": "Vous devez être connecté à ce membre avant de pouvoir lui écrire.",
-    "You cannot do that in this chat.": "Vous ne pouvez pas faire cela dans cette discussion."
+    "You cannot do that in this chat.": "Vous ne pouvez pas faire cela dans cette discussion.",
+    ":name mentioned you in :room": ":name vous a mentionné dans :room",
+    "New connection request": "Nouvelle demande de connexion",
+    ":name wants to connect with you.": ":name souhaite se connecter avec vous.",
+    "Connection accepted": "Connexion acceptée",
+    ":name accepted your connection request.": ":name a accepté votre demande de connexion."
 }

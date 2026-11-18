@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\Yard\RoomInfoController;
 use App\Http\Controllers\Api\V1\Yard\MessageActionsController;
 use App\Http\Controllers\Api\V1\LocationController;
 use App\Http\Controllers\Api\V1\MeController;
+use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\KamerController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProfileController as ProfileApiController;
@@ -113,6 +114,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware(['auth:sanctum', 'active', 'throttle:120,1'])->group(function () {
         Route::get('auth/me', [AuthController::class, 'me'])->name('auth.me');
         Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
+
+        // This phone's push token (Firebase Cloud Messaging).
+        Route::post('devices', [DeviceController::class, 'store'])->name('devices.store');
+        Route::delete('devices', [DeviceController::class, 'destroy'])->name('devices.destroy');
 
         Route::post('auth/email/resend', [AuthController::class, 'resendVerification'])
             ->middleware('throttle:6,1')

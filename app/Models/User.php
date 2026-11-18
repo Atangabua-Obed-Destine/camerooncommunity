@@ -87,6 +87,12 @@ class User extends Authenticatable implements MustVerifyEmail
 
     // ─── Relationships ───
 
+    /** The app installs that get this member's push notifications. */
+    public function deviceTokens(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
     public function badges(): HasMany
     {
         return $this->hasMany(UserBadge::class);

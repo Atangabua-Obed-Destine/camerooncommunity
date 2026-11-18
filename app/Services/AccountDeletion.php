@@ -96,6 +96,8 @@ class AccountDeletion
             }
 
             $user->tokens()->delete();
+            // And every phone it pushed to, should the app's own goodbye not arrive.
+            $user->deviceTokens()->delete();
             DB::table('password_reset_tokens')->where('email', $user->email)->delete();
             DB::table('coming_soon_signups')->where('email', $user->email)->delete();
             DB::table('activity_log')->where('subject_type', User::class)->where('subject_id', $id)->delete();

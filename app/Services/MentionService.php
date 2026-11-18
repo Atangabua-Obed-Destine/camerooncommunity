@@ -20,8 +20,12 @@ use Illuminate\Support\Collection;
  */
 class MentionService
 {
-    /** Regex matching `@username` tokens in free text. */
-    public const PATTERN = '/(?<![\w@])@([a-zA-Z0-9_]{3,32})/';
+    /**
+     * `@username` tokens in free text. Handles are the name and a suffix
+     * joined by a hyphen ("amanjoya-a1b2c"), so a hyphen belongs inside one;
+     * not at its end, so "@ama-, hi" still reads as @ama.
+     */
+    public const PATTERN = '/(?<![\w@])@([a-zA-Z0-9_][a-zA-Z0-9_-]{1,62}[a-zA-Z0-9_])/';
 
     /**
      * Parse @mentions out of a message's content and persist them on

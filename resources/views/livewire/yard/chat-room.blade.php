@@ -645,7 +645,7 @@
                                     $escaped = e($text);
                                     // Highlight @mentions
                                     $escaped = preg_replace(
-                                        '/(?<![\w@])@([a-zA-Z0-9_]{3,32})/',
+                                        \App\Services\MentionService::PATTERN,
                                         '<a class="yard-msg__mention" data-username="$1">@$1</a>',
                                         $escaped
                                     );

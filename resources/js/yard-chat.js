@@ -1051,7 +1051,7 @@ document.addEventListener('alpine:init', () => {
                     const upToCaret = (this.msgText || '').slice(0, caret);
                     // Match the trailing "@username" token (or "@" alone), allowing it at the
                     // start of input or after whitespace.
-                    const m = upToCaret.match(/(?:^|\s)@([a-zA-Z0-9_]{0,32})$/);
+                    const m = upToCaret.match(/(?:^|\s)@([a-zA-Z0-9_-]{0,64})$/);
                     if (!m) {
                         this.mentionOpen = false;
                         this._mentionAnchor = -1;

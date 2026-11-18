@@ -24,7 +24,7 @@ class NotificationService
             [$title, $body],
         );
 
-        $user->notifications()->create([
+        $notification = $user->notifications()->create([
             'id' => \Illuminate\Support\Str::uuid()->toString(),
             'tenant_id' => $user->tenant_id,
             // The notifications table carries an explicit user_id (NOT NULL) in
@@ -36,6 +36,17 @@ class NotificationService
                 'body' => $body,
             ]),
         ]);
+
+        // And to the member's phones, opening what the bell's row opens.
+        try {
+            app(\App\Services\Push\PushService::class)->toUser($user->id, (string) $title, (string) $body, [
+                'kind' => 'stored',
+                'notification_id' => $notification->id,
+                'link' => $data['url'] ?? route('yard'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('Push skipped: '.$e->getMessage());
+        }
     }
 
     /**

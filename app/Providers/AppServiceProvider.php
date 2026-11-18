@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Services\SiteSettings;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->assertEnvironmentLoaded();
+
+        // Push notifications ride on the realtime events (PushOnEvents).
+        Event::listen(\App\Events\MessageSent::class, [\App\Services\Push\PushOnEvents::class, 'messageSent']);
+        Event::listen(\App\Events\MessageMentioned::class, [\App\Services\Push\PushOnEvents::class, 'mentioned']);
+        Event::listen(\App\Events\ConnectionRequested::class, [\App\Services\Push\PushOnEvents::class, 'connectionRequested']);
+        Event::listen(\App\Events\ConnectionAccepted::class, [\App\Services\Push\PushOnEvents::class, 'connectionAccepted']);
 
         View::composer('*', function ($view) {
             static $shared = null;

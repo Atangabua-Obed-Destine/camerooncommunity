@@ -83,4 +83,11 @@ return [
         'redirect'      => env('GOOGLE_REDIRECT_URI'),
     ],
 
+    // Push notifications through Firebase Cloud Messaging (HTTP v1): the path
+    // to the Firebase service account's JSON key, kept outside the web root
+    // and out of git. Unset or unreadable, push is simply off.
+    'fcm' => [
+        'credentials' => env('FCM_CREDENTIALS'),
+    ],
+
 ];
