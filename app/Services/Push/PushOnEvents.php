@@ -20,11 +20,12 @@ use Illuminate\Support\Str;
  * through the event dispatcher too, so listening here covers each place a
  * message can be sent without touching any of them.
  *
- * Who gets a push, and the rule behind it:
+ * Who gets a push:
  *   - a direct message (GoConnect or a GoMarket product chat): the other member;
- *   - a private group: every member but the sender;
- *   - the national, regional and city rooms: only members @mentioned, since a
- *     public room pinging every member at every message would be noise;
+ *   - every other room, private group or national, regional and city room
+ *     alike: every member but the sender, as a group chat on a phone does
+ *     (decided 2026-11-18). A member it @mentions gets the "mentioned you"
+ *     push instead, not both;
  *   - a connection request, and its acceptance: the member it is for.
  * A muted chat does not push its messages, but an @mention still gets
  * through, as its toast does on the web. System lines and call logs never push.
@@ -42,15 +43,16 @@ class PushOnEvents
             if (! $room || ! $sender || in_array($message->message_type, [MessageType::System, MessageType::CallLog], true)) {
                 return;
             }
-            if (! in_array($room->room_type, [RoomType::DirectMessage, RoomType::PrivateGroup], true)) {
-                return;
-            }
 
             $preview = YardRoom::whereKey($room->id)->value('last_message_preview')
                 ?: Str::limit(strip_tags((string) $message->content), 100);
 
+            // Pushed by mentioned() instead, with a better title.
+            $mentioned = $room->room_type === RoomType::DirectMessage ? [] : array_map('intval', (array) $message->mentioned_user_ids);
+
             $recipients = YardRoomMember::where('room_id', $room->id)
                 ->where('user_id', '!=', $sender->id)
+                ->whereNotIn('user_id', $mentioned)
                 ->where(fn ($q) => $q->where('is_muted', false)->orWhereNull('is_muted'))
                 ->with('user')
                 ->get()
@@ -76,8 +78,8 @@ class PushOnEvents
     {
         $this->safely(function () use ($event) {
             $room = $event->message->loadMissing('room')->room;
-            // In a DM or a private group the message push already went.
-            if (! $room || in_array($room->room_type, [RoomType::DirectMessage, RoomType::PrivateGroup], true)) {
+            // In a DM the message push already says it all.
+            if (! $room || $room->room_type === RoomType::DirectMessage) {
                 return;
             }
             // A mention gets through a muted room, as its toast does on the

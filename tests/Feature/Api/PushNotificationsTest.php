@@ -151,7 +151,29 @@ class PushNotificationsTest extends TestCase
         $this->assertSame([], $this->sent());
     }
 
-    public function test_a_public_room_only_pushes_the_members_it_mentions(): void
+    public function test_a_public_room_pushes_every_member_but_the_sender(): void
+    {
+        // Decided 2026-11-18: the national, regional and city rooms push like
+        // any group chat on a phone.
+        [$ama, $ben, $cho] = [$this->createUser(['username' => 'ama-a1b2c']), $this->createUser(), $this->createUser()];
+        $city = $this->room(['room_type' => RoomType::City, 'name' => 'Douala']);
+        foreach ([$ama, $ben, $cho] as $u) {
+            $this->join($u, $city);
+        }
+        $this->phone($ama, 'ama-phone');
+        $this->phone($ben, 'ben-phone');
+        $this->phone($cho, 'cho-phone');
+
+        $this->actingAs($ama, 'sanctum')->postJson(route('api.v1.yard.messages.store', $city), ['content' => 'Who is around tonight?'])->assertCreated();
+
+        $sent = $this->sent();
+        $this->assertEqualsCanonicalizing(['ben-phone', 'cho-phone'], array_column($sent, 'token'));
+        $this->assertSame('Douala', $sent[0]['notification']['title']);
+        $this->assertStringEndsWith(': Who is around tonight?', $sent[0]['notification']['body']);
+        $this->assertSame('message', $sent[0]['data']['kind']);
+    }
+
+    public function test_a_mentioned_member_gets_one_push_saying_so_not_two(): void
     {
         [$ama, $ben, $cho] = [$this->createUser(['username' => 'ama-a1b2c']), $this->createUser(['username' => 'ben-x9y8z']), $this->createUser()];
         $city = $this->room(['room_type' => RoomType::City, 'name' => 'Douala']);
@@ -161,17 +183,15 @@ class PushNotificationsTest extends TestCase
         $this->phone($ben, 'ben-phone');
         $this->phone($cho, 'cho-phone');
 
-        $this->actingAs($ama, 'sanctum')->postJson(route('api.v1.yard.messages.store', $city), ['content' => 'Who is around tonight?'])->assertCreated();
-        $this->assertSame([], $this->sent(), 'nobody is pinged for every message in a public room');
+        $this->actingAs($ama, 'sanctum')->postJson(route('api.v1.yard.messages.store', $city), ['content' => '@ben-x9y8z are you coming?'])->assertCreated();
 
-        $this->postJson(route('api.v1.yard.messages.store', $city), ['content' => '@ben-x9y8z are you coming?'])->assertCreated();
-        $sent = $this->sent();
-        $this->assertCount(1, $sent);
-        $this->assertSame('ben-phone', $sent[0]['token']);
-        $this->assertSame('mention', $sent[0]['data']['kind']);
-        $this->assertStringContainsString('Douala', $sent[0]['notification']['title']);
+        $sent = collect($this->sent())->groupBy('token');
+        $this->assertCount(1, $sent['ben-phone']);
+        $this->assertSame('mention', $sent['ben-phone'][0]['data']['kind']);
+        $this->assertStringContainsString('Douala', $sent['ben-phone'][0]['notification']['title']);
         // Handles carry a hyphen; the mention used to stop at it ("@ben").
-        $this->assertStringContainsString('@ben-x9y8z', $sent[0]['notification']['body']);
+        $this->assertStringContainsString('@ben-x9y8z', $sent['ben-phone'][0]['notification']['body']);
+        $this->assertSame('message', $sent['cho-phone'][0]['data']['kind']);
     }
 
     public function test_a_mention_gets_through_a_muted_room(): void
@@ -183,7 +203,10 @@ class PushNotificationsTest extends TestCase
         $this->phone($ben, 'ben-phone');
 
         $this->actingAs($ama, 'sanctum')->postJson(route('api.v1.yard.messages.store', $city), ['content' => '@ben-x9y8z look'])->assertCreated();
+        $this->assertCount(1, $this->sent());
 
+        // An ordinary message in the muted room stays quiet.
+        $this->postJson(route('api.v1.yard.messages.store', $city), ['content' => 'anyone?'])->assertCreated();
         $this->assertCount(1, $this->sent());
     }
 
