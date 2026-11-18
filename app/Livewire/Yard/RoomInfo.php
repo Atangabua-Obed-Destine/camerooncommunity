@@ -35,6 +35,19 @@ class RoomInfo extends Component
     public bool $editingNickname = false;
     public string $nicknameDraft = '';
 
+    private function info(): \App\Services\Yard\RoomInfoService
+    {
+        return app(\App\Services\Yard\RoomInfoService::class);
+    }
+
+    /** The room, only when the viewer is in it (the panel's roomId is client-set). */
+    private function memberRoom(): ?YardRoom
+    {
+        $room = $this->roomId ? YardRoom::find($this->roomId) : null;
+
+        return $room && $this->info()->isMember(auth()->user(), $room) ? $room : null;
+    }
+
     protected $listeners = [
         'show-room-info' => 'showInfo',
         'room-updated'   => 'refreshRoomState',
@@ -71,8 +84,8 @@ class RoomInfo extends Component
 
     public function openAddMember()
     {
-        $room = YardRoom::find($this->roomId);
-        if (!$room || in_array($room->room_type->value, ['national', 'regional'])) {
+        $room = $this->memberRoom();
+        if (! $room || ! $this->info()->canAddMembers(auth()->user(), $room)) {
             return;
         }
 
@@ -100,66 +113,24 @@ class RoomInfo extends Component
 
     public function getSearchResultsProperty()
     {
-        if (!$this->addMemberOpen || strlen($this->memberSearch) < 1) {
+        $room = $this->addMemberOpen ? $this->memberRoom() : null;
+        if (! $room || strlen($this->memberSearch) < 1) {
             return collect();
         }
 
-        $existingMemberIds = YardRoomMember::where('room_id', $this->roomId)
-            ->pluck('user_id')
-            ->toArray();
-
-        return User::where('tenant_id', auth()->user()->tenant_id)
-            ->whereNotIn('id', $existingMemberIds)
-            ->where(function ($q) {
-                $q->where('name', 'like', '%' . $this->memberSearch . '%')
-                  ->orWhere('username', 'like', '%' . $this->memberSearch . '%');
-            })
-            ->select('id', 'name', 'username', 'avatar', 'current_region')
-            ->limit(20)
-            ->get();
+        return $this->info()->candidates(auth()->user(), $room, $this->memberSearch);
     }
 
     public function addSelectedMembers()
     {
-        if (empty($this->selectedUsers) || !$this->roomId) {
+        $room = $this->memberRoom();
+        if (empty($this->selectedUsers) || ! $room) {
             return;
         }
 
-        $room = YardRoom::find($this->roomId);
-        if (!$room || in_array($room->room_type->value, ['national', 'regional'])) {
-            return;
-        }
-
-        $existingIds = YardRoomMember::where('room_id', $this->roomId)
-            ->pluck('user_id')
-            ->toArray();
-
-        $added = 0;
-        foreach ($this->selectedUsers as $user) {
-            if (!in_array($user['id'], $existingIds)) {
-                YardRoomMember::create([
-                    'room_id' => $this->roomId,
-                    'user_id' => $user['id'],
-                    'role' => 'member',
-                    'joined_at' => now(),
-                    'last_read_at' => now(),
-                ]);
-                $added++;
-            }
-        }
-
-        if ($added > 0) {
-            $room->increment('members_count', $added);
-
-            try {
-                broadcast(new \App\Events\RoomUpdated($room->fresh(), 'member_added', [
-                    'added_count' => $added,
-                ]));
-            } catch (\Throwable $e) {
-                \Log::warning('Room member-added broadcast failed: ' . $e->getMessage());
-            }
-        }
-
+        // The service checks this member may add here, and skips anyone
+        // already in, blocked, or outside the tenant. It announces the change.
+        $this->info()->addMembers(auth()->user(), $room, array_column($this->selectedUsers, 'id'));
         $this->closeAddMember();
     }
 
@@ -172,40 +143,18 @@ class RoomInfo extends Component
             'newAvatar' => 'image|mimes:jpg,jpeg,png,webp|max:4096',
         ]);
 
-        $room = YardRoom::find($this->roomId);
-        if (!$room) {
-            return;
-        }
-
-        // Only the admin (creator) of a non-DM, non-system room can change the avatar
-        if (!$this->canEditRoom($room)) {
-            $this->newAvatar = null;
-            return;
-        }
-
+        $room = $this->memberRoom();
         $this->avatarUploading = true;
-
         try {
-            // Delete old avatar if it exists and is in storage
-            if ($room->avatar && Storage::disk('public')->exists($room->avatar)) {
-                Storage::disk('public')->delete($room->avatar);
-            }
-
-            $path = $this->newAvatar->store('yard/rooms/' . $room->id, 'public');
-
-            $room->update(['avatar' => $path]);
+            $ok = $room && $this->info()->setAvatar(auth()->user(), $room, $this->newAvatar);
         } finally {
             $this->newAvatar = null;
             $this->avatarUploading = false;
         }
 
-        $this->dispatch('room-updated');
-        $this->dispatch('room-avatar-updated', roomId: $room->id);
-
-        try {
-            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'avatar_changed'));
-        } catch (\Throwable $e) {
-            \Log::warning('Avatar broadcast failed: ' . $e->getMessage());
+        if ($ok) {
+            $this->dispatch('room-updated');
+            $this->dispatch('room-avatar-updated', roomId: $room->id);
         }
     }
 
@@ -214,24 +163,10 @@ class RoomInfo extends Component
      */
     public function removeAvatar(): void
     {
-        $room = YardRoom::find($this->roomId);
-        if (!$room || !$this->canEditRoom($room)) {
-            return;
-        }
-
-        if ($room->avatar && Storage::disk('public')->exists($room->avatar)) {
-            Storage::disk('public')->delete($room->avatar);
-        }
-
-        $room->update(['avatar' => null]);
-
-        $this->dispatch('room-updated');
-        $this->dispatch('room-avatar-updated', roomId: $room->id);
-
-        try {
-            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'avatar_changed'));
-        } catch (\Throwable $e) {
-            \Log::warning('Avatar broadcast failed: ' . $e->getMessage());
+        $room = $this->memberRoom();
+        if ($room && $this->info()->removeAvatar(auth()->user(), $room)) {
+            $this->dispatch('room-updated');
+            $this->dispatch('room-avatar-updated', roomId: $room->id);
         }
     }
 
@@ -240,13 +175,7 @@ class RoomInfo extends Component
      */
     protected function canEditRoom(YardRoom $room): bool
     {
-        if ($room->is_system_room) {
-            return false;
-        }
-        if (in_array($room->room_type->value, ['national', 'regional', 'city', 'direct_message'], true)) {
-            return false;
-        }
-        return $room->created_by === auth()->id();
+        return $this->info()->canEditAvatar(auth()->user(), $room);
     }
 
     /**
@@ -254,57 +183,15 @@ class RoomInfo extends Component
      */
     public function removeMember(int $userId): void
     {
-        $room = YardRoom::find($this->roomId);
-        if (!$room) {
-            return;
-        }
-
-        // Only room creator (admin) can remove members
-        if ($room->created_by !== auth()->id()) {
-            return;
-        }
-
-        // Cannot remove yourself
-        if ($userId === auth()->id()) {
-            return;
-        }
-
-        $membership = YardRoomMember::where('room_id', $this->roomId)
-            ->where('user_id', $userId)
-            ->first();
-
-        if (!$membership) {
-            return;
-        }
-
-        // Record the removal in history before deleting so admins can
-        // review past members later.
-        \App\Models\YardRoomMemberHistory::create([
-            'tenant_id'  => $room->tenant_id,
-            'room_id'    => $room->id,
-            'user_id'    => $userId,
-            'removed_by' => auth()->id(),
-            'reason'     => 'removed',
-            'exited_at'  => now(),
-        ]);
-
-        $membership->delete();
-        $room->decrement('members_count');
-
-        $this->dispatch('room-updated');
-
-        try {
-            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'member_removed', [
-                'user_id' => $userId,
-            ]));
-        } catch (\Throwable $e) {
-            \Log::warning('Member-removed broadcast failed: ' . $e->getMessage());
+        $room = $this->memberRoom();
+        if ($room && $this->info()->removeMember(auth()->user(), $room, $userId)) {
+            $this->dispatch('room-updated');
         }
     }
 
     public function getRoomProperty()
     {
-        if (!$this->roomId || !$this->visible) {
+        if (!$this->roomId || !$this->visible || ! $this->memberRoom()) {
             return null;
         }
         return YardRoom::withCount('members')->find($this->roomId);
@@ -312,23 +199,9 @@ class RoomInfo extends Component
 
     public function getMembersProperty()
     {
-        if (!$this->roomId || !$this->visible) {
-            return collect();
-        }
+        $room = $this->visible ? $this->memberRoom() : null;
 
-        $filter = trim($this->memberFilter);
-
-        return YardRoomMember::where('room_id', $this->roomId)
-            ->with('user:id,name,username,avatar,cover_photo,bio,email,current_region,last_active_at')
-            ->when($filter !== '', function ($q) use ($filter) {
-                $q->whereHas('user', function ($u) use ($filter) {
-                    $u->where('name', 'like', "%{$filter}%")
-                      ->orWhere('username', 'like', "%{$filter}%");
-                });
-            })
-            ->orderByDesc('last_read_at')
-            ->limit(50)
-            ->get();
+        return $room ? $this->info()->members($room, $this->memberFilter) : collect();
     }
 
     public function updatedMemberFilter(): void
@@ -342,77 +215,31 @@ class RoomInfo extends Component
      */
     public function getPastMembersProperty()
     {
-        if (! $this->roomId || ! $this->visible) {
-            return collect();
-        }
+        $room = $this->visible ? $this->memberRoom() : null;
 
-        $room = YardRoom::find($this->roomId);
-        if (! $room || $room->created_by !== auth()->id()) {
-            return collect();
-        }
-
-        // Exclude users who have since rejoined — only show those who are
-        // not currently active members of the room.
-        $currentMemberIds = YardRoomMember::where('room_id', $this->roomId)
-            ->pluck('user_id');
-
-        return \App\Models\YardRoomMemberHistory::where('room_id', $this->roomId)
-            ->whereNotIn('user_id', $currentMemberIds)
-            ->with(['user:id,name,username,avatar', 'remover:id,name,username'])
-            ->orderByDesc('exited_at')
-            ->limit(100)
-            ->get()
-            // Collapse to most recent exit per user (in case of multiple cycles).
-            ->unique('user_id')
-            ->values();
+        return $room ? $this->info()->pastMembers(auth()->user(), $room) : collect();
     }
 
     public function getPinnedProperty()
     {
-        if (!$this->roomId || !$this->visible) {
-            return collect();
-        }
+        $room = $this->visible ? $this->memberRoom() : null;
 
-        return YardMessage::where('room_id', $this->roomId)
-            ->where('is_pinned', true)
-            ->with('user:id,name,username')
-            ->orderByDesc('pinned_at')
-            ->limit(10)
-            ->get();
+        // Through visible(): no pins from before the viewer joined (the chat's own rule).
+        return $room ? $this->info()->pinned(auth()->user(), $room) : collect();
     }
 
     public function getMediaProperty()
     {
-        if (!$this->roomId || !$this->visible) {
-            return collect();
-        }
+        $room = $this->visible ? $this->memberRoom() : null;
 
-        return YardMessage::where('room_id', $this->roomId)
-            ->whereIn('message_type', ['image', 'file', 'audio'])
-            ->whereNotNull('media_path')
-            ->orderByDesc('created_at')
-            ->limit(20)
-            ->get();
+        return $room ? $this->info()->media(auth()->user(), $room) : collect();
     }
 
     public function getStarredProperty()
     {
-        if (!$this->roomId || !$this->visible) {
-            return collect();
-        }
+        $room = $this->visible ? $this->memberRoom() : null;
 
-        $userId = auth()->id();
-
-        return YardMessage::where('room_id', $this->roomId)
-            ->whereIn('yard_messages.id', function ($q) use ($userId) {
-                $q->select('message_id')
-                    ->from('yard_message_stars')
-                    ->where('user_id', $userId);
-            })
-            ->with('user:id,name,username')
-            ->orderByDesc('created_at')
-            ->limit(20)
-            ->get();
+        return $room ? $this->info()->starred(auth()->user(), $room) : collect();
     }
 
     /**
@@ -420,100 +247,24 @@ class RoomInfo extends Component
      */
     public function getPendingRequestsProperty()
     {
-        if (!$this->roomId || !$this->visible) {
-            return collect();
-        }
+        $room = $this->visible ? $this->memberRoom() : null;
 
-        $room = YardRoom::find($this->roomId);
-        if (!$room || !$room->is_private || $room->created_by !== auth()->id()) {
-            return collect();
-        }
-
-        return YardJoinRequest::where('room_id', $this->roomId)
-            ->where('status', 'pending')
-            ->with('user:id,name,username,avatar,current_region')
-            ->orderBy('created_at')
-            ->get();
+        return $room ? $this->info()->pendingRequests(auth()->user(), $room) : collect();
     }
 
     public function approveRequest(int $requestId): void
     {
-        $joinRequest = YardJoinRequest::with('room')->findOrFail($requestId);
-        $room = $joinRequest->room;
-
-        // Only room admin can approve
-        if ($room->created_by !== auth()->id()) {
-            return;
-        }
-
-        // Already a member
-        if (YardRoomMember::where('room_id', $room->id)->where('user_id', $joinRequest->user_id)->exists()) {
-            $joinRequest->update(['status' => 'approved', 'reviewed_by' => auth()->id(), 'reviewed_at' => now()]);
-            return;
-        }
-
-        YardRoomMember::create([
-            'room_id' => $room->id,
-            'user_id' => $joinRequest->user_id,
-            'role' => RoomMemberRole::Member,
-            'joined_at' => now(),
-        ]);
-
-        $room->increment('members_count');
-
-        $joinRequest->update([
-            'status' => 'approved',
-            'reviewed_by' => auth()->id(),
-            'reviewed_at' => now(),
-        ]);
-
-        // WhatsApp-style: replace the admin-only "requested to join" pill with
-        // a public "X joined" system message visible to everyone in the room.
-        // The announcement itself is now posted automatically by the
-        // YardRoomMember model event; here we only need to clear the
-        // previous "join_request" pill so it doesn't linger.
-        try {
-            \App\Models\YardMessage::where('room_id', $room->id)
-                ->where('message_type', \App\Enums\MessageType::System->value)
-                ->whereJsonContains('media_metadata->kind', 'join_request')
-                ->whereJsonContains('media_metadata->request_id', $joinRequest->id)
-                ->delete();
-        } catch (\Throwable $e) {
-            \Log::warning('Join-request pill cleanup failed: ' . $e->getMessage());
-        }
-
-        try {
-            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'request_approved', [
-                'user_id' => $joinRequest->user_id,
-            ]));
-        } catch (\Throwable $e) {
-            \Log::warning('Request-approved broadcast failed: ' . $e->getMessage());
+        $room = $this->memberRoom();
+        if ($room) {
+            $this->info()->approveRequest(auth()->user(), $room, $requestId);
         }
     }
 
     public function rejectRequest(int $requestId): void
     {
-        $joinRequest = YardJoinRequest::with('room')->findOrFail($requestId);
-
-        if ($joinRequest->room->created_by !== auth()->id()) {
-            return;
-        }
-
-        $joinRequest->update([
-            'status' => 'rejected',
-            'reviewed_by' => auth()->id(),
-            'reviewed_at' => now(),
-        ]);
-
-        // Remove the pending admin-only "requested to join" pill so the chat stays clean.
-        try {
-            \App\Models\YardMessage::where('room_id', $joinRequest->room_id)
-                ->where('message_type', \App\Enums\MessageType::System->value)
-                ->whereJsonContains('media_metadata->kind', 'join_request')
-                ->whereJsonContains('media_metadata->request_id', $joinRequest->id)
-                ->delete();
-        } catch (\Throwable $e) {
-            \Log::warning('Join-rejected cleanup failed: ' . $e->getMessage());
+        $room = $this->memberRoom();
+        if ($room) {
+            $this->info()->rejectRequest(auth()->user(), $room, $requestId);
         }
     }
 
@@ -523,43 +274,23 @@ class RoomInfo extends Component
      */
     public function leaveRoom(): void
     {
-        $room = YardRoom::find($this->roomId);
+        $room = $this->roomId ? YardRoom::find($this->roomId) : null;
         if (! $room) {
             return;
         }
 
-        // Disallow leaving system rooms (national/regional/city) and own group
-        if (in_array($room->room_type->value, ['national', 'regional', 'city'], true)) {
+        $why = $this->info()->leave(auth()->user(), $room);
+        if ($why === 'system_room') {
             $this->dispatch('toast', type: 'error', message: __('You cannot leave system rooms.'));
             return;
         }
-
-        if ($room->created_by === auth()->id()) {
+        if ($why === 'admin') {
             $this->dispatch('toast', type: 'error', message: __('Group admins cannot leave their own group. Delete it instead.'));
             return;
         }
-
-        $membership = YardRoomMember::where('room_id', $this->roomId)
-            ->where('user_id', auth()->id())
-            ->first();
-
-        if (! $membership) {
+        if ($why !== null) {
             return;
         }
-
-        // Record the leave in history before deleting so admins can
-        // review past members later.
-        \App\Models\YardRoomMemberHistory::create([
-            'tenant_id'  => $room->tenant_id,
-            'room_id'    => $room->id,
-            'user_id'    => auth()->id(),
-            'removed_by' => null,
-            'reason'     => 'left',
-            'exited_at'  => now(),
-        ]);
-
-        $membership->delete();
-        $room->decrement('members_count');
 
         $this->visible = false;
         $this->roomId = null;
@@ -567,14 +298,6 @@ class RoomInfo extends Component
         $this->dispatch('toast', type: 'success', message: __('You left the group.'));
         $this->dispatch('room-left', roomId: $room->id);
         $this->dispatch('refreshRoomList');
-
-        try {
-            broadcast(new \App\Events\RoomUpdated($room->fresh(), 'left', [
-                'user_id' => auth()->id(),
-            ]));
-        } catch (\Throwable $e) {
-            \Log::warning('Leave broadcast failed: ' . $e->getMessage());
-        }
     }
 
     /**
@@ -645,35 +368,15 @@ class RoomInfo extends Component
      */
     public function reportRoom(string $reason = 'inappropriate', string $details = ''): void
     {
-        $room = YardRoom::find($this->roomId);
+        $room = $this->memberRoom();
         if (! $room) {
             return;
         }
 
-        $reasonEnum = \App\Enums\ReportReason::tryFrom($reason) ?? \App\Enums\ReportReason::Inappropriate;
-
-        // Avoid duplicate open reports from the same user against this room.
-        $existing = \App\Models\Report::query()
-            ->where('reporter_id', auth()->id())
-            ->where('reportable_type', YardRoom::class)
-            ->where('reportable_id', $room->id)
-            ->where('status', \App\Enums\ReportStatus::Pending)
-            ->exists();
-
-        if ($existing) {
+        if (! $this->info()->report(auth()->user(), $room, $reason, $details)) {
             $this->dispatch('toast', type: 'info', message: __('You already reported this group. Our team is reviewing it.'));
             return;
         }
-
-        \App\Models\Report::create([
-            'uuid' => (string) \Illuminate\Support\Str::uuid(),
-            'reporter_id' => auth()->id(),
-            'reportable_type' => YardRoom::class,
-            'reportable_id' => $room->id,
-            'reason' => $reasonEnum,
-            'details' => mb_substr(trim(strip_tags($details)), 0, 1000),
-            'status' => \App\Enums\ReportStatus::Pending,
-        ]);
 
         $this->dispatch('toast', type: 'success', message: __('Thanks, our team will review this group.'));
     }
@@ -684,27 +387,13 @@ class RoomInfo extends Component
      */
     public function blockUser(int $userId): void
     {
-        if ($userId === auth()->id()) {
+        $room = $this->memberRoom();
+        $partner = $room ? $this->info()->partner(auth()->user(), $room) : null;
+        if (! $partner || $partner->id !== $userId) {
             return;
         }
 
-        // Only allow blocking from inside a DM with this user.
-        $room = YardRoom::find($this->roomId);
-        if (! $room || $room->room_type->value !== 'direct_message') {
-            return;
-        }
-
-        $partnerInRoom = YardRoomMember::where('room_id', $this->roomId)
-            ->where('user_id', $userId)
-            ->where('user_id', '!=', auth()->id())
-            ->exists();
-        if (! $partnerInRoom) {
-            return;
-        }
-
-        try {
-            app(\App\Services\ConnectionService::class)->block(auth()->user(), $userId);
-        } catch (\Throwable $e) {
+        if (! $this->info()->block(auth()->user(), $room)) {
             $this->dispatch('toast', type: 'error', message: __('Could not block this user.'));
             return;
         }
@@ -762,32 +451,21 @@ class RoomInfo extends Component
      */
     public function saveContactNickname(): void
     {
-        $room = YardRoom::find($this->roomId);
-        if (!$room) return;
-        $partner = $room->members()->where('user_id', '!=', auth()->id())->with('user')->first()?->user;
-        if (!$partner) return;
-
-        $nickname = trim($this->nicknameDraft);
-        $ownerId  = auth()->id();
-
-        if ($nickname === '') {
-            \App\Models\UserContactName::where('owner_user_id', $ownerId)
-                ->where('contact_user_id', $partner->id)
-                ->delete();
-            $this->dispatch('toast', type: 'success', message: __('Custom name removed'));
-        } else {
-            if (mb_strlen($nickname) > 60) {
-                $this->dispatch('toast', type: 'error', message: __('Name is too long (60 max)'));
-                return;
-            }
-            \App\Models\UserContactName::updateOrCreate(
-                ['owner_user_id' => $ownerId, 'contact_user_id' => $partner->id],
-                ['tenant_id' => auth()->user()->tenant_id, 'nickname' => $nickname],
-            );
-            $this->dispatch('toast', type: 'success', message: __('Saved as :name', ['name' => $nickname]));
+        $room = $this->memberRoom();
+        if (! $room || ! $this->info()->partner(auth()->user(), $room)) {
+            return;
         }
 
-        \Cache::driver('array')->forget("ucn.{$ownerId}.{$partner->id}");
+        $nickname = trim($this->nicknameDraft);
+        if (mb_strlen($nickname) > 60) {
+            $this->dispatch('toast', type: 'error', message: __('Name is too long (60 max)'));
+            return;
+        }
+
+        $saved = $this->info()->saveNickname(auth()->user(), $room, $nickname);
+        $this->dispatch('toast', type: 'success', message: $saved === null
+            ? __('Custom name removed')
+            : __('Saved as :name', ['name' => $saved]));
         $this->editingNickname = false;
 
         // Refresh the chat list so the room row updates immediately

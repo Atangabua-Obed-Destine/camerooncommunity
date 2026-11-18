@@ -2,7 +2,7 @@
 
 namespace App\Livewire\AI;
 
-use App\Services\AIService;
+use App\Services\KamerConversation;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -29,17 +29,7 @@ class KamerChat extends Component
 
         // If first open and empty, add Kamer welcome
         if (empty($this->messages)) {
-            $user = auth()->user();
-            $name = $user?->name ?? 'friend';
-            $lang = $user?->language_pref ?? app()->getLocale();
-            $langLabel = $lang === 'fr' ? 'French' : 'English';
-
-            $this->messages[] = [
-                'role' => 'assistant',
-                'content' => $lang === 'fr'
-                    ? "Salut {$name} ! 👋 Je suis Kamer, ton guide sur Cameroon Network. Comment puis-je t'aider aujourd'hui ?"
-                    : "Hi {$name}! 👋 I'm Kamer, your guide on Cameroon Network. What would you like to explore today?",
-            ];
+            $this->messages[] = app(KamerConversation::class)->welcome(auth()->user()?->name, $this->lang());
         }
     }
 
@@ -59,6 +49,12 @@ class KamerChat extends Component
         $this->isOpen = false;
     }
 
+    /**
+     * Step one: show the member's message and the thinking dots straight away.
+     * The browser then asks for the reply (step two). Doing both in one request
+     * turned isLoading on and off before anything was drawn, so the dots never
+     * showed and the member's own message only appeared with the answer.
+     */
     public function send()
     {
         $input = trim($this->input);
@@ -69,25 +65,34 @@ class KamerChat extends Component
         $this->input = '';
         $this->messages[] = ['role' => 'user', 'content' => $input];
         $this->isLoading = true;
-        $aiService = app(AIService::class);
-        $user = auth()->user();
-        $language = $user?->language_pref === 'fr' ? 'French' : 'English';
+        $this->dispatch('kamer-thinking');
+    }
 
-        $response = $aiService->chat($this->messages, $language);
-
-        if ($response) {
-            $this->messages[] = ['role' => 'assistant', 'content' => $response];
-        } else {
-            $failMsg = ($user?->language_pref === 'fr')
-                ? 'Désolé, je ne suis pas disponible pour le moment. Réessayez plus tard.'
-                : 'Sorry, I\'m not available right now. Please try again later.';
-            $this->messages[] = ['role' => 'assistant', 'content' => $failMsg];
+    /** Step two: called by the browser once the dots are on screen. */
+    public function reply()
+    {
+        if (! $this->isLoading || (end($this->messages)['role'] ?? null) !== 'user') {
+            $this->isLoading = false;
+            return;
         }
+
+        $kamer = app(KamerConversation::class);
+        $this->messages[] = $kamer->reply($this->messages, $this->lang());
 
         $this->isLoading = false;
 
         // Persist conversation to session (keep last 50 messages)
-        session(['kamer_chat_history' => array_slice($this->messages, -50)]);
+        session(['kamer_chat_history' => $kamer->trim($this->messages)]);
+    }
+
+    /**
+     * The language to talk in: the page's own (SetUserLanguage), so it follows
+     * the member's choice. language_pref is an enum, and comparing it with 'fr'
+     * was always false, so French members got English everywhere here.
+     */
+    public function lang(): string
+    {
+        return app()->getLocale() === 'fr' ? 'fr' : 'en';
     }
 
     /**
@@ -105,15 +110,7 @@ class KamerChat extends Component
         session()->forget('kamer_chat_history');
 
         // Re-add welcome
-        $user = auth()->user();
-        $lang = $user?->language_pref ?? 'en';
-        $name = $user?->name ?? 'friend';
-        $this->messages[] = [
-            'role' => 'assistant',
-            'content' => $lang === 'fr'
-                ? "Conversation réinitialisée ! Comment puis-je t'aider, {$name} ?"
-                : "Conversation cleared! How can I help you, {$name}?",
-        ];
+        $this->messages[] = app(KamerConversation::class)->cleared(auth()->user()?->name, $this->lang());
     }
 
     public function render()

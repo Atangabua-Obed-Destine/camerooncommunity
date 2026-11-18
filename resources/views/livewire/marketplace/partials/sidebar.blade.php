@@ -15,7 +15,7 @@
                 $total = 0;
                 foreach ($rows as $r) {
                     $filters = is_array($r->filters) ? $r->filters : [];
-                    $since = $r->last_notified_at ?? $r->created_at;
+                    $since = $r->last_seen_at ?? $r->created_at;
                     $total += \App\Support\MarketplaceQueryBuilder::build($filters)
                         ->where('published_at', '>', $since)
                         ->count();
@@ -119,10 +119,7 @@
                 $pendingOrders = \Illuminate\Support\Facades\Cache::remember(
                     'mp:orders-pending:'.auth()->id(),
                     120,
-                    fn () => \App\Models\MarketplaceOrder::query()
-                        ->where('seller_id', auth()->id())
-                        ->where('status', \App\Enums\OrderStatus::AwaitingPayment->value)
-                        ->count()
+                    fn () => \App\Models\MarketplaceOrder::needingSellerAttention(auth()->id())
                 );
             }
         @endphp

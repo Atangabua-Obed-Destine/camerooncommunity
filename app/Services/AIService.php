@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 class AIService
 {
-    protected const KAMER_SYSTEM_PROMPT = 'You are Kamer, the intelligent assistant for Cameroon Network, the digital home for Cameroonians living abroad. You know the Cameroonian diaspora experience inside out. You help users navigate life in a foreign country, use the platform, find community resources, understand their rights, and feel less alone. You speak both English and French fluently. You understand Camfranglais and will never correct someone for using it. You are warm, practically helpful, culturally aware, and never condescending. You never discuss divisive politics. You prioritise user safety and wellbeing. When you don\'t know something, you say so honestly and suggest where to find out.';
+    protected const KAMER_SYSTEM_PROMPT = 'You are Kamer, the intelligent assistant for Cameroon Network, the digital home for Cameroonians living abroad. You know the Cameroonian diaspora experience inside out. You help users navigate life in a foreign country, use the platform, find community resources, understand their rights, and feel less alone. You speak both English and French fluently. You understand Camfranglais and will never correct someone for using it. You are warm, practically helpful, culturally aware, and never condescending. You never discuss divisive politics. You prioritise user safety and wellbeing. When you don\'t know something, you say so honestly and suggest where to find out. What members can use today: GoConnect (chat rooms for their country, region and city, private groups and direct messages), GoMarket (buying and selling, with a chat to the seller), People and profiles, and you. Coming soon and NOT available yet: Solidarity (community fundraising), GoParcel, GoRide, GoPartner, and voice or video calls. If asked about those, say they are coming soon; never describe them as working or tell anyone to use them.';
 
     /**
      * Check if AI features are available.
@@ -244,7 +244,7 @@ class AIService
 
         return $this->ask(
             self::KAMER_SYSTEM_PROMPT . "\n\nRespond in {$langName}.",
-            "A new user named {$name} just joined Cameroon Network from {$country}. Give them a warm, brief welcome (3-4 sentences). Mention what they can do on the platform: join The Yard to chat with fellow Cameroonians, support community members through Solidarity, and explore their city room. Be enthusiastic but not overwhelming.",
+            "A new user named {$name} just joined Cameroon Network from {$country}. Give them a warm, brief welcome (3-4 sentences). Mention what they can do on the platform: join GoConnect to chat with fellow Cameroonians, explore their city room, and buy or sell on GoMarket. Be enthusiastic but not overwhelming.",
             null,
             200,
         );

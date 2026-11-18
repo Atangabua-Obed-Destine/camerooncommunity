@@ -167,44 +167,9 @@ class ChatRoom extends Component
             return collect();
         }
 
-        $query = YardMessage::where('room_id', $this->room->id)
+        // Who may see what is decided in one place, shared with the app's API.
+        $query = app(\App\Services\Yard\YardMessageService::class)->visible(auth()->user(), $this->room)
             ->with(['user:id,name,username,avatar', 'parent:id,content,user_id', 'parent.user:id,name,username', 'poll.options']);
-
-        // WhatsApp-style history privacy: a member should never see messages
-        // that were posted to the room before they joined. We use the
-        // viewer's own joined_at as the cut-off. DMs are excluded because
-        // both participants effectively "join" when the conversation starts
-        // and there is no prior history anyway.
-        if ($this->room->room_type !== \App\Enums\RoomType::DirectMessage) {
-            $joinedAt = $this->joinedAt();
-            if ($joinedAt) {
-                $query->where('created_at', '>=', $joinedAt);
-            }
-        }
-
-        // Block-aware: hide messages authored by users with whom the viewer
-        // has any block in either direction (mutual hide), in every room type.
-        // The viewer's own messages are always shown.
-        $blockedIds = auth()->user()->blockedOrBlockingUserIds();
-        if (!empty($blockedIds)) {
-            $query->whereNotIn('user_id', $blockedIds);
-        }
-
-        // Hide admin-only system messages (e.g. "X requested to join")
-        // from non-admin viewers, mirroring WhatsApp's behavior.
-        if ($this->room->created_by !== auth()->id()) {
-            $unquote = \Illuminate\Support\Facades\DB::getDriverName() === 'sqlite'
-                ? "JSON_EXTRACT(media_metadata, '$.visibility')"
-                : "JSON_UNQUOTE(JSON_EXTRACT(media_metadata, '$.visibility'))";
-            $query->where(function ($q) use ($unquote) {
-                $q->where('message_type', '!=', \App\Enums\MessageType::System->value)
-                  ->orWhereNull('media_metadata')
-                  ->orWhere(function ($qq) use ($unquote) {
-                      $qq->whereRaw("JSON_EXTRACT(media_metadata, '$.visibility') IS NULL")
-                         ->orWhereRaw("$unquote <> 'admins'");
-                  });
-            });
-        }
 
         if ($this->searchActive && $this->messageSearch) {
             $query->where('content', 'like', '%' . $this->messageSearch . '%');
@@ -523,81 +488,28 @@ class ChatRoom extends Component
         ]);
 
         $user = auth()->user();
+        $messages = app(\App\Services\Yard\YardMessageService::class);
 
-        $isMember = YardRoomMember::where('room_id', $this->room->id)
-            ->where('user_id', $user->id)
-            ->exists();
-
-        if (!$isMember) {
+        $blocked = $messages->cannotSend($user, $this->room);
+        if ($blocked === 'not_member') {
             $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
                 ? 'Vous n\'êtes plus membre de ce salon.'
                 : 'You are no longer a member of this room.');
             return;
         }
-
-        // DM connection gate: must be mutually connected to send a 1:1 DM.
-        // Marketplace-originated chats are exempt — buyers can message sellers
-        // about a listing without a connection (Facebook Marketplace behaviour).
-        if ($this->room->room_type === RoomType::DirectMessage && $this->room->origin !== 'marketplace') {
-            $partner = $this->room->members()
-                ->where('user_id', '!=', $user->id)
-                ->value('user_id');
-            if ($partner && ! $user->isConnectedWith((int) $partner)) {
-                $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
-                    ? 'Vous devez être connecté avec cet utilisateur pour lui envoyer un message.'
-                    : 'You must connect with this user before you can send a message.');
-                return;
-            }
+        if ($blocked === 'not_connected') {
+            $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
+                ? 'Vous devez être connecté avec cet utilisateur pour lui envoyer un message.'
+                : 'You must connect with this user before you can send a message.');
+            return;
         }
 
-        $message = YardMessage::create([
-            'tenant_id' => $user->tenant_id,
-            'uuid' => Str::uuid()->toString(),
-            'room_id' => $this->room->id,
-            'user_id' => $user->id,
-            'parent_message_id' => $this->replyToId,
-            'message_type' => MessageType::Text,
-            'content' => $this->newMessage,
-        ]);
-
-        // Parse @mentions, persist mentioned_user_ids, broadcast MessageMentioned.
-        app(\App\Services\MentionService::class)->processMessageMentions($message, $user);
-
-        $this->updateRoomMeta($this->newMessage);
+        $messages->sendText($user, $this->room, $this->newMessage, $this->replyToId);
 
         $this->reset('newMessage', 'replyToId', 'replyToPreview');
         unset($this->roomMessages);
         $this->dispatch('message-sent');
         $this->dispatch('room-updated');
-
-        try {
-            broadcast(new \App\Events\MessageSent($message))->toOthers();
-        } catch (\Throwable $e) {
-            \Log::warning('Broadcast failed: ' . $e->getMessage());
-        }
-
-        // Queue AI moderation asynchronously via database queue
-        $messageId = $message->id;
-        $content = $message->content;
-        dispatch(function () use ($messageId, $content) {
-            $ai = app(\App\Services\AIService::class);
-            if (!$ai->isAvailable() || !$content) {
-                return;
-            }
-            try {
-                $result = $ai->moderateText($content);
-                $threshold = (int) \App\Models\PlatformSetting::getValue('auto_flag_threshold', 70);
-                if (($result['flagged'] ?? false) || ($result['score'] ?? 0) >= $threshold) {
-                    YardMessage::where('id', $messageId)->update([
-                        'is_flagged' => true,
-                        'ai_moderation_score' => $result['score'] ?? null,
-                        'ai_moderation_detail' => $result['categories'] ?? [],
-                    ]);
-                }
-            } catch (\Throwable $e) {
-                // AI failure should never break chat
-            }
-        });
     }
 
     // ─── MEDIA UPLOAD (Photo / Document / Audio) ───
@@ -608,69 +520,24 @@ class ChatRoom extends Component
             return;
         }
 
-        $rules = match ($type) {
-            'image' => ['mediaUpload' => 'required|file|mimes:jpeg,jpg,png,webp,gif|max:10240'],
-            'document' => ['mediaUpload' => 'required|file|mimes:pdf,doc,docx,xlsx,pptx,txt,csv,zip|max:20480'],
-            'audio' => ['mediaUpload' => 'required|file|mimes:webm,ogg,mp3,wav,m4a,mp4|max:25600'],
-            default => ['mediaUpload' => 'required|file|max:20480'],
-        };
-
-        $this->validate($rules);
+        $messages = app(\App\Services\Yard\YardMessageService::class);
+        $this->validate(['mediaUpload' => $messages::MEDIA_RULES[$type] ?? 'required|file|max:20480']);
 
         $user = auth()->user();
 
-        $isMember = YardRoomMember::where('room_id', $this->room->id)
-            ->where('user_id', $user->id)
-            ->exists();
-
-        if (!$isMember) {
+        // The same gate as text: the web used to let a photo through to a DM
+        // with someone you weren't connected to.
+        if ($messages->cannotSend($user, $this->room)) {
             return;
         }
 
-        $messageType = match ($type) {
-            'image' => MessageType::Image,
-            'audio' => MessageType::Audio,
-            default => MessageType::File,
-        };
-
-        $path = $this->mediaUpload->store('yard/media/' . $this->room->id, 'public');
-        $originalName = $this->mediaUpload->getClientOriginalName();
-        $size = $this->mediaUpload->getSize();
-
-        // Use caption from preview screen if available, otherwise fall back to newMessage
-        $caption = trim($this->mediaCaption) ?: ($this->newMessage ?: null);
-
-        $message = YardMessage::create([
-            'tenant_id' => $user->tenant_id,
-            'uuid' => Str::uuid()->toString(),
-            'room_id' => $this->room->id,
-            'user_id' => $user->id,
-            'message_type' => $messageType,
-            'content' => $caption,
-            'media_path' => $path,
-            'media_original_name' => $originalName,
-            'media_size' => $size,
-        ]);
-
-        $preview = match ($type) {
-            'image' => '📷 Photo' . ($caption ? ': ' . Str::limit($caption, 60) : ''),
-            'audio' => '🎤 Voice note',
-            default => '📄 ' . $originalName,
-        };
-
-        $this->updateRoomMeta($preview);
+        $messages->sendMedia($user, $this->room, $this->mediaUpload, $type, trim($this->mediaCaption) ?: ($this->newMessage ?: null));
 
         $this->reset('newMessage', 'mediaUpload', 'mediaCaption');
         unset($this->roomMessages);
         $this->dispatch('message-sent');
         $this->dispatch('room-updated');
         $this->dispatch('media-sent');
-
-        try {
-            broadcast(new \App\Events\MessageSent($message))->toOthers();
-        } catch (\Throwable $e) {
-            \Log::warning('Broadcast failed: ' . $e->getMessage());
-        }
     }
 
     // ─── POLLS ───
@@ -938,23 +805,9 @@ class ChatRoom extends Component
             'editContent' => 'required|string|max:4000',
         ]);
 
-        $message = YardMessage::where('id', $this->editingMessageId)
-            ->where('user_id', auth()->id())
-            ->first();
-
+        $message = YardMessage::find($this->editingMessageId);
         if ($message) {
-            $message->update([
-                'content' => $this->editContent,
-                'is_edited' => true,
-                'edited_at' => now(),
-            ]);
-
-            // Rebroadcast so other clients refresh the message text in real time.
-            try {
-                broadcast(new \App\Events\MessageSent($message))->toOthers();
-            } catch (\Throwable $e) {
-                \Log::warning('Edit broadcast failed: ' . $e->getMessage());
-            }
+            app(\App\Services\Yard\YardMessageService::class)->edit(auth()->user(), $message, $this->editContent);
         }
 
         unset($this->roomMessages);
@@ -976,31 +829,10 @@ class ChatRoom extends Component
             ->where('is_deleted', false)
             ->first();
 
-        if (!$message) {
-            return;
-        }
-
-        if ($message->is_pinned) {
-            $message->update([
-                'is_pinned' => false,
-                'pinned_at' => null,
-                'pinned_by' => null,
-            ]);
-        } else {
-            $message->update([
-                'is_pinned' => true,
-                'pinned_at' => now(),
-                'pinned_by' => auth()->id(),
-            ]);
-        }
-
-        unset($this->roomMessages, $this->pinnedMessages);
-
-        // Rebroadcast so other clients refresh the pin badge & pinned panel.
-        try {
-            broadcast(new \App\Events\MessageSent($message->fresh()))->toOthers();
-        } catch (\Throwable $e) {
-            \Log::warning('Pin broadcast failed: ' . $e->getMessage());
+        // The service checks the member can see it, and rebroadcasts so
+        // other clients refresh the pin badge and the pinned bar.
+        if ($message && app(\App\Services\Yard\MessageActionsService::class)->togglePin(auth()->user(), $message) !== null) {
+            unset($this->roomMessages, $this->pinnedMessages);
         }
     }
 
@@ -1008,23 +840,10 @@ class ChatRoom extends Component
 
     public function deleteMessage(int $messageId)
     {
-        $message = YardMessage::where('id', $messageId)
-            ->where('user_id', auth()->id())
-            ->first();
+        $message = YardMessage::find($messageId);
 
-        if ($message) {
-            $message->update([
-                'is_deleted' => true,
-                'content' => null,
-            ]);
-
+        if ($message && app(\App\Services\Yard\YardMessageService::class)->delete(auth()->user(), $message)) {
             unset($this->roomMessages);
-
-            try {
-                broadcast(new \App\Events\MessageDeleted($message))->toOthers();
-            } catch (\Throwable $e) {
-                \Log::warning('Broadcast failed: ' . $e->getMessage());
-            }
         }
     }
 
@@ -1050,120 +869,46 @@ class ChatRoom extends Component
      */
     public function starMessages(array $ids)
     {
-        $ids = array_slice(array_filter(array_map('intval', $ids)), 0, 100);
-
-        if (empty($ids)) {
-            return;
-        }
-
-        $userId = auth()->id();
-        $starred = \DB::table('yard_message_stars')
-            ->where('user_id', $userId)
-            ->whereIn('message_id', $ids)
-            ->pluck('message_id')
-            ->all();
-
-        $allStarred = count($starred) === count($ids);
-
-        foreach ($ids as $id) {
-            $isStarred = in_array($id, $starred, true);
-
-            // toggleStar() flips one message; call it only where the end state
-            // differs from what we want, so a mixed selection ends up all starred.
-            if ($allStarred || ! $isStarred) {
-                $this->toggleStar($id);
-            }
-        }
+        app(\App\Services\Yard\MessageActionsService::class)->star(auth()->user(), $ids);
+        $this->dispatch('starred-changed');
     }
 
-    /** Forward a selection into another room, oldest first. */
+    /**
+     * Forward a selection into another room, oldest first. Returns how many
+     * went, or false (with a toast) when the target won't take them.
+     */
     public function forwardMessages(array $ids, int $targetRoomId)
     {
-        $ids = array_slice(array_filter(array_map('intval', $ids)), 0, 50);
-        sort($ids);
+        $target = YardRoom::find($targetRoomId);
+        $result = $target
+            ? app(\App\Services\Yard\MessageActionsService::class)->forward(auth()->user(), $ids, $target)
+            : 'not_member';
 
-        foreach ($ids as $id) {
-            $this->forwardMessage($id, $targetRoomId);
+        if (in_array($result, ['not_connected', 'blocked'], true)) {
+            $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
+                ? 'Impossible de transférer à cet utilisateur.'
+                : 'Cannot forward to this user.');
         }
 
-        return count($ids);
+        return is_int($result) ? $result : false;
     }
 
     // ─── STAR ───
 
     public function toggleStar(int $messageId)
     {
-        $userId = auth()->id();
-
-        $exists = \DB::table('yard_message_stars')
-            ->where('user_id', $userId)
-            ->where('message_id', $messageId)
-            ->exists();
-
-        if ($exists) {
-            \DB::table('yard_message_stars')
-                ->where('user_id', $userId)
-                ->where('message_id', $messageId)
-                ->delete();
-        } else {
-            \DB::table('yard_message_stars')->insert([
-                'user_id' => $userId,
-                'message_id' => $messageId,
-                'created_at' => now(),
-            ]);
-        }
-
-        $this->dispatch('starred-changed');
+        $this->starMessages([$messageId]);
     }
 
     // ─── REACTIONS (full emoji support) ───
 
     public function toggleReaction(int $messageId, string $emoji)
     {
-        $user = auth()->user();
-        $emoji = mb_substr($emoji, 0, 10);
+        $message = YardMessage::find($messageId);
 
-        $existing = YardMessageReaction::where('message_id', $messageId)
-            ->where('user_id', $user->id)
-            ->where('emoji', $emoji)
-            ->first();
-
-        if ($existing) {
-            $existing->delete();
-        } else {
-            YardMessageReaction::create([
-                'tenant_id' => $user->tenant_id,
-                'message_id' => $messageId,
-                'user_id' => $user->id,
-                'emoji' => $emoji,
-            ]);
+        if ($message) {
+            app(\App\Services\Yard\YardMessageService::class)->toggleReaction(auth()->user(), $message, $emoji);
         }
-
-        // Sync reaction counts from source of truth
-        $this->refreshReactionCount($messageId);
-
-        // Rebroadcast so other clients see the reaction badge update live.
-        try {
-            $msg = YardMessage::find($messageId);
-            if ($msg) {
-                broadcast(new \App\Events\MessageSent($msg))->toOthers();
-            }
-        } catch (\Throwable $e) {
-            \Log::warning('Reaction broadcast failed: ' . $e->getMessage());
-        }
-    }
-
-    protected function refreshReactionCount(int $messageId): void
-    {
-        $reactions = YardMessageReaction::where('message_id', $messageId)
-            ->selectRaw('emoji, count(*) as cnt')
-            ->groupBy('emoji')
-            ->pluck('cnt', 'emoji')
-            ->toArray();
-
-        YardMessage::where('id', $messageId)->update([
-            'reactions_count' => !empty($reactions) ? $reactions : null,
-        ]);
     }
 
     // ─── REPLY ───
@@ -1198,23 +943,8 @@ class ChatRoom extends Component
     public function sendTyping()
     {
         try {
-            $user = auth()->user();
-            if (!$user || !$this->room) {
-                $this->skipRender();
-                return;
-            }
-
-            // Server-side throttle: at most one typing broadcast per
-            // (user, room) every 2 seconds. Protects Reverb against a
-            // misbehaving / malicious client that ignores the JS debounce.
-            $key = "yard:typing:{$this->room->id}:{$user->id}";
-            if (\Illuminate\Support\Facades\Cache::add($key, 1, now()->addSeconds(2))) {
-                broadcast(new \App\Events\UserTyping(
-                    roomId: $this->room->id,
-                    userId: $user->id,
-                    userName: $user->name,
-                    tenantId: $user->tenant_id,
-                ))->toOthers();
+            if (auth()->user() && isset($this->room) && $this->room->exists) {
+                app(\App\Services\Yard\YardMessageService::class)->typing(auth()->user(), $this->room);
             }
         } catch (\Throwable $e) {
             // Typing indicator is non-critical
@@ -1227,75 +957,9 @@ class ChatRoom extends Component
 
     public function forwardMessage(int $messageId, int $targetRoomId)
     {
-        $originalMessage = YardMessage::find($messageId);
-        $user = auth()->user();
-
-        if (!$originalMessage || (!$originalMessage->content && !$originalMessage->media_path)) {
-            return false;
-        }
-
-        $isMember = YardRoomMember::where('room_id', $targetRoomId)
-            ->where('user_id', $user->id)
-            ->whereNull('archived_at')
-            ->whereNull('auto_archived_at')
-            ->exists();
-
-        if (!$isMember) {
-            return false;
-        }
-
-        // If forwarding into a DM, enforce the same connection gate as
-        // sendMessage / ShareToChat — cannot forward to a partner you blocked
-        // or who blocked you, or to someone you're not yet connected with.
-        $targetRoom = YardRoom::find($targetRoomId);
-        if ($targetRoom && $targetRoom->room_type === RoomType::DirectMessage) {
-            $partnerId = (int) $targetRoom->members()->where('user_id', '!=', $user->id)->value('user_id');
-            if ($partnerId && ! $user->isConnectedWith($partnerId)) {
-                $this->dispatch('toast', type: 'warning', message: app()->getLocale() === 'fr'
-                    ? 'Impossible de transférer à cet utilisateur.'
-                    : 'Cannot forward to this user.');
-                return false;
-            }
-        }
-
-        $forwarded = YardMessage::create([
-            'tenant_id' => $user->tenant_id,
-            'uuid' => Str::uuid()->toString(),
-            'room_id' => $targetRoomId,
-            'user_id' => $user->id,
-            'message_type' => $originalMessage->message_type,
-            'content' => $originalMessage->content,
-            'media_path' => $originalMessage->media_path,
-            'media_original_name' => $originalMessage->media_original_name,
-            'media_size' => $originalMessage->media_size,
-            'is_forwarded' => true,
-        ]);
-
-        if ($targetRoom) {
-            $preview = $forwarded->content;
-            if (!$preview) {
-                $preview = match($forwarded->message_type) {
-                    \App\Enums\MessageType::Audio => '🎤 Voice note',
-                    \App\Enums\MessageType::Image => '📷 Image',
-                    \App\Enums\MessageType::File  => '📎 ' . ($forwarded->media_original_name ?? 'File'),
-                    default => 'Forwarded',
-                };
-            }
-            $targetRoom->update([
-                'last_message_at' => now(),
-                'last_message_preview' => Str::limit($preview, 100),
-                'last_message_user_id' => $user->id,
-                'messages_count' => $targetRoom->messages_count + 1,
-            ]);
-        }
-
-        try {
-            broadcast(new \App\Events\MessageSent($forwarded))->toOthers();
-        } catch (\Throwable $e) {
-            \Log::warning('Broadcast failed: ' . $e->getMessage());
-        }
-
-        return $targetRoomId;
+        // Through the service, which only forwards what this member can see
+        // (this used to copy any message id, from any room).
+        return $this->forwardMessages([$messageId], $targetRoomId) ? $targetRoomId : false;
     }
 
     // ─── BROADCAST LISTENER ───
@@ -1424,7 +1088,7 @@ class ChatRoom extends Component
             return;
         }
 
-        $userLang = auth()->user()?->language_pref ?? 'en';
+        $userLang = auth()->user()?->language_pref?->value ?? 'en';
         $summary = $aiService->summariseThread($recentMessages, $userLang);
 
         if ($summary) {
@@ -1569,31 +1233,11 @@ class ChatRoom extends Component
             return;
         }
 
-        $member = YardRoomMember::where('room_id', $this->room->id)
-            ->where('user_id', auth()->id())
-            ->first(['id', 'last_read_at']);
-
-        if (! $member) {
-            return;
-        }
-
-        // Nothing new since the last visit: skip the write, the receipt sweep and
-        // the bell ping. This runs on every open and 1.5s after every incoming
-        // message, so it is worth not doing when there is nothing to clear.
-        $lastMessageAt = $this->room->last_message_at;
-        if ($lastMessageAt && $member->last_read_at && $member->last_read_at->gte($lastMessageAt)) {
-            return;
-        }
-
-        YardRoomMember::whereKey($member->id)->update(['last_read_at' => now()]);
-
-        // Per-message read receipts (WhatsApp blue ticks).
-        app(ReceiptService::class)->markRoomRead($this->room, auth()->id());
-
         // The bell counts unread chats, and nothing told it when they stopped
-        // being unread — so its badge kept showing messages the user had just
-        // read until the next full page load.
-        $this->dispatch('bell-refresh');
+        // being unread, so it refreshes whenever something was marked.
+        if (app(\App\Services\Yard\YardMessageService::class)->markRead(auth()->user(), $this->room)) {
+            $this->dispatch('bell-refresh');
+        }
     }
 
     protected function updateRoomMeta(string $preview): void

@@ -1,6 +1,10 @@
 <div>
     @if ($visible)
-        <div class="yard-share-modal" x-data x-trap.inert.noscroll="true"
+        <div class="yard-share-modal" x-trap.inert.noscroll="true"
+             x-data="{
+                 init() { window.cnOverlay?.open(this.$el, () => $wire.close()); },
+                 destroy() { window.cnOverlay?.close(this.$el); },
+             }"
              @keydown.escape.window="$wire.close()">
             <div class="yard-share-modal__backdrop" wire:click="close"></div>
 
@@ -19,7 +23,7 @@
                                  class="yard-share-card__img" alt="">
                         @else
                             <div class="yard-share-card__img yard-share-card__img--placeholder">
-                                <span>{{ strtoupper(substr($p['kind'], 0, 1)) }}</span>
+                                <span>{{ mb_strtoupper(mb_substr($p['kind'], 0, 1)) }}</span>
                             </div>
                         @endif
                         <div class="yard-share-card__body">
@@ -60,9 +64,9 @@
                                     class="yard-share-modal__room-btn">
                                 <div class="yard-share-modal__room-avatar">
                                     @if ($room->avatar)
-                                        <img src="{{ asset('storage/' . $room->avatar) }}" alt="">
+                                        <img src="{{ \App\Support\StorageUrl::for($room->avatar) }}" alt="">
                                     @else
-                                        <span>{{ strtoupper(substr($room->name ?? '?', 0, 1)) }}</span>
+                                        <span>{{ mb_strtoupper(mb_substr($room->name ?? '?', 0, 1)) }}</span>
                                     @endif
                                 </div>
                                 <div class="yard-share-modal__room-meta">

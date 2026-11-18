@@ -372,7 +372,7 @@
         <aside class="yard-drawer" :class="{ 'yard-drawer--open': menuOpen }" x-cloak>
             <div class="yard-drawer__profile">
                 <div class="w-14 h-14 rounded-full bg-cm-green flex items-center justify-center text-white text-xl font-bold shadow-lg">
-                    {{ substr(auth()->user()->username ?? auth()->user()->name ?? 'U', 0, 1) }}
+                    {{ mb_substr(auth()->user()->username ?? auth()->user()->name ?? 'U', 0, 1) }}
                 </div>
                 <p class="mt-3 font-bold text-[15px] text-slate-900 truncate">{{ auth()->user()->username ?? auth()->user()->name }}</p>
                 <p class="text-xs text-slate-500 truncate">{{ auth()->user()->email }}</p>
@@ -490,8 +490,7 @@
                                     </div>
                                     <button x-show="user.connection_state === 'none'"
                                             type="button"
-                                            onclick="console.log('[Connect btn] native onclick fired')"
-                                            @click.stop.prevent="console.log('[Connect btn] alpine @click fired'); connectUser(user)"
+                                            @click.stop.prevent="connectUser(user)"
                                             class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-cm-green text-white hover:bg-cm-green/90 transition-colors whitespace-nowrap"
                                             x-text="$store.lang.t('Connect', 'Connecter')"></button>
                                     <span x-show="user.connection_state === 'outgoing'"
@@ -878,27 +877,15 @@
                 },
 
                 connectUser(user) {
-                    console.log('[connectUser] called with', user);
-                    if (!user) { console.warn('[connectUser] no user'); return; }
-                    if (user.busy) { console.warn('[connectUser] user is busy, skipping'); return; }
+                    if (!user || user.busy) return;
                     user.busy = true;
                     // Optimistic UI flip — server will confirm via 'connection-updated' event.
                     user.connection_state = 'outgoing';
                     try {
-                        if (!window.Livewire) {
-                            console.error('[connectUser] window.Livewire not loaded yet');
-                            user.connection_state = 'none';
-                            user.busy = false;
-                            alert('Livewire not loaded, please refresh the page.');
-                            return;
-                        }
-                        console.log('[connectUser] dispatching Livewire event connect-user', { userId: user.id });
                         window.Livewire.dispatch('connect-user', { userId: user.id });
-                        console.log('[connectUser] dispatch succeeded');
                     } catch (e) {
-                        console.error('[connectUser] dispatch threw:', e);
                         user.connection_state = 'none';
-                        alert('Connect failed: ' + (e?.message || e));
+                        window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: this.$store.lang.t('Network error', 'Erreur réseau') } }));
                     } finally {
                         // Release busy after a short tick so users can't double-click.
                         setTimeout(() => { user.busy = false; }, 1500);
@@ -924,7 +911,7 @@
                         u.connection_state = 'none';
                         u.busy = false;
                     }
-                    if (detail.message) alert(detail.message);
+                    if (detail.message) window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message: detail.message } }));
                 },
 
                 acceptUser(user) {

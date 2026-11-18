@@ -7,16 +7,20 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 #[Layout('components.layouts.marketplace', ['active' => 'marketplace'])]
 class Favorites extends Component
 {
+    // Keeps the page number right after a remove; see MyListings.
+    use WithPagination;
+
     #[Computed]
     public function favorites()
     {
         return MarketplaceFavorite::query()
             ->where('user_id', Auth::id())
-            ->with(['listing.category', 'listing.media' => fn ($m) => $m->limit(1)])
+            ->with(['listing.category', 'listing.cover'])
             ->orderByDesc('created_at')
             ->paginate(24);
     }

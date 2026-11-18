@@ -1,6 +1,6 @@
 {{-- Community Card — used in Communities modal --}}
 @php
-    $initials = strtoupper(substr($room->name, 0, 1));
+    $initials = mb_strtoupper(mb_substr($room->name, 0, 1));
     $colors = ['bg-blue-600', 'bg-violet-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600', 'bg-cyan-600'];
     $colorIdx = crc32($room->name) % count($colors);
     $avatarColor = $colors[$colorIdx];
@@ -18,7 +18,7 @@
     <div class="comm-card__top">
         <div class="comm-card__avatar {{ $avatarColor }}">
             @if($room->avatar)
-                <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-lg object-cover">
+                <img src="{{ \App\Support\StorageUrl::for($room->avatar) }}" alt="" class="w-full h-full rounded-lg object-cover">
             @else
                 <span class="text-white font-bold text-lg">{{ $initials }}</span>
             @endif

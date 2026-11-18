@@ -209,54 +209,18 @@ class YardController extends Controller
         ]);
 
         $user = $request->user();
-        $query = $request->input('q');
+        $people = app(\App\Services\Yard\PeopleService::class);
+        $users = $people->searchForChat($user, (string) $request->input('q'));
+        $states = $people->states($user, $users->pluck('id')->all());
 
-        $users = User::where('tenant_id', $user->tenant_id)
-            ->where('id', '!=', $user->id)
-            ->where(function ($q) use ($query) {
-                $q->where('name', 'like', '%' . $query . '%')
-                  ->orWhere('email', 'like', '%' . $query . '%')
-                  ->orWhere('username', 'like', '%' . $query . '%');
-            })
-            ->select('id', 'name', 'username', 'avatar', 'current_region')
-            ->limit(20)
-            ->get();
-
-        // Annotate each result with the current viewer's connection state.
-        $userIds = $users->pluck('id')->all();
-        $connections = \App\Models\UserConnection::where(function ($q) use ($user, $userIds) {
-                $q->where(function ($qq) use ($user, $userIds) {
-                    $qq->where('user_a_id', $user->id)->whereIn('user_b_id', $userIds);
-                })->orWhere(function ($qq) use ($user, $userIds) {
-                    $qq->where('user_b_id', $user->id)->whereIn('user_a_id', $userIds);
-                });
-            })
-            ->get(['user_a_id', 'user_b_id', 'status', 'requested_by'])
-            ->keyBy(fn ($c) => $c->user_a_id === $user->id ? $c->user_b_id : $c->user_a_id);
-
-        $payload = $users->map(function ($u) use ($connections, $user) {
-            $c = $connections->get($u->id);
-            $state = 'none';
-            if ($c) {
-                if ($c->status === \App\Models\UserConnection::STATUS_ACCEPTED) {
-                    $state = 'connected';
-                } elseif ($c->status === \App\Models\UserConnection::STATUS_PENDING) {
-                    $state = $c->requested_by === $user->id ? 'outgoing' : 'incoming';
-                } elseif ($c->status === \App\Models\UserConnection::STATUS_BLOCKED) {
-                    $state = $c->requested_by === $user->id ? 'blocked-by-me' : 'blocked-by-them';
-                }
-            }
-            return [
-                'id' => $u->id,
-                'name' => $u->name,
-                'username' => $u->username,
-                'avatar' => $u->avatar,
-                'current_region' => $u->current_region,
-                'connection_state' => $state,
-            ];
-        });
-
-        return response()->json($payload);
+        return response()->json($users->map(fn ($u) => [
+            'id' => $u->id,
+            'name' => $u->name,
+            'username' => $u->username,
+            'avatar' => $u->avatar,
+            'current_region' => $u->current_region,
+            'connection_state' => $states[$u->id] ?? 'none',
+        ])->values());
     }
 
     /**
@@ -299,12 +263,40 @@ class YardController extends Controller
         $targetId = (int) $request->input('user_id');
 
         try {
-            app(\App\Services\ConnectionService::class)->accept($user, $targetId);
+            $accepted = app(\App\Services\ConnectionService::class)->accept($user, $targetId);
         } catch (\Throwable $e) {
             return response()->json(['error' => 'accept_failed', 'message' => $e->getMessage()], 422);
         }
 
+        // Nothing to accept: the request was withdrawn or declined elsewhere. A second
+        // tap on an accepted request is still a success, so only that case gets an ok.
+        $state = $this->connectionStateFor($user, $targetId);
+        if (! $accepted && $state !== 'connected') {
+            return response()->json(['error' => 'no_pending_request', 'connection_state' => $state], 422);
+        }
+
         return response()->json(['status' => 'ok', 'connection_state' => 'connected']);
+    }
+
+    /**
+     * Decline an incoming connection request. The requester is told only that the
+     * request is gone, so their button goes back to "Connect".
+     */
+    public function declineConnection(Request $request)
+    {
+        $request->validate(['user_id' => 'required|integer|exists:users,id']);
+
+        $user = $request->user();
+        $targetId = (int) $request->input('user_id');
+
+        $declined = app(\App\Services\ConnectionService::class)->decline($user, $targetId);
+
+        $state = $this->connectionStateFor($user, $targetId);
+        if (! $declined && $state !== 'none') {
+            return response()->json(['error' => 'no_pending_request', 'connection_state' => $state], 422);
+        }
+
+        return response()->json(['status' => 'declined', 'connection_state' => 'none']);
     }
 
     /**
@@ -332,29 +324,7 @@ class YardController extends Controller
      */
     private function connectionStateFor(User $viewer, int $otherId): string
     {
-        if ($otherId === $viewer->id) {
-            return 'self';
-        }
-
-        $c = \App\Models\UserConnection::between($viewer->id, $otherId);
-
-        if (! $c) {
-            return 'none';
-        }
-
-        if ($c->status === \App\Models\UserConnection::STATUS_ACCEPTED) {
-            return 'connected';
-        }
-
-        if ($c->status === \App\Models\UserConnection::STATUS_PENDING) {
-            return $c->requested_by === $viewer->id ? 'outgoing' : 'incoming';
-        }
-
-        if ($c->status === \App\Models\UserConnection::STATUS_BLOCKED) {
-            return $c->requested_by === $viewer->id ? 'blocked-by-me' : 'blocked-by-them';
-        }
-
-        return 'none';
+        return app(\App\Services\Yard\PeopleService::class)->state($viewer, $otherId);
     }
 
     /**
@@ -365,48 +335,11 @@ class YardController extends Controller
      */
     public function userPreview(Request $request, string $identifier)
     {
-        $viewer = $request->user();
+        $preview = app(\App\Services\Yard\PeopleService::class)->preview($request->user(), $identifier);
 
-        $other = ctype_digit($identifier)
-            ? User::find((int) $identifier)          // tenant scope applies automatically
-            : User::where('username', $identifier)->first();
+        abort_if($preview === null, 404);
 
-        if (! $other) {
-            abort(404);
-        }
-
-        $state = $this->connectionStateFor($viewer, $other->id);
-        $isSelf = $other->id === $viewer->id;
-        $blocked = in_array($state, ['blocked-by-me', 'blocked-by-them'], true);
-
-        // No town: a person's city is not shown to other people, here or on
-        // their profile page. Country only.
-        $location = trim((string) config("cameroon.countries.{$other->current_country}", $other->current_country));
-
-        // Message should open the conversation that already exists, not start a new one.
-        $dmRoom = $isSelf ? null : YardRoom::where('room_type', RoomType::DirectMessage)
-            ->whereHas('members', fn ($q) => $q->where('user_id', $viewer->id))
-            ->whereHas('members', fn ($q) => $q->where('user_id', $other->id))
-            ->first(['id', 'slug']);
-
-        return response()->json([
-            'id'          => $other->id,
-            'name'        => $viewer->displayNameFor($other),   // a saved nickname wins
-            'username'    => $other->username,
-            'avatar'      => $other->avatar ? asset('storage/' . $other->avatar) : null,
-            // Same seed the chat and member lists use, so the enlarged initial is
-            // the colour the viewer just tapped.
-            'avatar_bg'   => \App\Support\AvatarPalette::colorClass('user:' . $other->id),
-            // Withheld when either side has blocked: the card shows only the notice.
-            'bio'         => $blocked ? null : $other->bio,
-            'location'    => $blocked ? null : ($location ?: null),
-            'nickname'    => $isSelf ? null : $viewer->nicknameFor($other->id),
-            'state'       => $state,
-            'is_self'     => $isSelf,
-            'dm_room_id'   => $dmRoom?->id,
-            'dm_room_slug' => $dmRoom?->slug,
-            'profile_url' => $other->profileUrl(),
-        ]);
+        return response()->json($preview);
     }
 
     /**
@@ -416,7 +349,7 @@ class YardController extends Controller
     public function saveNickname(Request $request)
     {
         $data = $request->validate([
-            'user_id'  => 'required|integer|exists:users,id|different:_self',
+            'user_id'  => 'required|integer|exists:users,id',
             'nickname' => 'nullable|string|max:60',
         ]);
 
@@ -426,23 +359,9 @@ class YardController extends Controller
             return response()->json(['error' => 'cannot_rename_self'], 422);
         }
 
-        $nickname = trim((string) ($data['nickname'] ?? ''));
+        $saved = app(\App\Services\Yard\PeopleService::class)->saveNickname($user, $targetId, $data['nickname'] ?? null);
 
-        if ($nickname === '') {
-            \App\Models\UserContactName::where('owner_user_id', $user->id)
-                ->where('contact_user_id', $targetId)
-                ->delete();
-            \Cache::driver('array')->forget("ucn.{$user->id}.{$targetId}");
-            return response()->json(['status' => 'cleared', 'nickname' => null]);
-        }
-
-        \App\Models\UserContactName::updateOrCreate(
-            ['owner_user_id' => $user->id, 'contact_user_id' => $targetId],
-            ['tenant_id' => $user->tenant_id, 'nickname' => $nickname],
-        );
-        \Cache::driver('array')->forget("ucn.{$user->id}.{$targetId}");
-
-        return response()->json(['status' => 'saved', 'nickname' => $nickname]);
+        return response()->json(['status' => $saved === null ? 'cleared' : 'saved', 'nickname' => $saved]);
     }
 
     /**

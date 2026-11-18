@@ -20,8 +20,15 @@
     <a href="{{ route('home') }}"
        class="absolute left-4 sm:left-10 lg:left-12 top-0 h-16 sm:h-[92px] z-10 flex items-center">
         @if($__siteLogo ?? null)
+        {{-- The logo's "Cameroon" is white, so the white bar gets the navy copy. --}}
         <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}"
+             x-show="! scrolled" @if($forceScrolled) style="display: none" @endif
              class="h-14 sm:h-20 md:h-24 lg:h-[120px] w-auto max-w-[55vw] sm:max-w-none object-contain">
+        @unless($staysTransparent)
+        <img src="{{ \App\Services\SiteSettings::logoOnLightUrl() }}" alt="{{ $__siteName ?? 'Cameroon Network' }}"
+             x-show="scrolled" @unless($forceScrolled) style="display: none" @endunless
+             class="h-14 sm:h-20 md:h-24 lg:h-[120px] w-auto max-w-[55vw] sm:max-w-none object-contain">
+        @endunless
         @else
         <span class="text-4xl sm:text-5xl">🇨🇲</span>
         @endif

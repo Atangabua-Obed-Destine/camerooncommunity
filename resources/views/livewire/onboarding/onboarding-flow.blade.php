@@ -144,11 +144,11 @@
             @endphp
             <div class="px-6 pb-3 flex flex-wrap gap-2" wire:key="chips-round-{{ $userMessageCount }}">
                 @foreach($chips as $chip)
-                <button wire:click="sendChat('{{ $chip['en'] }}')"
+                <button wire:click="sendChat(@js($chip['en']))"
                         wire:loading.attr="disabled"
                         wire:target="sendChat"
                         class="text-xs bg-cm-green/5 text-cm-green font-medium rounded-full px-4 py-2 border border-cm-green/20 hover:bg-cm-green/10 hover:border-cm-green/40 transition-all duration-200 disabled:opacity-50"
-                        x-text="$store.lang.t('{{ $chip['en'] }}', '{{ $chip['fr'] }}')">
+                        x-text="$store.lang.t(@js($chip['en']), @js($chip['fr']))">
                 </button>
                 @endforeach
             </div>
@@ -304,8 +304,10 @@
 
             {{-- Actions --}}
             <div class="border-t border-slate-100 px-6 py-4 flex justify-end items-center bg-slate-50/50">
+                {{-- Disabled only when there are rooms to pick and none is picked. A member
+                     with no country has none to offer, and used to be stuck here. --}}
                 <button wire:click="joinSelectedRooms"
-                        @if(empty($selectedRoomIds)) disabled @endif
+                        @if(empty($selectedRoomIds) && (count($defaultRoomIds) > 0 || count($this->discoverableRooms) > 0)) disabled @endif
                         class="rounded-xl bg-cm-green px-6 py-2.5 text-sm font-bold text-white hover:bg-cm-green/90 transition-all duration-200 flex items-center gap-2 shadow-lg shadow-cm-green/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none">
                     @php $extraRooms = count($selectedRoomIds) - count($defaultRoomIds); @endphp
                     @if($extraRooms > 0)
@@ -378,9 +380,10 @@
                        x-transition:enter="transition ease-out duration-500 delay-700"
                        x-transition:enter-start="opacity-0"
                        x-transition:enter-end="opacity-100"
+                       @php($foundingCap = \App\Livewire\Auth\RegisterWizard::foundingCap(\App\Models\Tenant::find(auth()->user()->tenant_id)))
                        x-text="$store.lang.t(
-                           'You\'re one of the first 20 members! This exclusive badge is yours forever.',
-                           'Vous êtes parmi les 20 premiers membres ! Ce badge exclusif est à vous pour toujours.'
+                           @js("You're one of the first {$foundingCap} members! This exclusive badge is yours forever."),
+                           @js("Vous êtes parmi les {$foundingCap} premiers membres ! Ce badge exclusif est à vous pour toujours.")
                        )"></p>
                 </div>
                 @endif
@@ -472,7 +475,7 @@
                         x-transition:enter="transition ease-out duration-500 delay-300"
                         x-transition:enter-start="opacity-0 translate-y-4"
                         x-transition:enter-end="opacity-100 translate-y-0"
-                        x-text="$store.lang.t('You\'re all set, {{ auth()->user()->name }}!', 'Vous êtes prêt(e), {{ auth()->user()->name }} !')"></h2>
+                        x-text="$store.lang.t(@js("You're all set, " . auth()->user()->name . '!'), @js('Vous êtes prêt(e), ' . auth()->user()->name . ' !'))"></h2>
                     <p class="text-white/80 text-base"
                        x-show="launched"
                        x-transition:enter="transition ease-out duration-500 delay-500"
@@ -498,7 +501,7 @@
                     <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <div class="text-2xl mb-2">🤲</div>
                         <p class="text-xs font-semibold text-slate-700" x-text="$store.lang.t('Support', 'Soutenir')"></p>
-                        <p class="text-[10px] text-slate-500 mt-0.5" x-text="$store.lang.t('Solidarity', 'Solidarité')"></p>
+                        <p class="text-[10px] text-slate-500 mt-0.5" x-text="$store.lang.t('Solidarity · soon', 'Solidarité · bientôt')"></p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                         <div class="text-2xl mb-2">🤖</div>

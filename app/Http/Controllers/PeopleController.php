@@ -31,14 +31,10 @@ class PeopleController extends Controller
             : collect();
 
         $browsable = User::query()
+            ->discoverable()
             ->whereKeyNot($viewer->id)
             ->when(!$blockedIds->isEmpty(), fn ($q2) => $q2->whereNotIn('id', $blockedIds))
-            ->when($q !== '', function ($q2) use ($q) {
-                $q2->where(function ($qq) use ($q) {
-                    $qq->where('name', 'like', "%{$q}%")
-                       ->orWhere('username', 'like', "%{$q}%");
-                });
-            });
+            ->tap(fn ($q2) => $this->search($q2, $q));
 
         // Counts (used by the sidebar)
         $incomingRequestsCount = UserConnection::where('status', UserConnection::STATUS_PENDING)
@@ -74,7 +70,7 @@ class PeopleController extends Controller
                 break;
 
             case 'connections':
-                $myConnections = $this->myConnections($viewer);
+                $myConnections = $this->myConnections($viewer, $q);
                 break;
 
             case 'home':
@@ -136,20 +132,42 @@ class PeopleController extends Controller
             ->get();
     }
 
-    /** Accepted connections for the viewer. */
-    private function myConnections(User $viewer)
+    /**
+     * Accepted connections for the viewer, most recent first, narrowed by the
+     * search box. The search runs over every connection, not just the newest 200.
+     */
+    private function myConnections(User $viewer, string $q = '')
     {
-        $rows = UserConnection::with(['userA', 'userB'])
+        $ids = UserConnection::query()
             ->where('status', UserConnection::STATUS_ACCEPTED)
             ->where(function ($w) use ($viewer) {
                 $w->where('user_a_id', $viewer->id)->orWhere('user_b_id', $viewer->id);
             })
             ->orderByDesc('accepted_at')
-            ->limit(200)
-            ->get();
+            ->get(['user_a_id', 'user_b_id'])
+            ->map(fn ($c) => $c->user_a_id === $viewer->id ? $c->user_b_id : $c->user_a_id);
 
-        return $rows->map(function ($c) use ($viewer) {
-            return $c->user_a_id === $viewer->id ? $c->userB : $c->userA;
-        })->filter();
+        $rank = $ids->flip();
+
+        return User::query()
+            ->whereIn('id', $ids)
+            ->tap(fn ($q2) => $this->search($q2, $q))
+            ->get()
+            ->sortBy(fn ($u) => $rank[$u->id])
+            ->take(200)
+            ->values();
+    }
+
+    /** Name or username contains $q. % and _ are matched literally. */
+    private function search($query, string $q): void
+    {
+        if ($q === '') {
+            return;
+        }
+
+        $like = '%' . addcslashes($q, '%_\\') . '%';
+        $query->where(function ($qq) use ($like) {
+            $qq->where('name', 'like', $like)->orWhere('username', 'like', $like);
+        });
     }
 }

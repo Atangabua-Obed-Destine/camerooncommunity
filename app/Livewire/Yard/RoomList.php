@@ -46,14 +46,14 @@ class RoomList extends Component
                 ->pluck('room_id');
 
             foreach ($roomIds as $roomId) {
-                $listeners["echo:tenant.{$user->tenant_id}.room.{$roomId},.MessageSent"] = 'onNewMessage';
+                $listeners["echo-private:tenant.{$user->tenant_id}.room.{$roomId},.MessageSent"] = 'onNewMessage';
             }
 
             // When the user accepts/receives an accepted connection, the server
             // creates a fresh DM room for both sides. Listen on the user's own
             // channel so the chat list refreshes immediately and the new DM
             // shows up without waiting for the first message.
-            $listeners["echo:tenant.{$user->tenant_id}.user.{$user->id},.connection.accepted"] = 'refreshRooms';
+            $listeners["echo-private:tenant.{$user->tenant_id}.user.{$user->id},.connection.accepted"] = 'refreshRooms';
         }
 
         return $listeners;
@@ -73,134 +73,7 @@ class RoomList extends Component
     #[Computed]
     public function rooms()
     {
-        $user = auth()->user();
-
-        // Single join to get rooms the user belongs to (avoids whereHas subquery)
-        $rooms = YardRoom::join('yard_room_members as m', function ($join) use ($user) {
-                $join->on('m.room_id', '=', 'yard_rooms.id')
-                     ->where('m.user_id', $user->id)
-                     ->whereNull('m.auto_archived_at'); // hide rooms auto-archived by location switch
-            })
-            ->select('yard_rooms.*', 'm.last_read_at as member_last_read_at', 'm.joined_at as member_joined_at', 'm.is_favorited as is_favorited', 'm.archived_at as member_archived_at')
-            ->selectRaw('(SELECT COUNT(*) FROM yard_room_members WHERE room_id = yard_rooms.id) as members_count')
-            ->selectRaw('(SELECT COALESCE(u.username, u.name) FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_name', [$user->id])
-            ->selectRaw('(SELECT u.avatar FROM yard_room_members om JOIN users u ON u.id = om.user_id WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_avatar', [$user->id])
-            ->selectRaw('(SELECT om.user_id FROM yard_room_members om WHERE om.room_id = yard_rooms.id AND om.user_id != ? LIMIT 1) as dm_other_id', [$user->id])
-            ->selectRaw('(SELECT COALESCE(u.username, u.name) FROM users u WHERE u.id = yard_rooms.last_message_user_id LIMIT 1) as last_message_sender_name');
-
-        if ($this->search) {
-            $rooms->where('yard_rooms.name', 'like', '%' . $this->search . '%');
-        }
-
-        // Filter: archived view shows ONLY user-archived chats. All other
-        // filters EXCLUDE archived chats (WhatsApp behavior).
-        if ($this->filter === 'archived') {
-            $rooms->whereNotNull('m.archived_at');
-        } else {
-            $rooms->whereNull('m.archived_at');
-        }
-
-        // Filter: favorites only
-        if ($this->filter === 'favorites') {
-            $rooms->where('m.is_favorited', true);
-        }
-
-        // Filter: groups only (PrivateGroup + system rooms that aren't DMs)
-        if ($this->filter === 'groups') {
-            $rooms->where('yard_rooms.room_type', '!=', RoomType::DirectMessage);
-        }
-
-        $rooms = $rooms->orderByDesc('m.is_favorited')
-            ->orderByDesc('yard_rooms.last_message_at')
-            ->orderByDesc('yard_rooms.created_at')
-            ->get();
-
-        // Batch unread counts in a single query
-        $roomIds = $rooms->pluck('id')->toArray();
-        if (!empty($roomIds)) {
-            $unreadCounts = collect();
-            $mentionCounts = collect();
-
-            // WhatsApp-style cut-off: unread = messages newer than the LATER
-            // of the viewer's last_read_at and their joined_at. This way a
-            // freshly-joined member never sees a badge counting messages
-            // that pre-dated their join.
-            $greatest = DB::getDriverName() === 'sqlite' ? 'MAX' : 'GREATEST';
-            $cutoffSql = "$greatest(
-                COALESCE((SELECT joined_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1), '1970-01-01 00:00:00'),
-                COALESCE((SELECT last_read_at FROM yard_room_members WHERE room_id = yard_messages.room_id AND user_id = ? LIMIT 1), '1970-01-01 00:00:00')
-            )";
-
-            $unreadCounts = DB::table('yard_messages')
-                ->select('room_id', DB::raw('COUNT(*) as cnt'))
-                ->whereIn('room_id', $roomIds)
-                ->where('user_id', '!=', $user->id)
-                ->where('is_deleted', false)
-                ->whereRaw("created_at > $cutoffSql", [$user->id, $user->id])
-                ->groupBy('room_id')
-                ->pluck('cnt', 'room_id');
-
-            // Count unread messages where this user is mentioned (WhatsApp-style "@" badge).
-            // Uses MySQL JSON_CONTAINS on the mentioned_user_ids JSON column.
-            try {
-                $mentionCounts = DB::table('yard_messages')
-                    ->select('room_id', DB::raw('COUNT(*) as cnt'))
-                    ->whereIn('room_id', $roomIds)
-                    ->where('user_id', '!=', $user->id)
-                    ->where('is_deleted', false)
-                    ->whereNotNull('mentioned_user_ids')
-                    ->whereRaw('JSON_CONTAINS(mentioned_user_ids, ?)', [(string) $user->id])
-                    ->whereRaw("created_at > $cutoffSql", [$user->id, $user->id])
-                    ->groupBy('room_id')
-                    ->pluck('cnt', 'room_id');
-            } catch (\Throwable $e) {
-                // Driver without JSON_CONTAINS — gracefully degrade.
-                \Log::warning('[RoomList] mention count query failed: ' . $e->getMessage());
-            }
-
-            foreach ($rooms as $room) {
-                $room->unread_count = (int) ($unreadCounts->get($room->id) ?? $unreadCounts->get((string) $room->id) ?? 0);
-                $room->unread_mention_count = (int) ($mentionCounts->get($room->id) ?? $mentionCounts->get((string) $room->id) ?? 0);
-            }
-
-            // Apply per-viewer custom contact names (WhatsApp "Save as...") on
-            // top of the SQL-derived names so DM rows and the last-message
-            // sender chip both reflect the saved nickname.
-            $contactIds = collect();
-            foreach ($rooms as $r) {
-                if ($r->dm_other_id)            $contactIds->push((int) $r->dm_other_id);
-                if ($r->last_message_user_id)   $contactIds->push((int) $r->last_message_user_id);
-            }
-            $contactIds = $contactIds->unique()->filter()->values()->all();
-            $nicknames = \App\Models\UserContactName::nicknamesFor($user->id, $contactIds);
-            foreach ($rooms as $r) {
-                if ($r->dm_other_id && isset($nicknames[$r->dm_other_id])) {
-                    $r->dm_other_name = $nicknames[$r->dm_other_id];
-                }
-                if ($r->last_message_user_id && isset($nicknames[$r->last_message_user_id])) {
-                    $r->last_message_sender_name = $nicknames[$r->last_message_user_id];
-                }
-            }
-
-            // Debug: always log to trace the badge issue
-            \Log::info('[RoomList] rooms() computed', [
-                'user' => $user->id,
-                'unread_counts' => $unreadCounts->toArray(),
-                'rooms_with_data' => $rooms->map(fn ($r) => [
-                    'room' => $r->id,
-                    'unread' => $r->unread_count,
-                    'last_read' => $r->member_last_read_at,
-                ])->values()->toArray(),
-            ]);
-        }
-
-        // Filter: unread only (applied post-query since counts are computed)
-        if ($this->filter === 'unread') {
-            $rooms = $rooms->filter(fn ($r) => ($r->unread_count ?? 0) > 0)->values();
-        }
-
-        // Flat list — already ordered by pinned first, then last_message_at desc (WhatsApp-style)
-        return $rooms;
+        return app(\App\Services\Yard\RoomListService::class)->rooms(auth()->user(), $this->filter, $this->search);
     }
 
     /**
@@ -212,50 +85,7 @@ class RoomList extends Component
     #[Computed]
     public function filterCounts(): array
     {
-        $user = auth()->user();
-
-        // Active membership scope: matches the default "all" view.
-        $base = YardRoomMember::query()
-            ->where('user_id', $user->id)
-            ->whereNull('auto_archived_at')
-            ->whereNull('archived_at');
-
-        // Favorites count.
-        $favorites = (clone $base)->where('is_favorited', true)->count();
-
-        // Groups count (everything except DMs).
-        $groups = (clone $base)
-            ->join('yard_rooms', 'yard_rooms.id', '=', 'yard_room_members.room_id')
-            ->where('yard_rooms.room_type', '!=', RoomType::DirectMessage->value)
-            ->count();
-
-        // Unread count = rooms with at least one message newer than the
-        // viewer's effective cut-off (later of last_read_at and joined_at).
-        // This keeps freshly-joined rooms from being flagged unread just
-        // because they contain pre-existing history.
-        $unread = (clone $base)
-            ->where(function ($q) use ($user) {
-                $q->whereExists(function ($sub) use ($user) {
-                    $sub->select(DB::raw(1))
-                        ->from('yard_messages')
-                        ->whereColumn('yard_messages.room_id', 'yard_room_members.room_id')
-                        ->where('yard_messages.user_id', '!=', $user->id)
-                        ->where('yard_messages.is_deleted', false)
-                        ->whereRaw(
-                            "yard_messages.created_at > " . (DB::getDriverName() === 'sqlite' ? 'MAX' : 'GREATEST') . "(
-                                COALESCE(yard_room_members.joined_at, '1970-01-01 00:00:00'),
-                                COALESCE(yard_room_members.last_read_at, '1970-01-01 00:00:00')
-                            )"
-                        );
-                });
-            })
-            ->count();
-
-        return [
-            'unread'    => $unread,
-            'favorites' => $favorites,
-            'groups'    => $groups,
-        ];
+        return app(\App\Services\Yard\RoomListService::class)->filterCounts(auth()->user());
     }
 
 
@@ -285,56 +115,7 @@ class RoomList extends Component
     #[Computed]
     public function suggestedRooms()
     {
-        $user = auth()->user();
-
-        // Only suggest rooms for the user's *active* location — i.e. the
-        // location they have explicitly switched to. If they were just
-        // detected somewhere new but haven't confirmed the switch yet,
-        // we don't surface those rooms here (the location-switch prompt
-        // handles that flow). Home region is still honoured as a fallback.
-        if (! $user->active_country) {
-            return collect();
-        }
-
-        $joinedRoomIds = YardRoomMember::where('user_id', $user->id)->pluck('room_id');
-
-        // Determine which regions are eligible for the regional suggestion.
-        // We use the active_region (set by the location switch flow), and
-        // for Cameroon users we also accept the home_region as a fallback.
-        $eligibleRegions = [];
-        if ($user->active_region) {
-            $eligibleRegions[] = $user->active_region;
-        }
-        if ($user->home_region && $user->active_country === 'Cameroon') {
-            $regionName = config('cameroon.regions.' . $user->home_region, $user->home_region);
-            if ($regionName && ! in_array($regionName, $eligibleRegions, true)) {
-                $eligibleRegions[] = $regionName;
-            }
-        }
-
-        return YardRoom::where('is_system_room', true)
-            ->where('is_active', true)
-            ->whereNotIn('id', $joinedRoomIds)
-            ->where(function ($q) use ($user, $eligibleRegions) {
-                // National room for user's active country
-                $q->where(function ($q2) use ($user) {
-                    $q2->where('room_type', RoomType::National)
-                       ->where('country', $user->active_country);
-                });
-                // Regional room ONLY when we have a specific region to suggest.
-                // Without a region we'd otherwise match every regional room in
-                // the country (e.g. all 12 UK ITL regions).
-                if (! empty($eligibleRegions)) {
-                    $q->orWhere(function ($q2) use ($user, $eligibleRegions) {
-                        $q2->where('room_type', RoomType::Regional)
-                           ->where('country', $user->active_country)
-                           ->whereIn('region', $eligibleRegions);
-                    });
-                }
-            })
-            ->withCount('members')
-            ->orderBy('room_type')
-            ->get();
+        return app(\App\Services\Yard\RoomListService::class)->suggested(auth()->user());
     }
 
     /**
@@ -389,7 +170,7 @@ class RoomList extends Component
             $user->language_pref?->value ?? 'en',
         );
 
-        $this->previewAiGreeting = $greeting ?? $this->fallbackGreeting($user->language_pref ?? 'en');
+        $this->previewAiGreeting = $greeting ?? $this->fallbackGreeting($user->language_pref?->value ?? 'en');
     }
 
     /**
@@ -447,26 +228,11 @@ class RoomList extends Component
      */
     public function joinRoom(int $roomId): void
     {
-        $user = auth()->user();
-        $room = YardRoom::findOrFail($roomId);
-
-        if (! $room->is_system_room || ! $room->is_active) {
+        if (! app(\App\Services\Yard\RoomListService::class)->join(auth()->user(), YardRoom::findOrFail($roomId))) {
             return;
         }
 
-        YardRoomMember::firstOrCreate([
-            'tenant_id' => $user->tenant_id,
-            'room_id' => $room->id,
-            'user_id' => $user->id,
-        ], [
-            'role' => 'member',
-        ]);
-
-        $room->increment('members_count');
-
-        // Clear computed caches so lists refresh
-        unset($this->rooms);
-        unset($this->suggestedRooms);
+        unset($this->rooms, $this->suggestedRooms);
 
         // Auto-open the room
         $this->activeRoomId = $roomId;
@@ -489,12 +255,7 @@ class RoomList extends Component
 
     public function toggleFavorite(int $roomId): void
     {
-        $member = YardRoomMember::where('room_id', $roomId)
-            ->where('user_id', auth()->id())
-            ->first();
-
-        if ($member) {
-            $member->update(['is_favorited' => ! $member->is_favorited]);
+        if (app(\App\Services\Yard\RoomListService::class)->setFavorite(auth()->user(), $roomId) !== null) {
             unset($this->rooms);
         }
     }

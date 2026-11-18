@@ -5,6 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    {{-- Echo authorises private channels here (resources/js/bootstrap.js). --}}
+    <meta name="broadcast-auth" content="{{ url('/broadcasting/auth') }}">
     <title>{{ $title ?? ($__siteName ?? 'Cameroon Network') }}</title>
 
     <!-- Fonts -->
@@ -254,6 +256,9 @@
     @endauth
 
     <x-connection-notifier />
+
+    {{-- Toasts, on every page; it stands down where GoConnect mounts its own. --}}
+    @include('partials.toasts')
 
     {{-- PWA install banner --}}
     @include('partials.pwa-install')

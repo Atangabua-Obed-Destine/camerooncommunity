@@ -27,7 +27,7 @@
             x-transition:leave="transform transition ease-in duration-300"
             x-transition:leave-start="translate-x-0 opacity-100"
             x-transition:leave-end="translate-x-[120%] opacity-0"
-            class="pointer-events-auto w-[360px] rounded-2xl bg-white shadow-2xl shadow-black/10 border border-slate-200/80 overflow-hidden"
+            class="pointer-events-auto w-[360px] max-w-full rounded-2xl bg-white shadow-2xl shadow-black/10 border border-slate-200/80 overflow-hidden"
         >
         {{-- Cameroon tricolour gradient bar --}}
         <div class="h-1 bg-gradient-to-r from-cm-green via-cm-red to-cm-yellow"></div>
@@ -487,9 +487,6 @@
                 return;
             }
             
-            const toastEl = document.querySelector('[x-data*="showToast"]');
-            if (!toastEl) return;
-            
             const store = Alpine.store('locationToast');
             if (!store) return;
             
@@ -582,12 +579,17 @@
                 body: JSON.stringify({ country: c, region: r })
             }).then(resp => resp.json())
               .then(data => {
-                  console.log('[LocationTracker] Switch response:', data);
                   // Reload page so the header / rooms reflect the new active location
                   window.location.reload();
               })
               .catch(e => {
                 console.error('[LocationTracker] Location switch failed:', e);
+                // Say so: before, a failed switch only reached the console.
+                const fr = (document.documentElement.lang || 'en') === 'fr';
+                window.dispatchEvent(new CustomEvent('toast', { detail: {
+                    type: 'error',
+                    message: fr ? "Impossible de changer de localisation. Réessayez." : "Couldn't switch location. Please try again.",
+                } }));
             });
         });
 

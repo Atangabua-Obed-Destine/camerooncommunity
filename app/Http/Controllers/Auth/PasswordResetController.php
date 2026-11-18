@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Support\PasswordPolicy;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -40,8 +41,8 @@ class PasswordResetController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+            'password' => PasswordPolicy::rules(),
+        ], ['password.regex' => PasswordPolicy::message()]);
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),

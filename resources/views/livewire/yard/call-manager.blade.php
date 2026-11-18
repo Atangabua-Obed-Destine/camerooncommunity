@@ -18,7 +18,7 @@
     <template x-if="incomingCall">
         <div class="fixed inset-0 z-[201] flex items-start justify-center pt-8 pointer-events-none" x-transition>
             <div class="yard-call-modal yard-call-modal--incoming pointer-events-auto animate-slide-down"
-                 style="width: 380px;">
+                 style="width: 380px; max-width: calc(100vw - 24px);">
                 <div class="yard-call-modal__body">
                     {{-- Header row --}}
                     <div class="flex items-center gap-4 mb-5">
@@ -70,7 +70,7 @@
              x-ref="callModal"
              :style="modalPos.x !== null ? `left:${modalPos.x}px;top:${modalPos.y}px` : 'top:50%;left:50%;transform:translate(-50%,-50%)'"
              x-transition>
-            <div class="yard-call-modal yard-call-modal--outgoing" style="width: 360px;">
+            <div class="yard-call-modal yard-call-modal--outgoing" style="width: 360px; max-width: calc(100vw - 24px);">
                 {{-- Drag handle --}}
                 <div class="yard-call-modal__drag"
                      @mousedown.prevent="startDrag($event)"
@@ -142,7 +142,7 @@
              :style="modalPos.x !== null ? `left:${modalPos.x}px;top:${modalPos.y}px` : 'top:50%;left:50%;transform:translate(-50%,-50%)'"
              x-transition>
             <div class="yard-call-modal yard-call-modal--active"
-                 :style="callType === 'video' ? 'width:480px' : 'width:360px'">
+                 :style="(callType === 'video' ? 'width:480px' : 'width:360px') + '; max-width: calc(100vw - 24px)'">
                 {{-- Drag handle --}}
                 <div class="yard-call-modal__drag"
                      @mousedown.prevent="startDrag($event)"

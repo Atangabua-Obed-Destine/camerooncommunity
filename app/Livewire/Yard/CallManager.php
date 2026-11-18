@@ -129,7 +129,7 @@ class CallManager extends Component
         $this->broadcastToOthers(new CallStarted(
             $call,
             $user->username ?? $user->name,
-            $user->avatar ? asset('storage/' . $user->avatar) : null,
+            $user->avatar ? \App\Support\StorageUrl::for($user->avatar) : null,
         ));
 
         // Which channels the ring actually went to. When a call does not ring,
@@ -158,7 +158,7 @@ class CallManager extends Component
             'callType' => $type,
             'roomId' => $roomId,
             'calleeName' => $otherUser ? $user->displayNameFor($otherUser) : $room->name,
-            'calleeAvatar' => $otherUser?->avatar ? asset('storage/' . $otherUser->avatar) : null,
+            'calleeAvatar' => $otherUser?->avatar ? \App\Support\StorageUrl::for($otherUser->avatar) : null,
             'calleeOnline' => $otherUser?->last_active_at && $otherUser->last_active_at->gt(now()->subMinutes(5)),
             'isInitiator' => true,
         ]);
@@ -451,8 +451,8 @@ class CallManager extends Component
             ->map(fn ($p) => [
                 'user_id' => $p->user_id,
                 'name' => $viewer ? $viewer->displayNameFor($p->user) : ($p->user->username ?? $p->user->name ?? 'Unknown'),
-                'initial' => strtoupper(substr($viewer ? $viewer->displayNameFor($p->user) : ($p->user->username ?? $p->user->name ?? 'U'), 0, 1)),
-                'avatar' => $p->user->avatar ? asset('storage/' . $p->user->avatar) : null,
+                'initial' => mb_strtoupper(mb_substr($viewer ? $viewer->displayNameFor($p->user) : ($p->user->username ?? $p->user->name ?? 'U'), 0, 1)),
+                'avatar' => $p->user->avatar ? \App\Support\StorageUrl::for($p->user->avatar) : null,
                 'is_online' => $p->user->last_active_at && $p->user->last_active_at->gt(now()->subMinutes(5)),
                 'status' => $p->status,
                 'is_muted' => $p->is_muted,

@@ -6,8 +6,8 @@ use App\Models\CommunityPointsLog;
 use App\Models\YardRoomMember;
 use App\Models\SolidarityContribution;
 use App\Models\UserBadge;
+use App\Services\ProfileSettings;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
@@ -18,59 +18,30 @@ class ProfileController extends Controller
         return view('profile.index', [
             'user' => $user,
             'totalPoints' => CommunityPointsLog::where('user_id', $user->id)->sum('points_awarded'),
-            'roomsJoined' => YardRoomMember::where('user_id', $user->id)->count(),
+            'roomsJoined' => YardRoomMember::where('user_id', $user->id)->inCommunityRooms()->count(),
             'contributions' => SolidarityContribution::where('contributor_id', $user->id)->count(),
             'badges' => UserBadge::where('user_id', $user->id)->get(),
         ]);
     }
 
-    public function update(Request $request)
+    public function update(Request $request, ProfileSettings $settings)
     {
-        $user = auth()->user();
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'language_pref' => 'required|in:en,fr',
-            'home_region' => 'nullable|string|max:100',
-            'home_city' => 'nullable|string|max:100',
-            'show_archived_away' => 'nullable|boolean',
-        ]);
-
-        $validated['show_archived_away'] = $request->boolean('show_archived_away');
-
-        $user->update($validated);
+        $settings->update(auth()->user(), $request->validate(ProfileSettings::RULES));
 
         return back()->with('success', __('Profile updated successfully.'));
     }
 
-    public function updateAvatar(Request $request)
+    public function updateAvatar(Request $request, ProfileSettings $settings)
     {
-        $request->validate([
-            'avatar' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
-        ]);
-
-        $user = auth()->user();
-
-        // Delete old avatar if exists
-        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
-        }
-
-        $path = $request->file('avatar')->store('avatars', 'public');
-        $user->update(['avatar' => $path]);
+        $request->validate(ProfileSettings::AVATAR_RULES);
+        $settings->setAvatar(auth()->user(), $request->file('avatar'));
 
         return back()->with('success', __('Profile photo updated.'));
     }
 
-    public function removeAvatar()
+    public function removeAvatar(ProfileSettings $settings)
     {
-        $user = auth()->user();
-
-        if ($user->avatar && Storage::disk('public')->exists($user->avatar)) {
-            Storage::disk('public')->delete($user->avatar);
-        }
-
-        $user->update(['avatar' => null]);
+        $settings->removeAvatar(auth()->user());
 
         return back()->with('success', __('Profile photo removed.'));
     }
@@ -79,33 +50,17 @@ class ProfileController extends Controller
      * Upload a Facebook/WhatsApp-style cover photo. Wide aspect images work
      * best; we accept up to 8 MB and replace any existing one on disk.
      */
-    public function updateCover(Request $request)
+    public function updateCover(Request $request, ProfileSettings $settings)
     {
-        $request->validate([
-            'cover_photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:8192',
-        ]);
-
-        $user = auth()->user();
-
-        if ($user->cover_photo && Storage::disk('public')->exists($user->cover_photo)) {
-            Storage::disk('public')->delete($user->cover_photo);
-        }
-
-        $path = $request->file('cover_photo')->store('cover-photos', 'public');
-        $user->update(['cover_photo' => $path]);
+        $request->validate(ProfileSettings::COVER_RULES);
+        $settings->setCover(auth()->user(), $request->file('cover_photo'));
 
         return back()->with('success', __('Cover photo updated.'));
     }
 
-    public function removeCover()
+    public function removeCover(ProfileSettings $settings)
     {
-        $user = auth()->user();
-
-        if ($user->cover_photo && Storage::disk('public')->exists($user->cover_photo)) {
-            Storage::disk('public')->delete($user->cover_photo);
-        }
-
-        $user->update(['cover_photo' => null]);
+        $settings->removeCover(auth()->user());
 
         return back()->with('success', __('Cover photo removed.'));
     }
@@ -120,12 +75,13 @@ class ProfileController extends Controller
         $viewer = auth()->user();
 
         $user = \App\Models\User::where('username', $username)
+            ->discoverable()
             ->where('tenant_id', $viewer->tenant_id)
             ->firstOrFail();
 
-        // Block-aware: hide profile in either direction so blocked users
-        // can't snoop and blockers don't see ghost stats.
-        if (method_exists($viewer, 'hasBlockedOrIsBlockedBy') && $viewer->hasBlockedOrIsBlockedBy($user->id)) {
+        // Hidden from someone they blocked, so they can't snoop. The blocker
+        // still gets the page, with Unblock (see SellerProfile).
+        if ($viewer->isBlockedBy($user->id)) {
             abort(404);
         }
 
@@ -143,7 +99,7 @@ class ProfileController extends Controller
 
         $stats = [
             'points'        => CommunityPointsLog::where('user_id', $user->id)->sum('points_awarded'),
-            'rooms'         => YardRoomMember::where('user_id', $user->id)->count(),
+            'rooms'         => YardRoomMember::where('user_id', $user->id)->inCommunityRooms()->count(),
             'contributions' => SolidarityContribution::where('contributor_id', $user->id)->count(),
             'listings'      => \App\Models\MarketplaceListing::where('seller_id', $user->id)
                                 ->where('status', 'active')->count(),

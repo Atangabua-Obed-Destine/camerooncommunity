@@ -596,7 +596,7 @@ class AdminController extends Controller
             // Delete old logo
             $oldLogo = SiteSettings::get('site_logo');
             if ($oldLogo) {
-                Storage::disk('public')->delete($oldLogo);
+                Storage::disk('public')->delete([$oldLogo, SiteSettings::logoOnLightPath($oldLogo)]);
             }
 
             $path = $request->file('site_logo')->store('branding', 'public');
@@ -616,7 +616,7 @@ class AdminController extends Controller
         if ($request->boolean('remove_logo')) {
             $oldLogo = SiteSettings::get('site_logo');
             if ($oldLogo) {
-                Storage::disk('public')->delete($oldLogo);
+                Storage::disk('public')->delete([$oldLogo, SiteSettings::logoOnLightPath($oldLogo)]);
             }
             \App\Models\PlatformSetting::setValue('site_logo', null, 'branding');
         }

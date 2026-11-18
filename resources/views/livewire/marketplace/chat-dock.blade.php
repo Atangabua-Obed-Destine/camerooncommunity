@@ -36,7 +36,7 @@
                 ch: @js($channel), c: null, h: null,
                 init() {
                     if (!window.Echo || !this.ch) return;
-                    this.c = window.Echo.channel(this.ch);
+                    this.c = window.Echo.private(this.ch);
                     this.h = () => $wire.refreshThread();
                     this.c.listen('.MessageSent', this.h);
                 },
@@ -50,7 +50,7 @@
             <div class="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-cm-green to-cm-green-light text-white">
                 <div class="w-8 h-8 rounded-full bg-white/20 grid place-items-center overflow-hidden shrink-0">
                     @if ($partner?->avatar)
-                        <img src="{{ asset('storage/' . $partner->avatar) }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ \App\Support\StorageUrl::for($partner->avatar) }}" alt="" class="w-full h-full object-cover">
                     @else
                         <span class="text-sm font-bold">{{ strtoupper(mb_substr($pName, 0, 1)) }}</span>
                     @endif

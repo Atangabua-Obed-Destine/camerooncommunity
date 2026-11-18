@@ -165,6 +165,11 @@
         from { opacity: 0; transform: translateX(40px) scale(.95); }
         to   { opacity: 1; transform: translateX(0) scale(1); }
     }
+    /* The leave classes x-transition names. They had no rules, so the toast
+       vanished in one frame; it now slides back out the way it came. */
+    .kc-toast--leave { transition: opacity .2s ease-in, transform .2s ease-in; }
+    .kc-toast--leave-start { opacity: 1; transform: translateX(0) scale(1); }
+    .kc-toast--leave-end { opacity: 0; transform: translateX(40px) scale(.95); }
     @media (max-width: 640px) {
         .kc-notifier { top: 76px; right: 8px; left: 8px; max-width: none; }
     }
@@ -193,7 +198,7 @@
                 }
 
                 const channel = `tenant.${tenantId}.user.${userId}`;
-                this._channel = window.Echo.channel(channel);
+                this._channel = window.Echo.private(channel);
 
                 this._channel.listen('.connection.requested', (data) => {
                     this.push({

@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Models\YardCallParticipant;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -31,7 +32,7 @@ class CallUpdated implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('tenant.' . $this->tenantId . '.room.' . $this->roomId),
+            new PrivateChannel('tenant.' . $this->tenantId . '.room.' . $this->roomId),
         ];
 
         // Also address each other participant directly.
@@ -51,7 +52,7 @@ class CallUpdated implements ShouldBroadcastNow
                 ->pluck('user_id');
 
             foreach ($participantIds as $uid) {
-                $channels[] = new Channel('tenant.' . $this->tenantId . '.user.' . $uid . '.calls');
+                $channels[] = new PrivateChannel('tenant.' . $this->tenantId . '.user.' . $uid . '.calls');
             }
         }
 

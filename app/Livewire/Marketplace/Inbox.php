@@ -45,6 +45,13 @@ class Inbox extends Component
     /** Mobile only: whether the thread pane (vs the list) is showing. */
     public bool $threadOpen = false;
 
+    /**
+     * Whether both panes show (lg and up), as reported by the browser. The
+     * server can't see the screen, and on a phone the thread is hidden until
+     * opened, so it must not be marked read just because it resolved.
+     */
+    public bool $wide = false;
+
     public function updatedTab(): void
     {
         $this->activeRoomId = null;
@@ -61,40 +68,9 @@ class Inbox extends Component
     #[Computed]
     public function allConversations(): Collection
     {
-        $me = auth()->id();
-        if (! $me) {
-            return collect();
-        }
-        $svc = app(MarketplaceChatService::class);
+        $me = auth()->user();
 
-        return YardRoom::where('origin', 'marketplace')
-            ->whereHas('members', fn ($q) => $q->where('user_id', $me))
-            ->with(['members.user'])
-            ->orderByDesc('last_message_at')
-            ->get()
-            ->map(function (YardRoom $room) use ($me, $svc) {
-                $listing = $svc->listingForRoom($room);
-                $role = ($listing && (int) $listing->user_id === (int) $me) ? 'selling' : 'buying';
-                $myMember = $room->members->firstWhere('user_id', $me);
-                $partner = $room->members->first(fn ($m) => (int) $m->user_id !== (int) $me)?->user;
-
-                $unread = YardMessage::where('room_id', $room->id)
-                    ->where('user_id', '!=', $me)
-                    ->where('is_deleted', false)
-                    ->when($myMember?->last_read_at, fn ($q, $lr) => $q->where('created_at', '>', $lr))
-                    ->count();
-
-                return (object) [
-                    'room_id' => $room->id,
-                    'tenant_id' => $room->tenant_id,
-                    'listing' => $listing,
-                    'partner' => $partner,
-                    'preview' => $room->last_message_preview,
-                    'time'    => $room->last_message_at,
-                    'unread'  => $unread,
-                    'role'    => $role,
-                ];
-            });
+        return $me ? app(MarketplaceChatService::class)->conversations($me) : collect();
     }
 
     #[Computed]
@@ -144,9 +120,13 @@ class Inbox extends Component
             ->where('room_id', $id)
             ->where('is_deleted', false)
             ->whereIn('message_type', [MessageType::Text->value, MessageType::ShareCard->value, MessageType::Image->value])
-            ->orderBy('id')
+            // The newest 200, shown oldest first. orderBy('id')->limit(200) kept the
+            // oldest, so past 200 new messages, your own included, never appeared.
+            ->orderByDesc('id')
             ->limit(200)
-            ->get();
+            ->get()
+            ->reverse()
+            ->values();
     }
 
     public function channelName(): ?string
@@ -199,7 +179,7 @@ class Inbox extends Component
     public function refresh(): void
     {
         $id = $this->resolvedActiveId();
-        if ($id) {
+        if ($id && $this->threadVisible()) {
             $this->markRead($id);
         }
         unset($this->messages, $this->allConversations, $this->conversations, $this->counts, $this->active);
@@ -216,12 +196,30 @@ class Inbox extends Component
         \Illuminate\Support\Facades\Cache::forget('mp:inbox-unread:' . auth()->id());
     }
 
-    public function mount(): void
+    /** Called once by the browser when both panes are on screen. */
+    public function showingBothPanes(): void
     {
-        // Mark the opened conversation read on first load.
+        $this->wide = true;
         $id = $this->resolvedActiveId();
         if ($id) {
             $this->markRead($id);
+            unset($this->allConversations, $this->conversations, $this->counts, $this->active);
+        }
+    }
+
+    private function threadVisible(): bool
+    {
+        return $this->wide || $this->threadOpen;
+    }
+
+    public function mount(): void
+    {
+        // A link to a conversation (?c=) opens it, on a phone too, and that one
+        // is read. Otherwise nothing is marked until it is actually on screen:
+        // see showingBothPanes() and selectRoom().
+        if ($this->activeRoomId && $this->resolvedActiveId() === $this->activeRoomId) {
+            $this->threadOpen = true;
+            $this->markRead($this->activeRoomId);
         }
     }
 

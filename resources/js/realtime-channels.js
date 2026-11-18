@@ -49,7 +49,9 @@ export function join(name, owner, handlers) {
     let entry = held.get(name);
 
     if (! entry) {
-        entry = { channel: e.channel(name), owners: new Map() };
+        // Room and member channels are private (routes/channels.php): Echo
+        // asks /broadcasting/auth before it subscribes.
+        entry = { channel: name.startsWith('tenant.') ? e.private(name) : e.channel(name), owners: new Map() };
         held.set(name, entry);
     }
 

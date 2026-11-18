@@ -235,8 +235,23 @@
                                     {{ $lang === 'fr' ? $myOffer->status->labelFr() : $myOffer->status->label() }}
                                     · {{ $myOffer->created_at->diffForHumans() }}
                                 </div>
+                                @if ($myOffer->status === \App\Enums\OfferStatus::Countered && $myOffer->counter_amount)
+                                    <div class="font-bold mt-1">↩ {{ $lang === 'fr' ? 'Contre-offre du vendeur' : "Seller's counter-offer" }}: {{ number_format((float) $myOffer->counter_amount, 0, '.', ',') }} {{ $myOffer->currency }}</div>
+                                @endif
                             </div>
-                            @if ($myOffer->status->isOpen())
+                            @if ($myOffer->status === \App\Enums\OfferStatus::Countered)
+                                <div class="flex flex-col items-end gap-1 shrink-0">
+                                    <button wire:click="acceptCounter({{ $myOffer->id }})"
+                                            wire:confirm="{{ $lang === 'fr' ? 'Accepter cette contre-offre ?' : 'Accept this counter-offer?' }}"
+                                            class="text-xs font-bold bg-emerald-600 text-white px-3 py-1.5 rounded-full hover:bg-emerald-700 shadow-sm">
+                                        ✓ {{ $lang === 'fr' ? 'Accepter' : 'Accept' }}
+                                    </button>
+                                    <button wire:click="declineCounter({{ $myOffer->id }})"
+                                            class="text-xs font-semibold opacity-75 hover:opacity-100 hover:text-cm-red underline">
+                                        {{ $lang === 'fr' ? 'Refuser' : 'Decline' }}
+                                    </button>
+                                </div>
+                            @elseif ($myOffer->status->isOpen())
                                 <button wire:click="withdrawOffer({{ $myOffer->id }})"
                                         wire:confirm="{{ $lang === 'fr' ? 'Retirer cette offre ?' : 'Withdraw this offer?' }}"
                                         class="text-xs font-semibold opacity-75 hover:opacity-100 hover:text-cm-red underline">
@@ -521,9 +536,9 @@
                            x-data @click.prevent="$dispatch('open-user-preview', { id: {{ $seller->id }} })"
                            class="relative w-12 h-12 rounded-full bg-cm-green/15 flex items-center justify-center text-cm-green font-bold uppercase overflow-hidden shrink-0">
                             @if ($seller->avatar)
-                                <img src="{{ asset('storage/' . $seller->avatar) }}" alt="" class="w-full h-full object-cover">
+                                <img src="{{ \App\Support\StorageUrl::for($seller->avatar) }}" alt="" class="w-full h-full object-cover">
                             @else
-                                {{ substr($seller->name ?? 'U', 0, 1) }}
+                                {{ mb_substr($seller->name ?? 'U', 0, 1) }}
                             @endif
                             @if ($listing->is_verified_seller)
                                 <span class="absolute -bottom-0.5 -right-0.5 bg-blue-500 text-white text-[10px] rounded-full w-4 h-4 grid place-items-center ring-2 ring-white" title="Verified seller">✓</span>
@@ -650,9 +665,9 @@
                                 <div class="flex items-start gap-2.5">
                                     <div class="w-9 h-9 rounded-full bg-cm-green/15 grid place-items-center text-cm-green text-sm font-bold uppercase shrink-0 overflow-hidden">
                                         @if ($offer->buyer?->avatar)
-                                            <img src="{{ asset('storage/' . $offer->buyer->avatar) }}" alt="" class="w-full h-full object-cover">
+                                            <img src="{{ \App\Support\StorageUrl::for($offer->buyer->avatar) }}" alt="" class="w-full h-full object-cover">
                                         @else
-                                            {{ substr($offer->buyer?->name ?? 'U', 0, 1) }}
+                                            {{ mb_substr($offer->buyer?->name ?? 'U', 0, 1) }}
                                         @endif
                                     </div>
                                     <div class="flex-1 min-w-0">
@@ -664,7 +679,12 @@
                                         <div class="text-[10px] text-slate-500 mt-1">{{ $offer->created_at->diffForHumans() }}</div>
                                     </div>
                                 </div>
-                                @if ($counteringOfferId === $offer->id)
+                                @if ($offer->status === \App\Enums\OfferStatus::Countered)
+                                    <div class="mt-2.5 text-xs text-blue-800">
+                                        ↩ {{ $lang === 'fr' ? 'Votre contre-offre' : 'Your counter-offer' }}: <span class="font-bold">{{ number_format((float) $offer->counter_amount, 0, '.', ',') }} {{ $offer->currency }}</span>
+                                        · <span class="text-slate-500">{{ $lang === 'fr' ? "En attente de l'acheteur." : 'Waiting for the buyer.' }}</span>
+                                    </div>
+                                @elseif ($counteringOfferId === $offer->id)
                                     <div class="mt-2.5 flex gap-1.5">
                                         <input type="number" min="1" wire:model="counterAmount" wire:keydown.enter="submitCounter"
                                                class="flex-1 rounded-lg bg-white ring-1 ring-slate-300 px-3 py-1.5 text-sm focus:ring-2 focus:ring-cm-green focus:outline-none">
@@ -769,7 +789,7 @@
                                 <li class="py-3 flex items-start gap-3">
                                     <div class="w-10 h-10 rounded-full bg-slate-200 grid place-items-center text-sm font-bold text-slate-700 overflow-hidden shrink-0">
                                         @if ($rev->reviewer?->avatar)
-                                            <img src="{{ asset('storage/' . $rev->reviewer->avatar) }}" alt="" class="w-full h-full object-cover">
+                                            <img src="{{ \App\Support\StorageUrl::for($rev->reviewer->avatar) }}" alt="" class="w-full h-full object-cover">
                                         @else
                                             {{ mb_strtoupper(mb_substr($rev->reviewer?->name ?: $rev->reviewer?->username ?: 'U', 0, 1)) }}
                                         @endif

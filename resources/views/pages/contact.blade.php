@@ -1,31 +1,33 @@
+@use('App\Support\Bilingual')
 {{-- Signed-in visitors get the same header as the rest of the app (the one on
      the Yard), so following "Contact us" from a menu does not drop them onto a
-     page that looks like the public site. Guests keep the marketing navbar. --}}
-<x-dynamic-component :component="auth()->check() ? 'layouts.app' : 'layouts.guest'">
+     page that looks like the public site. Guests keep the marketing navbar.
+     In the app's in-app browser (?app=1) it's the bare guest page, with no navbar. --}}
+<x-dynamic-component :component="auth()->check() && ! $inApp ? 'layouts.app' : 'layouts.guest'">
     <x-slot name="title">{{ app()->getLocale() === 'fr' ? 'Nous contacter' : 'Contact Us' }} | Cameroon Network</x-slot>
 
-    @guest
+    @if(! auth()->check() && ! $inApp)
         {{-- Sticky navbar (white state, like the legal pages) --}}
         @php($forceScrolled = true)
         @include('partials.site-nav')
-    @endguest
+    @endif
 
     {{-- The app layout already pads <main> below its fixed header; the guest
          navbar is fixed with nothing reserving space, so only guests need it. --}}
-    <div class="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 @guest pt-24 sm:pt-28 @endguest">
+    <div @class(['min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50', 'pt-24 sm:pt-28' => ! auth()->check() && ! $inApp])>
         {{-- Hero --}}
         <section class="relative overflow-hidden">
             <div class="absolute inset-0 bg-gradient-to-br from-emerald-400/20 via-transparent to-transparent pointer-events-none"></div>
             <div class="relative mx-auto max-w-3xl px-6 pt-10 pb-8 text-center">
                 <span class="inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ring-1 bg-emerald-50 text-emerald-700 ring-emerald-200"
-                      x-text="$store.lang.t('Contact', 'Contact')"></span>
+                      x-text="$store.lang.t('Contact', 'Contact')">{{ Bilingual::t('Contact', 'Contact') }}</span>
                 <h1 class="mt-5 text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900"
-                    x-text="$store.lang.t('We\'d love to hear from you.', 'Nous serions ravis de vous entendre.')"></h1>
+                    x-text="$store.lang.t('We\'d love to hear from you.', 'Nous serions ravis de vous entendre.')">{{ Bilingual::t('We\'d love to hear from you.', 'Nous serions ravis de vous entendre.') }}</h1>
                 <p class="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed"
                    x-text="$store.lang.t(
                        'Questions, partnerships, press, or just a story to share? Pick the route that suits you.',
                        'Questions, partenariats, presse, ou simplement une histoire à partager ? Choisissez le moyen qui vous convient.'
-                   )"></p>
+                   )">{{ Bilingual::t('Questions, partnerships, press, or just a story to share? Pick the route that suits you.', 'Questions, partenariats, presse, ou simplement une histoire à partager ? Choisissez le moyen qui vous convient.') }}</p>
             </div>
         </section>
 
@@ -39,9 +41,9 @@
                         💬
                     </div>
                     <h3 class="mt-4 font-bold text-slate-900"
-                        x-text="$store.lang.t('General questions', 'Questions générales')"></h3>
+                        x-text="$store.lang.t('General questions', 'Questions générales')">{{ Bilingual::t('General questions', 'Questions générales') }}</h3>
                     <p class="mt-1 text-xs text-slate-500"
-                       x-text="$store.lang.t('Anything else not listed here.', 'Tout ce qui n\'est pas listé ici.')"></p>
+                       x-text="$store.lang.t('Anything else not listed here.', 'Tout ce qui n\'est pas listé ici.')">{{ Bilingual::t('Anything else not listed here.', 'Tout ce qui n\'est pas listé ici.') }}</p>
                     <p class="mt-3 text-sm font-semibold text-emerald-600 group-hover:text-emerald-700">hello@cameroonnetwork.org</p>
                 </a>
 
@@ -52,9 +54,9 @@
                         🔐
                     </div>
                     <h3 class="mt-4 font-bold text-slate-900"
-                        x-text="$store.lang.t('Privacy & data', 'Confidentialité & données')"></h3>
+                        x-text="$store.lang.t('Privacy & data', 'Confidentialité & données')">{{ Bilingual::t('Privacy & data', 'Confidentialité & données') }}</h3>
                     <p class="mt-1 text-xs text-slate-500"
-                       x-text="$store.lang.t('Export, correction, or deletion requests.', 'Export, correction ou suppression de données.')"></p>
+                       x-text="$store.lang.t('Export, correction, or deletion requests.', 'Export, correction ou suppression de données.')">{{ Bilingual::t('Export, correction, or deletion requests.', 'Export, correction ou suppression de données.') }}</p>
                     <p class="mt-3 text-sm font-semibold text-indigo-600 group-hover:text-indigo-700">privacy@cameroonnetwork.org</p>
                 </a>
 
@@ -65,9 +67,9 @@
                         🛡️
                     </div>
                     <h3 class="mt-4 font-bold text-slate-900"
-                        x-text="$store.lang.t('Security', 'Sécurité')"></h3>
+                        x-text="$store.lang.t('Security', 'Sécurité')">{{ Bilingual::t('Security', 'Sécurité') }}</h3>
                     <p class="mt-1 text-xs text-slate-500"
-                       x-text="$store.lang.t('Report a vulnerability or unauthorised access.', 'Signaler une vulnérabilité ou un accès non autorisé.')"></p>
+                       x-text="$store.lang.t('Report a vulnerability or unauthorised access.', 'Signaler une vulnérabilité ou un accès non autorisé.')">{{ Bilingual::t('Report a vulnerability or unauthorised access.', 'Signaler une vulnérabilité ou un accès non autorisé.') }}</p>
                     <p class="mt-3 text-sm font-semibold text-rose-600 group-hover:text-rose-700">security@cameroonnetwork.org</p>
                 </a>
 
@@ -78,9 +80,9 @@
                         🤝
                     </div>
                     <h3 class="mt-4 font-bold text-slate-900"
-                        x-text="$store.lang.t('Partnerships', 'Partenariats')"></h3>
+                        x-text="$store.lang.t('Partnerships', 'Partenariats')">{{ Bilingual::t('Partnerships', 'Partenariats') }}</h3>
                     <p class="mt-1 text-xs text-slate-500"
-                       x-text="$store.lang.t('Collaborate with the community or sponsor a campaign.', 'Collaborez avec la communauté ou parrainez une campagne.')"></p>
+                       x-text="$store.lang.t('Collaborate with the community or sponsor a campaign.', 'Collaborez avec la communauté ou parrainez une campagne.')">{{ Bilingual::t('Collaborate with the community or sponsor a campaign.', 'Collaborez avec la communauté ou parrainez une campagne.') }}</p>
                     <p class="mt-3 text-sm font-semibold text-amber-600 group-hover:text-amber-700">partnerships@cameroonnetwork.org</p>
                 </a>
 
@@ -91,9 +93,9 @@
                         📰
                     </div>
                     <h3 class="mt-4 font-bold text-slate-900"
-                        x-text="$store.lang.t('Press & media', 'Presse & médias')"></h3>
+                        x-text="$store.lang.t('Press & media', 'Presse & médias')">{{ Bilingual::t('Press & media', 'Presse & médias') }}</h3>
                     <p class="mt-1 text-xs text-slate-500"
-                       x-text="$store.lang.t('Interviews, stories, brand assets.', 'Interviews, reportages, ressources de marque.')"></p>
+                       x-text="$store.lang.t('Interviews, stories, brand assets.', 'Interviews, reportages, ressources de marque.')">{{ Bilingual::t('Interviews, stories, brand assets.', 'Interviews, reportages, ressources de marque.') }}</p>
                     <p class="mt-3 text-sm font-semibold text-sky-600 group-hover:text-sky-700">press@cameroonnetwork.org</p>
                 </a>
 
@@ -104,9 +106,9 @@
                         🛠️
                     </div>
                     <h3 class="mt-4 font-bold text-slate-900"
-                        x-text="$store.lang.t('Account help', 'Aide compte')"></h3>
+                        x-text="$store.lang.t('Account help', 'Aide compte')">{{ Bilingual::t('Account help', 'Aide compte') }}</h3>
                     <p class="mt-1 text-xs text-slate-500"
-                       x-text="$store.lang.t('Trouble logging in, lost password, missing data.', 'Problème de connexion, mot de passe perdu, données manquantes.')"></p>
+                       x-text="$store.lang.t('Trouble logging in, lost password, missing data.', 'Problème de connexion, mot de passe perdu, données manquantes.')">{{ Bilingual::t('Trouble logging in, lost password, missing data.', 'Problème de connexion, mot de passe perdu, données manquantes.') }}</p>
                     <p class="mt-3 text-sm font-semibold text-violet-600 group-hover:text-violet-700">support@cameroonnetwork.org</p>
                 </a>
             </div>
@@ -134,24 +136,24 @@
                     }
                  }">
                 <h2 class="text-xl font-bold text-slate-900"
-                    x-text="$store.lang.t('Send a quick message', 'Envoyer un message rapide')"></h2>
+                    x-text="$store.lang.t('Send a quick message', 'Envoyer un message rapide')">{{ Bilingual::t('Send a quick message', 'Envoyer un message rapide') }}</h2>
                 <p class="mt-1 text-sm text-slate-500"
                    x-text="$store.lang.t(
                        'This opens your email app pre-filled, no account needed.',
                        'Ceci ouvre votre application e-mail pré-remplie, aucun compte requis.'
-                   )"></p>
+                   )">{{ Bilingual::t('This opens your email app pre-filled, no account needed.', 'Ceci ouvre votre application e-mail pré-remplie, aucun compte requis.') }}</p>
 
                 <div class="mt-5 grid sm:grid-cols-2 gap-4">
                     <label class="block">
                         <span class="text-xs font-semibold text-slate-600"
-                              x-text="$store.lang.t('Your name', 'Votre nom')"></span>
+                              x-text="$store.lang.t('Your name', 'Votre nom')">{{ Bilingual::t('Your name', 'Votre nom') }}</span>
                         <input type="text" x-model="name" autocomplete="name"
                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                                placeholder="Ndongo">
                     </label>
                     <label class="block">
                         <span class="text-xs font-semibold text-slate-600"
-                              x-text="$store.lang.t('Your email', 'Votre e-mail')"></span>
+                              x-text="$store.lang.t('Your email', 'Votre e-mail')">{{ Bilingual::t('Your email', 'Votre e-mail') }}</span>
                         <input type="email" x-model="email" autocomplete="email"
                                class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                                placeholder="you@example.com">
@@ -160,7 +162,7 @@
 
                 <label class="mt-4 block">
                     <span class="text-xs font-semibold text-slate-600"
-                          x-text="$store.lang.t('Subject', 'Sujet')"></span>
+                          x-text="$store.lang.t('Subject', 'Sujet')">{{ Bilingual::t('Subject', 'Sujet') }}</span>
                     <input type="text" x-model="subject"
                            class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                            :placeholder="$store.lang.t('A short title for your message', 'Un titre court pour votre message')">
@@ -168,7 +170,7 @@
 
                 <label class="mt-4 block">
                     <span class="text-xs font-semibold text-slate-600"
-                          x-text="$store.lang.t('Message', 'Message')"></span>
+                          x-text="$store.lang.t('Message', 'Message')">{{ Bilingual::t('Message', 'Message') }}</span>
                     <textarea x-model="body" rows="5"
                               class="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-cm-green focus:ring-1 focus:ring-cm-green"
                               :placeholder="$store.lang.t('Tell us what\'s on your mind…', 'Dites-nous ce que vous avez en tête…')"></textarea>
@@ -178,24 +180,27 @@
                     <a :href="mailto"
                        class="inline-flex items-center gap-2 rounded-full bg-cm-green px-5 py-2.5 text-sm font-bold text-white hover:bg-cm-green-light transition-colors">
                         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-                        <span x-text="$store.lang.t('Open in email app', 'Ouvrir dans l\'app e-mail')"></span>
+                        <span x-text="$store.lang.t('Open in email app', 'Ouvrir dans l\'app e-mail')">{{ Bilingual::t('Open in email app', 'Ouvrir dans l\'app e-mail') }}</span>
                     </a>
                     <a href="mailto:hello@cameroonnetwork.org"
                        class="text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-                       x-text="$store.lang.t('Or just write to hello@cameroonnetwork.org', 'Ou écrivez simplement à hello@cameroonnetwork.org')"></a>
+                       x-text="$store.lang.t('Or just write to hello@cameroonnetwork.org', 'Ou écrivez simplement à hello@cameroonnetwork.org')">{{ Bilingual::t('Or just write to hello@cameroonnetwork.org', 'Ou écrivez simplement à hello@cameroonnetwork.org') }}</a>
                 </div>
             </div>
 
             {{-- Sister page links --}}
             <div class="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm">
-                <a href="{{ route('legal.privacy') }}" class="text-slate-500 hover:text-slate-900 transition-colors"
-                   x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')"></a>
+                <a href="{{ route('legal.privacy', $staticQuery) }}" class="text-slate-500 hover:text-slate-900 transition-colors"
+                   x-text="$store.lang.t('Privacy Policy', 'Politique de Confidentialité')">{{ Bilingual::t('Privacy Policy', 'Politique de Confidentialité') }}</a>
                 <span class="text-slate-300">·</span>
-                <a href="{{ route('legal.terms') }}" class="text-slate-500 hover:text-slate-900 transition-colors"
-                   x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')"></a>
+                <a href="{{ route('legal.terms', $staticQuery) }}" class="text-slate-500 hover:text-slate-900 transition-colors"
+                   x-text="$store.lang.t('Terms of Service', 'Conditions d\'Utilisation')">{{ Bilingual::t('Terms of Service', 'Conditions d\'Utilisation') }}</a>
+                {{-- The landing page is the website's front door, not the app's. --}}
+                @unless($inApp)
                 <span class="text-slate-300">·</span>
                 <a href="{{ route('home') }}" class="text-slate-500 hover:text-slate-900 transition-colors"
-                   x-text="$store.lang.t('Home', 'Accueil')"></a>
+                   x-text="$store.lang.t('Home', 'Accueil')">{{ Bilingual::t('Home', 'Accueil') }}</a>
+                @endunless
             </div>
         </section>
     </div>

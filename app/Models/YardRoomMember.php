@@ -58,6 +58,21 @@ class YardRoomMember extends Model
         return $this->belongsTo(YardRoom::class, 'room_id');
     }
 
+    /**
+     * Memberships of the public community rooms (national, regional, city).
+     * What a profile's "Rooms" counts: one-to-one chats are rooms too, so
+     * counting every membership let anyone watch someone's number of private
+     * conversations, and private groups are nobody else's business either.
+     */
+    public function scopeInCommunityRooms($query)
+    {
+        return $query->whereHas('room', fn ($room) => $room->whereIn('room_type', [
+            \App\Enums\RoomType::National->value,
+            \App\Enums\RoomType::Regional->value,
+            \App\Enums\RoomType::City->value,
+        ]));
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

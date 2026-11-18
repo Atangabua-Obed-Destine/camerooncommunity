@@ -29,6 +29,10 @@ window.Echo = new Echo({
     // Both names stay enabled and forceTLS picks the right one. Listing only
     // one removed pusher's own fallback path for no benefit.
     enabledTransports: ['ws', 'wss'],
+    // Private channels are authorised here. The full URL comes from the page:
+    // locally the app is not at the domain root, so the default
+    // '/broadcasting/auth' would miss it.
+    authEndpoint: document.querySelector('meta[name="broadcast-auth"]')?.content || '/broadcasting/auth',
 });
 
 // ── Echo cleanup ────────────────────────────────────────────────

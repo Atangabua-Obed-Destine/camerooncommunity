@@ -62,4 +62,16 @@ class MarketplaceOrder extends Model
         $cur = $this->currency ?: 'XAF';
         return number_format((float) $this->amount, 0, '.', ',') . ' ' . $cur;
     }
+
+    /**
+     * A seller's orders that need them: awaiting payment, or paid and waiting
+     * to be handed over. One definition for the Orders page's red pill and the
+     * menu badge, which used to count differently ("1" against "3 need attention").
+     */
+    public static function needingSellerAttention(int $sellerId): int
+    {
+        return static::where('seller_id', $sellerId)
+            ->whereIn('status', [\App\Enums\OrderStatus::AwaitingPayment->value, \App\Enums\OrderStatus::Paid->value])
+            ->count();
+    }
 }

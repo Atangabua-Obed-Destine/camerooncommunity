@@ -58,7 +58,7 @@
     </div>
 
     {{-- ─── Mobile drawer ─── --}}
-    <div x-cloak x-show="filtersOpen" class="lg:hidden">
+    <div x-cloak x-show="filtersOpen" x-overlay="filtersOpen" class="lg:hidden">
         <div x-show="filtersOpen" x-transition.opacity
              @click="filtersOpen = false"
              class="fixed inset-0 z-40 bg-black/50"></div>
@@ -103,14 +103,14 @@
                         <p class="text-sm text-slate-600 mt-0.5">
                             {{ $this->listings->total() }}
                             @if ($locLabel !== '')
-                                <span x-data x-text="$store.lang.t('listings','annonces')"></span>
+                                <span x-data x-text="{{ $this->listings->total() === 1 ? "\$store.lang.t('listing','annonce')" : "\$store.lang.t('listings','annonces')" }}"></span>
                                 <span class="text-slate-400">·</span>
                                 <span class="inline-flex items-center gap-0.5 font-medium text-slate-700">
                                     <svg class="w-3.5 h-3.5 text-cm-red" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8 2 5 5 5 9c0 5 7 13 7 13s7-8 7-13c0-4-3-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>
                                     {{ $locLabel }}@if ($radius) · {{ $radius }} km @endif
                                 </span>
                             @else
-                                <span x-data x-text="$store.lang.t('listings in your area','annonces dans votre région')"></span>
+                                <span x-data x-text="{{ $this->listings->total() === 1 ? "\$store.lang.t('listing in your area','annonce dans votre région')" : "\$store.lang.t('listings in your area','annonces dans votre région')" }}"></span>
                             @endif
                         </p>
                     </div>
@@ -154,7 +154,7 @@
                 <div class="lg:hidden flex items-center justify-between mb-3 px-1">
                     <div class="text-sm text-slate-600">
                         {{ $this->listings->total() }}
-                        <span x-data x-text="$store.lang.t('listings','annonces')"></span>
+                        <span x-data x-text="{{ $this->listings->total() === 1 ? "\$store.lang.t('listing','annonce')" : "\$store.lang.t('listings','annonces')" }}"></span>
                     </div>
                     <label class="flex items-center gap-1.5 text-xs">
                         <span class="text-slate-500" x-data x-text="$store.lang.t('Sort','Trier')"></span>

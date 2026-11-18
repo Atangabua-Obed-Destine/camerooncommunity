@@ -7,6 +7,10 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
+        // The mobile app's surface. Served under /api, versioned inside, and
+        // deliberately separate from web.php: these routes carry no session
+        // and answer only in JSON.
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
@@ -20,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->append(\App\Http\Middleware\InitializeTenancy::class);
         $middleware->append(\App\Http\Middleware\SetUserLanguage::class);
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
 
         $middleware->appendToGroup('web', [
             \App\Http\Middleware\EnsureUserActive::class,
@@ -51,5 +56,22 @@ return Application::configure(basePath: dirname(__DIR__))
             return redirect()
                 ->guest(route('login', ['expired' => 1]))
                 ->with('status', $message);
+        });
+        // The sign-in forms are throttled. Say so on the form, in the member's
+        // language, rather than on a bare 429 page.
+        $exceptions->render(function (\Illuminate\Http\Exceptions\ThrottleRequestsException $e, \Illuminate\Http\Request $request) {
+            $signIn = $request->is('login') || $request->routeIs('password.email', 'password.update');
+            if ($request->expectsJson() || ! $signIn) {
+                return null;
+            }
+
+            $minutes = max(1, (int) ceil(($e->getHeaders()['Retry-After'] ?? 60) / 60));
+
+            return back()->withInput($request->only('email'))->withErrors([
+                'email' => \App\Support\Bilingual::t(
+                    "Too many attempts. Try again in {$minutes} minute(s).",
+                    "Trop de tentatives. Réessayez dans {$minutes} minute(s)."
+                ),
+            ]);
         });
     })->create();

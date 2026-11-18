@@ -36,7 +36,7 @@
         <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-full bg-cm-green/15 grid place-items-center text-cm-green font-bold overflow-hidden shrink-0">
                 @if($seller->avatar)
-                    <img src="{{ asset('storage/' . $seller->avatar) }}" alt="" class="w-full h-full object-cover">
+                    <img src="{{ \App\Support\StorageUrl::for($seller->avatar) }}" alt="" class="w-full h-full object-cover">
                 @else
                     {{ strtoupper(mb_substr($sName, 0, 1)) }}
                 @endif

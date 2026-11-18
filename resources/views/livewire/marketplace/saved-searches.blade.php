@@ -1,5 +1,13 @@
 <div class="min-h-[calc(100vh-96px)] bg-slate-100">
     <div class="max-w-[1400px] mx-auto px-3 sm:px-4 lg:px-5 py-4 lg:py-5">
+        {{-- On a phone the sidebar (and its way back) is hidden. --}}
+        <div class="lg:hidden">
+            <a href="{{ route('marketplace.index') }}" wire:navigate
+               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs px-3.5 py-2 rounded-full transition shrink-0 mb-3">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                GoMarket
+            </a>
+        </div>
         <div class="grid lg:grid-cols-[300px_1fr] gap-5">
 
             {{-- ─── Sidebar (nav-only; filter sidebar is FeedBrowse-only) ─── --}}
@@ -23,7 +31,7 @@
                     <a href="{{ route('marketplace.favorites') }}" wire:navigate
                        class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-100 transition">
                         <span>⭐</span>
-                        <span x-data x-text="$store.lang.t('Favorites','Favoris')"></span>
+                        <span x-data x-text="$store.lang.t('Saved listings','Annonces enregistrées')"></span>
                     </a>
                     <div class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-cm-green bg-cm-green/10">
                         <span>🔔</span>

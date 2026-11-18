@@ -430,4 +430,78 @@ return [
         'profile_completed' => 25,
         'first_message' => 10,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Modules
+    |--------------------------------------------------------------------------
+    |
+    | What the platform offers, and what it only promises. The coming-soon
+    | slugs were a literal array inside routes/web.php; they moved here when
+    | the mobile app needed the same list, because the app decides what to grey
+    | out from the /api/v1/configuration response and two hand-kept copies of
+    | this would drift apart within a release.
+    |
+    | `live` is keyed by the slug the app routes on, with the route name the
+    | web uses for the same thing. `coming_soon` keeps the slug => display name
+    | shape routes/web.php already looped over, so the placeholder pages are
+    | generated from here unchanged.
+    |
+    | Note: the drawer in resources/views/partials/app-drawer.blade.php shows a
+    | shorter teaser list (Solidarity, GoParcel, GoRide, GoPartner) — approved
+    | design copy, not a registry. This list is what actually has routes behind
+    | it, and Solidarity is not on it; see the note under `live` below.
+    |
+    | The names of the first three slugs used to disagree with what the header
+    | tabs, the drawer and the rail display (EasyGoParcel/RoadFam/WorkConnect
+    | against GoParcel/GoRide/GoPartner), so the API told the app one thing and
+    | the navigation showed another. Settled on 2026-11-02: the navigation names
+    | are the approved ones and this list follows them. ConfigurationTest locks
+    | all three, because the two are edited in different places and drifted once
+    | already.
+    |
+    */
+    'modules' => [
+
+        // Solidarity is advertised as "Coming soon" until this is on. Its stats
+        // (always 0 until then) stay hidden on profiles.
+        'solidarity_live' => (bool) env('SOLIDARITY_LIVE', false),
+
+        'live' => [
+            'home' => ['name' => 'Home', 'route' => 'home'],
+            'goconnect' => ['name' => 'GoConnect', 'route' => 'yard'],
+            'gomarket' => ['name' => 'GoMarket', 'route' => 'marketplace.index'],
+            'people' => ['name' => 'People', 'route' => 'people'],
+            'profile' => ['name' => 'Profile', 'route' => 'profile'],
+
+            // An overlay the app layout mounts rather than a page of its own,
+            // so it has no route name to offer.
+            'kamer_ai' => ['name' => 'Kamer AI', 'route' => null],
+
+            // Solidarity is deliberately absent. The two components under
+            // app/Livewire/Solidarity exist and render their own
+            // views, but nothing mounts either one — no route, no @livewire
+            // call, no <livewire: tag anywhere in resources/ or routes/ — and
+            // the only solidarity routes are three admin moderation endpoints.
+            // The header tabs, the drawer and the Yard rail already show it as
+            // Coming Soon. Listing it here told the app it was live and handed
+            // the member a module with no way into it. It does not belong in
+            // coming_soon either: that list is the slugs with a /module/{slug}
+            // teaser page behind them, and solidarity has none. Wire up a
+            // member-facing entry point and it belongs back here.
+        ],
+
+        'coming_soon' => [
+            'easygoparcel' => 'GoParcel',
+            'roadfam' => 'GoRide',
+            'camevents' => 'CamEvents',
+            'kamernest' => 'KamerNest',
+            'workconnect' => 'GoPartner',
+            'kamereats' => 'KamerEats',
+            'kamersos' => 'KamerSOS',
+            'camstories' => 'CamStories',
+            'kamerpulse' => 'KamerPulse',
+            'kamersend' => 'KamerSend',
+        ],
+    ],
 ];

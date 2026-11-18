@@ -122,7 +122,7 @@
                     @if(auth()->user()->avatar)
                         <img src="{{ asset('storage/' . auth()->user()->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                     @else
-                        {{ substr(auth()->user()->username ?? auth()->user()->name ?? 'U', 0, 1) }}
+                        {{ mb_substr(auth()->user()->username ?? auth()->user()->name ?? 'U', 0, 1) }}
                     @endif
                 </span>
                 <span class="yard-icon-sidebar__profile-info">

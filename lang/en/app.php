@@ -31,7 +31,7 @@ return [
     'problem_2' => 'Finding housing is dangerous alone',
     'problem_2_solve' => 'KamerNest has verified listings',
     'problem_3' => 'Sending things home costs too much',
-    'problem_3_solve' => 'EasyGoParcel connects travellers',
+    'problem_3_solve' => 'GoParcel connects travellers',
     'problem_transition' => 'Cameroon Network was built because these problems are real.',
 
     // Module preview

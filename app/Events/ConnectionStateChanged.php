@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Models\User;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -41,7 +42,7 @@ class ConnectionStateChanged implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $tenantId = $this->target->tenant_id;
-        return [new Channel("tenant.{$tenantId}.user.{$this->target->id}")];
+        return [new PrivateChannel("tenant.{$tenantId}.user.{$this->target->id}")];
     }
 
     public function broadcastWith(): array

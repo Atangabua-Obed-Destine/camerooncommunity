@@ -31,7 +31,7 @@ return [
     'problem_2' => 'Chercher un logement seul est risqué',
     'problem_2_solve' => 'KamerNest a des annonces vérifiées',
     'problem_3' => 'Envoyer des choses au pays coûte trop cher',
-    'problem_3_solve' => 'EasyGoParcel connecte les voyageurs',
+    'problem_3_solve' => 'GoParcel connecte les voyageurs',
     'problem_transition' => 'Cameroon Network a été créé parce que ces problèmes sont réels.',
 
     // Module preview

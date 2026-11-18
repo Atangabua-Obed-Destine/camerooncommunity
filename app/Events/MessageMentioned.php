@@ -5,6 +5,7 @@ namespace App\Events;
 use App\Models\User;
 use App\Models\YardMessage;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -33,7 +34,7 @@ class MessageMentioned implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $tenantId = $this->message->tenant_id;
-        return [new Channel("tenant.{$tenantId}.user.{$this->mentionedUser->id}")];
+        return [new PrivateChannel("tenant.{$tenantId}.user.{$this->mentionedUser->id}")];
     }
 
     public function broadcastWith(): array

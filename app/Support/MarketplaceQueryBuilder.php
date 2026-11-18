@@ -23,6 +23,10 @@ use Illuminate\Support\Facades\DB;
  *   fulfillment   string  Listing fulfillment enum value.
  *   priceMin      int     Inclusive lower bound.
  *   priceMax      int     Inclusive upper bound.
+ *   loc           string  A region key ('littoral'): that area, and with
+ *   radius        int     km, the regions within it (applyRadius). Saved
+ *                         searches carry these; the live feed applies its
+ *                         own pin instead and never passes them here.
  *   sort          string  newest | price_asc | price_desc | popular | ranked.
  */
 class MarketplaceQueryBuilder
@@ -63,6 +67,9 @@ class MarketplaceQueryBuilder
         }
         if (isset($filters['priceMax']) && $filters['priceMax'] !== '' && $filters['priceMax'] !== null) {
             $q->where('price', '<=', (int) $filters['priceMax']);
+        }
+        if (! empty($filters['loc']) && ($c = \App\Support\CameroonGeo::centroidForRegion((string) $filters['loc']))) {
+            self::applyRadius($q, $c['lat'], $c['lng'], isset($filters['radius']) ? (int) $filters['radius'] : null);
         }
 
         // Phase 4: category-specific attribute filters. Stored on listings as JSON.
@@ -225,7 +232,7 @@ class MarketplaceQueryBuilder
      */
     public static function normalize(array $raw): array
     {
-        $allowed = ['query', 'categorySlug', 'region', 'country', 'condition', 'fulfillment', 'priceMin', 'priceMax', 'sort'];
+        $allowed = ['query', 'categorySlug', 'region', 'country', 'condition', 'fulfillment', 'priceMin', 'priceMax', 'sort', 'loc', 'radius'];
         $out = [];
         foreach ($allowed as $k) {
             $v = $raw[$k] ?? null;
@@ -242,6 +249,13 @@ class MarketplaceQueryBuilder
         }
         if (($out['sort'] ?? 'newest') === 'newest') {
             unset($out['sort']);
+        }
+        // A distance means nothing without the area it is measured from.
+        if (empty($out['loc']) || (int) ($out['radius'] ?? 0) <= 0) {
+            unset($out['radius']);
+        }
+        if (isset($out['radius'])) {
+            $out['radius'] = (int) $out['radius'];
         }
         return $out;
     }
@@ -264,6 +278,11 @@ class MarketplaceQueryBuilder
         }
         if (! empty($filters['region']))      { $parts[] = ($fr ? '📍 ' : '📍 ') . $filters['region']; }
         if (! empty($filters['country']))     { $parts[] = '🌍 ' . $filters['country']; }
+        if (! empty($filters['loc'])) {
+            $key = \App\Support\CameroonGeo::matchRegion((string) $filters['loc']);
+            $label = \App\Support\CameroonGeo::regionLabels()[$key][$fr ? 'fr' : 'en'] ?? (string) $filters['loc'];
+            $parts[] = '📍 ' . $label . (! empty($filters['radius']) ? ' · ' . (int) $filters['radius'] . ' km' : '');
+        }
         if (! empty($filters['condition']))   { $parts[] = ($fr ? 'État: ' : 'Condition: ') . $filters['condition']; }
         if (! empty($filters['fulfillment'])) { $parts[] = ($fr ? 'Livraison: ' : 'Delivery: ') . $filters['fulfillment']; }
 
@@ -312,6 +331,8 @@ class MarketplaceQueryBuilder
             'priceMin'    => 'priceMin',
             'priceMax'    => 'priceMax',
             'sort'        => 'sort',
+            'loc'         => 'loc',
+            'radius'      => 'radius',
         ];
         $qs = [];
         foreach ($map as $key => $param) {

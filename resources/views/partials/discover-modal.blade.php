@@ -30,7 +30,7 @@
              class="discover-modal pointer-events-auto relative w-full max-w-3xl max-h-[92vh] overflow-y-auto rounded-3xl bg-white shadow-2xl">
 
             {{-- ═══════════════════ HERO SLIDER ═══════════════════ --}}
-            <div class="relative h-64 sm:h-72 overflow-hidden rounded-t-3xl">
+            <div class="relative h-72 overflow-hidden rounded-t-3xl">
                 <div class="absolute inset-0 discover-hero-bg"></div>
 
                 {{-- Floating orbs --}}
@@ -49,7 +49,7 @@
                 {{-- Slides --}}
                 <div class="relative h-full">
                     <template x-for="(slide, idx) in slides" :key="idx">
-                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6 transition-all duration-700 ease-out"
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6 pb-8 transition-all duration-700 ease-out"
                              :class="idx === current
                                 ? 'opacity-100 translate-y-0 scale-100'
                                 : (idx < current ? 'opacity-0 -translate-y-6 scale-95 pointer-events-none' : 'opacity-0 translate-y-6 scale-95 pointer-events-none')">
@@ -199,11 +199,11 @@ function discoverModal() {
               titleFr: 'GoConnect Bouge',
               descEn: 'Public rooms, private chats, group conversations: your daily meeting place.',
               descFr: 'Salons publics, discussions privées, groupes : votre lieu de rencontre quotidien.' },
-            { emoji: '❤️',
-              titleEn: 'Solidarity in Action',
-              titleFr: 'La Solidarité en Action',
-              descEn: 'Fundraisers, mutual aid, community support. We lift each other up.',
-              descFr: "Collectes, entraide, soutien communautaire. On s'élève ensemble." },
+            { emoji: '🛍️',
+              titleEn: 'Shop on GoMarket',
+              titleFr: 'Achetez sur GoMarket',
+              descEn: 'Buy and sell with Cameroonians near you, and chat with the seller in one tap.',
+              descFr: 'Achetez et vendez entre Camerounais près de chez vous, et écrivez au vendeur en un geste.' },
             { emoji: '✨',
               titleEn: 'Meet Kamer AI',
               titleFr: 'Rencontrez Kamer AI',
@@ -212,8 +212,8 @@ function discoverModal() {
             { emoji: '🚀',
               titleEn: 'Much More Coming',
               titleFr: 'Bien Plus Arrive',
-              descEn: 'GoMarket, parcels home, carpooling, jobs: built by us, for us.',
-              descFr: 'GoMarket, colis, covoiturage, emplois : fait par nous, pour nous.' },
+              descEn: 'Solidarity, parcels home, carpooling, jobs: coming soon, built by us, for us.',
+              descFr: 'Solidarité, colis, covoiturage, emplois : bientôt, fait par nous, pour nous.' },
         ],
         upcoming: [
             { name: 'Solidarity', emoji: '❤️', color: '#CE1126',
@@ -232,6 +232,9 @@ function discoverModal() {
               descEn: 'Weddings, parties, conferences near you.',
               descFr: 'Mariages, fêtes, conférences près de chez vous.' },
         ],
+        init() {
+            this.$watch('open', (isOpen) => { if (! isOpen) this.stopAuto(); });
+        },
         openModal() {
             this.open = true;
             this.current = 0;

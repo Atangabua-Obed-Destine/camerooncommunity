@@ -66,7 +66,7 @@
                                 @if($member->user?->avatar)
                                     <img src="{{ $member->user->avatar }}" alt="" class="w-8 h-8 rounded-full object-cover">
                                 @else
-                                    {{ strtoupper(substr($member->user?->username ?? $member->user?->name ?? '?', 0, 1)) }}
+                                    {{ mb_strtoupper(mb_substr($member->user?->username ?? $member->user?->name ?? '?', 0, 1)) }}
                                 @endif
                             </div>
                             <span class="text-sm text-slate-700 truncate">{{ $member->user?->username ?? $member->user?->name ?? 'Unknown' }}</span>

@@ -90,6 +90,45 @@ class MarketplaceChatService
     }
 
     /** The listing a marketplace conversation is about (latest seeded card). */
+    /**
+     * The member's GoMarket conversations, newest first: the listing each is
+     * about (its latest product card), the other person, the last message,
+     * how many messages arrived since they last read, and whether they are
+     * buying or selling in it. The web's Inbox and the app's both read this.
+     *
+     * @return \Illuminate\Support\Collection<int, object>
+     */
+    public function conversations(User $me): \Illuminate\Support\Collection
+    {
+        return YardRoom::where('origin', 'marketplace')
+            ->whereHas('members', fn ($q) => $q->where('user_id', $me->id))
+            ->with(['members.user'])
+            ->orderByDesc('last_message_at')
+            ->get()
+            ->map(function (YardRoom $room) use ($me) {
+                $listing = $this->listingForRoom($room);
+                $myMember = $room->members->firstWhere('user_id', $me->id);
+                $partner = $room->members->first(fn ($m) => (int) $m->user_id !== (int) $me->id)?->user;
+
+                $unread = YardMessage::where('room_id', $room->id)
+                    ->where('user_id', '!=', $me->id)
+                    ->where('is_deleted', false)
+                    ->when($myMember?->last_read_at, fn ($q, $lr) => $q->where('created_at', '>', $lr))
+                    ->count();
+
+                return (object) [
+                    'room_id' => $room->id,
+                    'tenant_id' => $room->tenant_id,
+                    'listing' => $listing,
+                    'partner' => $partner,
+                    'preview' => $room->last_message_preview,
+                    'time' => $room->last_message_at,
+                    'unread' => $unread,
+                    'role' => ($listing && (int) $listing->user_id === (int) $me->id) ? 'selling' : 'buying',
+                ];
+            });
+    }
+
     public function listingForRoom(YardRoom $room): ?MarketplaceListing
     {
         $card = YardMessage::where('room_id', $room->id)
@@ -165,6 +204,10 @@ class MarketplaceChatService
             'shareable_type' => MarketplaceListing::class,
             'shareable_id'   => $listing->id,
         ]);
+
+        // One per buyer per listing: the listing's "Inquiries" figure, which
+        // nothing incremented before, so it read 0 on every listing.
+        $listing->increment('messages_count');
 
         $room->forceFill([
             'last_message_at'      => now(),

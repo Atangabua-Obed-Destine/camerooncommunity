@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Models\YardMessage;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -25,7 +26,7 @@ class MessageDeleted implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('tenant.' . $this->message->tenant_id . '.room.' . $this->message->room_id),
+            new PrivateChannel('tenant.' . $this->message->tenant_id . '.room.' . $this->message->room_id),
         ];
     }
 

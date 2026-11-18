@@ -3,10 +3,8 @@
 namespace App\Livewire\Yard;
 
 use App\Models\User;
-use App\Models\UserConnection;
-use App\Models\YardRoomMember;
 use App\Services\ConnectionService;
-use Illuminate\Support\Facades\DB;
+use App\Services\Yard\PeopleService;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -58,162 +56,46 @@ class Connections extends Component
     #[Computed]
     public function myConnections()
     {
-        $userId = auth()->id();
-
-        $connections = UserConnection::where('status', UserConnection::STATUS_ACCEPTED)
-            ->where(function ($q) use ($userId) {
-                $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
-            })
-            ->orderByDesc('accepted_at')
-            ->get();
-
-        $partnerIds = $connections->map(fn ($c) => $c->otherUserId($userId))->all();
-        $users = User::whereIn('id', $partnerIds)
-            ->get(['id', 'name', 'username', 'avatar', 'current_country'])
-            ->keyBy('id');
-
-        return $connections->map(fn ($c) => $users->get($c->otherUserId($userId)))->filter()->values();
+        return app(PeopleService::class)->connections(auth()->user());
     }
 
     /** Incoming pending requests for the current user. */
     #[Computed]
     public function incomingRequests()
     {
-        $userId = auth()->id();
-
-        $rows = UserConnection::where('status', UserConnection::STATUS_PENDING)
-            ->where('requested_by', '!=', $userId)
-            ->where(function ($q) use ($userId) {
-                $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
-            })
-            ->latest()
-            ->get();
-
-        $userIds = $rows->pluck('requested_by')->all();
-        $users = User::whereIn('id', $userIds)
-            ->get(['id', 'name', 'username', 'avatar', 'current_country'])
-            ->keyBy('id');
-
-        return $rows->map(fn ($r) => $users->get($r->requested_by))->filter()->values();
+        return app(PeopleService::class)->incoming(auth()->user());
     }
 
     /** Outgoing pending requests sent by the current user. */
     #[Computed]
     public function sentRequests()
     {
-        $userId = auth()->id();
-
-        $rows = UserConnection::where('status', UserConnection::STATUS_PENDING)
-            ->where('requested_by', $userId)
-            ->latest()
-            ->get();
-
-        $userIds = $rows->map(fn ($r) => $r->otherUserId($userId))->all();
-        $users = User::whereIn('id', $userIds)
-            ->get(['id', 'name', 'username', 'avatar', 'current_country'])
-            ->keyBy('id');
-
-        return $rows->map(fn ($r) => $users->get($r->otherUserId($userId)))->filter()->values();
+        return app(PeopleService::class)->sent(auth()->user());
     }
 
     /**
-     * Blocked connections — ONLY those the current user blocked.
-     * If the other party blocked us, we must not reveal that fact here
-     * (privacy) and we have no business unblocking on their behalf.
+     * Blocked connections: ONLY those the current user blocked. If the other
+     * party blocked us, we must not reveal that fact here (privacy).
      */
     #[Computed]
     public function blockedConnections()
     {
-        $userId = auth()->id();
-
-        $rows = UserConnection::where('status', UserConnection::STATUS_BLOCKED)
-            ->where('requested_by', $userId)
-            ->where(function ($q) use ($userId) {
-                $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
-            })
-            ->latest()
-            ->get();
-
-        $userIds = $rows->map(fn ($r) => $r->user_a_id === $userId ? $r->user_b_id : $r->user_a_id)->all();
-        $users = User::whereIn('id', $userIds)
-            ->get(['id', 'name', 'username', 'avatar', 'current_country'])
-            ->keyBy('id');
-
-        return $rows->map(function ($r) use ($userId, $users) {
-            $otherId = $r->user_a_id === $userId ? $r->user_b_id : $r->user_a_id;
-            $u = $users->get($otherId);
-            return [
-                'user' => $u,
-                'connection' => $r,
-                'blockedByMe' => $r->requested_by === $userId,
-            ];
-        })->filter()->values();
+        return app(PeopleService::class)->blocked(auth()->user())
+            ->map(fn ($u) => ['user' => $u, 'blockedByMe' => true]);
     }
 
-    /**
-     * People the user shares a National/Regional/City room with — minus
-     * existing connections, blocked, and self.
-     */
+    /** People the user shares a room with, minus existing connections, blocked, and self. */
     #[Computed]
     public function suggestions()
     {
-        $userId = auth()->id();
-
-        $myRoomIds = YardRoomMember::where('user_id', $userId)->pluck('room_id');
-        if ($myRoomIds->isEmpty()) {
-            return collect();
-        }
-
-        $excludedIds = collect(UserConnection::where(function ($q) use ($userId) {
-                $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
-            })
-            ->get(['user_a_id', 'user_b_id'])
-            ->map(fn ($c) => $c->user_a_id === $userId ? $c->user_b_id : $c->user_a_id)
-            ->all())
-            ->push($userId)
-            ->unique()
-            ->all();
-
-        return User::query()
-            ->whereIn('id', function ($q) use ($myRoomIds) {
-                $q->select('user_id')
-                    ->from('yard_room_members')
-                    ->whereIn('room_id', $myRoomIds);
-            })
-            ->whereNotIn('id', $excludedIds)
-            ->limit(30)
-            ->get(['id', 'name', 'username', 'avatar', 'current_country']);
+        return app(PeopleService::class)->suggestions(auth()->user());
     }
 
     /** Global search results (excluding self + blocked). */
     #[Computed]
     public function searchResults()
     {
-        $term = trim($this->search);
-        if (strlen($term) < 2) {
-            return collect();
-        }
-        $userId = auth()->id();
-
-        $blockedIds = collect(UserConnection::where('status', UserConnection::STATUS_BLOCKED)
-            ->where(function ($q) use ($userId) {
-                $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId);
-            })
-            ->get(['user_a_id', 'user_b_id'])
-            ->map(fn ($c) => $c->user_a_id === $userId ? $c->user_b_id : $c->user_a_id)
-            ->all())
-            ->push($userId)
-            ->unique()
-            ->all();
-
-        return User::query()
-            ->where(function ($q) use ($term) {
-                $q->where('name', 'like', "%{$term}%")
-                    ->orWhere('username', 'like', "%{$term}%");
-            })
-            ->whereNotIn('id', $blockedIds)
-            ->limit(30)
-            ->get(['id', 'name', 'username', 'avatar', 'current_country']);
+        return app(PeopleService::class)->searchPeople(auth()->user(), $this->search);
     }
 
     /**
@@ -222,16 +104,7 @@ class Connections extends Component
      */
     public function stateFor(int $otherId): string
     {
-        $c = UserConnection::between(auth()->id(), $otherId);
-        if (! $c) return 'none';
-        if ($c->status === UserConnection::STATUS_ACCEPTED) return 'connected';
-        if ($c->status === UserConnection::STATUS_PENDING) {
-            return $c->requested_by === auth()->id() ? 'outgoing' : 'incoming';
-        }
-        if ($c->status === UserConnection::STATUS_BLOCKED) {
-            return $c->requested_by === auth()->id() ? 'blocked-by-me' : 'blocked-by-them';
-        }
-        return 'none';
+        return app(PeopleService::class)->state(auth()->user(), $otherId);
     }
 
     /*

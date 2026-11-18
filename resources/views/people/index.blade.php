@@ -20,7 +20,7 @@
         'requests'    => ['en' => 'Connection requests', 'fr' => 'Demandes',       'icon' => 'plus',  'badge' => $incomingRequestsCount],
         'suggestions' => ['en' => 'Suggestions',         'fr' => 'Suggestions',    'icon' => 'spark'],
         'all'         => ['en' => 'All people',          'fr' => 'Tous',           'icon' => 'globe'],
-        'connections' => ['en' => 'My connections',      'fr' => 'Mes contacts',   'icon' => 'check', 'badge' => $myConnectionsCount],
+        'connections' => ['en' => 'My connections',      'fr' => 'Mes contacts',   'icon' => 'check', 'badge' => $myConnectionsCount, 'count' => true],
     ];
 @endphp
 
@@ -58,8 +58,9 @@
                             @endswitch
                         </span>
                         <span class="flex-1" x-text="$store.lang.t(@js($meta['en']), @js($meta['fr']))"></span>
+                        {{-- Red only for what needs answering; a total is a grey count. --}}
                         @if(($meta['badge'] ?? 0) > 0)
-                            <span class="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold">
+                            <span class="inline-flex min-w-[20px] h-5 px-1.5 items-center justify-center rounded-full {{ ($meta['count'] ?? false) ? 'bg-slate-100 text-slate-600 font-semibold' : 'bg-red-500 text-white font-bold' }} text-[11px]">
                                 {{ $meta['badge'] > 99 ? '99+' : $meta['badge'] }}
                             </span>
                         @endif
@@ -82,7 +83,7 @@
                                   {{ $active ? 'bg-cm-green text-white' : 'bg-white text-slate-700 border border-slate-200' }}">
                             <span x-text="$store.lang.t(@js($meta['en']), @js($meta['fr']))"></span>
                             @if(($meta['badge'] ?? 0) > 0)
-                                <span class="ml-1 inline-flex min-w-[18px] h-4 px-1 items-center justify-center rounded-full {{ $active ? 'bg-white/30' : 'bg-red-500 text-white' }} text-[10px] font-bold">{{ $meta['badge'] > 99 ? '99+' : $meta['badge'] }}</span>
+                                <span class="ml-1 inline-flex min-w-[18px] h-4 px-1 items-center justify-center rounded-full {{ $active ? 'bg-white/30' : (($meta['count'] ?? false) ? 'bg-slate-100 text-slate-600' : 'bg-red-500 text-white') }} text-[10px] font-bold">{{ $meta['badge'] > 99 ? '99+' : $meta['badge'] }}</span>
                             @endif
                         </a>
                     @endforeach

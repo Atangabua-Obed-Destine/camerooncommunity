@@ -46,14 +46,14 @@
                  would leave the @if unclosed and break the whole view. --}}
             <div class="h-24 sm:h-32 bg-gradient-to-r from-cm-green to-cm-green-light
                 @if($user->cover_photo) bg-cover bg-center @endif"
-                 style="border-top-left-radius:1rem;border-top-right-radius:1rem;@if($user->cover_photo)background-image:url('{{ asset('storage/' . $user->cover_photo) }}');cursor:zoom-in;@endif"
+                 style="border-top-left-radius:1rem;border-top-right-radius:1rem;@if($user->cover_photo)background-image:url('{{ \App\Support\StorageUrl::for($user->cover_photo) }}');cursor:zoom-in;@endif"
                  @if($user->cover_photo)
                  x-data
                  role="button"
                  tabindex="0"
                  :aria-label="$store.lang.t('View cover photo', 'Voir la photo de couverture')"
-                 @keydown.enter="$dispatch('open-user-photo', { url: @js(asset('storage/' . $user->cover_photo)), name: @js($name) })"
-                 @click="$dispatch('open-user-photo', { url: @js(asset('storage/' . $user->cover_photo)), name: @js($name) })"
+                 @keydown.enter="$dispatch('open-user-photo', { url: @js(\App\Support\StorageUrl::for($user->cover_photo)), name: @js($name) })"
+                 @click="$dispatch('open-user-photo', { url: @js(\App\Support\StorageUrl::for($user->cover_photo)), name: @js($name) })"
                  @endif></div>
 
             <div class="px-4 sm:px-6 pb-5">
@@ -62,11 +62,11 @@
                      stack underneath at full width. Left-aligned at every size. --}}
                 <div class="flex items-end gap-4">
                     {{-- Avatar --}}
-                    <div class="-mt-14 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-cm-green/10 grid place-items-center text-3xl font-bold text-cm-green shrink-0"
+                    <div class="-mt-14 w-24 h-24 sm:w-28 sm:h-28 rounded-full border-4 border-white shadow-lg overflow-hidden bg-[#E9EBEF] grid place-items-center text-3xl font-bold text-cm-green shrink-0"
                          x-data style="cursor:zoom-in"
-                         @click="$dispatch('open-user-photo', { url: @js($user->avatar ? asset('storage/' . $user->avatar) : null), name: @js($name), bg: @js(\App\Support\AvatarPalette::colorClass('user:' . $user->id)) })">
+                         @click="$dispatch('open-user-photo', { url: @js($user->avatar ? \App\Support\StorageUrl::for($user->avatar) : null), name: @js($name), bg: @js(\App\Support\AvatarPalette::colorClass('user:' . $user->id)) })">
                         @if($user->avatar)
-                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
+                            <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="" class="w-full h-full object-cover">
                         @else
                             {{ strtoupper(mb_substr($name, 0, 1)) }}
                         @endif
@@ -77,7 +77,7 @@
                         <div class="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[13px] text-slate-500">
                             <span>{{ $lang === 'fr' ? 'Inscrit' : 'Joined' }} {{ $user->created_at?->translatedFormat('M Y') }}</span>
                             <span class="text-slate-300">·</span>
-                            <span class="font-semibold text-slate-700">{{ $stats['active'] }} {{ $lang === 'fr' ? 'annonces actives' : 'active listings' }}</span>
+                            <span class="font-semibold text-slate-700">{{ $stats['active'] }} {{ $stats['active'] === 1 ? ($lang === 'fr' ? 'annonce active' : 'active listing') : ($lang === 'fr' ? 'annonces actives' : 'active listings') }}</span>
                             @if($stats['rating_count'] > 0)
                                 <span class="text-slate-300">·</span>
                                 <span class="inline-flex items-center gap-0.5"><span class="text-cm-yellow">★</span> {{ number_format($stats['rating_avg'],1) }} <span class="text-slate-400">({{ $stats['rating_count'] }})</span></span>
@@ -220,7 +220,7 @@
                                 </button>
                                 <div x-show="open" @click.away="open=false" x-transition x-cloak
                                      class="absolute right-0 top-full mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl z-30">
-                                    <a href="#" @click.prevent="navigator.clipboard.writeText(window.location.href); $dispatch('toast',{type:'success',message:'Link copied'}); open=false"
+                                    <a href="#" @click.prevent="navigator.clipboard.writeText(window.location.href); $dispatch('toast',{type:'success',message: $store.lang.t('Link copied', 'Lien copié')}); open=false"
                                        class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">&#128203; <span x-text="$store.lang.t('Copy link', 'Copier le lien')"></span></a>
                                     @if($state === 'connected')
                                         <a href="{{ route('yard') }}?dm={{ $user->id }}#info"
@@ -259,7 +259,7 @@
         </div>
 
         {{-- Community stats, carried over from the old /u/ profile --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div @class(['grid gap-3 mb-4', config('cameroon.modules.solidarity_live') ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'])>
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ number_format($cstats['points']) }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-data x-text="$store.lang.t('Points', 'Points')"></p>
@@ -268,10 +268,13 @@
                 <p class="text-2xl font-bold text-cm-green">{{ $cstats['rooms'] }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-data x-text="$store.lang.t('Rooms', 'Salons')"></p>
             </div>
+            {{-- Solidarity isn't live: its count is always 0. --}}
+            @if(config('cameroon.modules.solidarity_live'))
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ $cstats['contributions'] }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-data x-text="$store.lang.t('Contributions', 'Contributions')"></p>
             </div>
+            @endif
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ $stats['active'] }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-data x-text="$store.lang.t('Listings', 'Annonces')"></p>
@@ -304,7 +307,7 @@
                         @if($user->language_pref)
                             <li class="flex items-start gap-2">
                                 <span>&#128483;</span>
-                                <span>{{ $user->language_pref === 'fr' ? 'Français' : 'English' }}</span>
+                                <span>{{ $user->language_pref?->value === 'fr' ? 'Français' : 'English' }}</span>
                             </li>
                         @endif
                         <li class="flex items-start gap-2">
@@ -340,7 +343,9 @@
                     <h2 class="font-bold text-slate-900 mb-3" x-data x-text="$store.lang.t('Activity', 'Activité')"></h2>
                     <ul class="text-sm text-slate-600 space-y-2">
                         <li class="flex items-center gap-2">&#128172; <span><span x-data x-text="$store.lang.t('Member of', 'Membre de')"></span> <strong>{{ $cstats['rooms'] }}</strong> <span x-data x-text="$store.lang.t('rooms', 'salons')"></span></span></li>
+                        @if(config('cameroon.modules.solidarity_live'))
                         <li class="flex items-center gap-2">&#129309; <span><strong>{{ $cstats['contributions'] }}</strong> <span x-data x-text="$store.lang.t('solidarity contributions', 'contributions de solidarité')"></span></span></li>
+                        @endif
                         <li class="flex items-center gap-2">&#127942; <span><strong>{{ number_format($cstats['points']) }}</strong> <span x-data x-text="$store.lang.t('community points earned', 'points communautaires gagnés')"></span></span></li>
                     </ul>
                 </div>
@@ -400,7 +405,7 @@
                         {{-- Only you see these; the card itself badges 'sold' already. --}}
                         <div class="relative">
                             <span class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded bg-slate-900/80 text-white text-[10px] font-semibold uppercase">
-                                {{ str_replace('_', ' ', $st) }}
+                                {{ app()->getLocale() === 'fr' ? $listing->status?->labelFr() : $listing->status?->label() }}
                             </span>
                             <x-marketplace.listing-card :listing="$listing" />
                         </div>
@@ -450,7 +455,7 @@
                         <div class="flex items-center gap-3">
                             <div class="w-16 h-16 rounded-full overflow-hidden bg-cm-green/10 grid place-items-center text-xl font-bold text-cm-green shrink-0">
                                 @if($user->avatar)
-                                    <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
+                                    <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="" class="w-full h-full object-cover">
                                 @else
                                     {{ strtoupper(mb_substr($name, 0, 1)) }}
                                 @endif
@@ -519,13 +524,13 @@
                             <label class="block text-sm font-medium text-slate-700 mb-1" x-text="$store.lang.t('Language', 'Langue')"></label>
                             <div class="flex gap-3">
                                 <label class="flex-1 cursor-pointer">
-                                    <input type="radio" name="language_pref" value="en" {{ $user->language_pref === 'en' ? 'checked' : '' }} class="peer sr-only">
+                                    <input type="radio" name="language_pref" value="en" {{ $user->language_pref?->value === 'en' ? 'checked' : '' }} class="peer sr-only">
                                     <div class="rounded-xl border-2 border-slate-200 px-4 py-3 text-center text-sm peer-checked:border-cm-green peer-checked:bg-cm-green/5 transition-colors">
                                         🇬🇧 English
                                     </div>
                                 </label>
                                 <label class="flex-1 cursor-pointer">
-                                    <input type="radio" name="language_pref" value="fr" {{ $user->language_pref === 'fr' ? 'checked' : '' }} class="peer sr-only">
+                                    <input type="radio" name="language_pref" value="fr" {{ $user->language_pref?->value === 'fr' ? 'checked' : '' }} class="peer sr-only">
                                     <div class="rounded-xl border-2 border-slate-200 px-4 py-3 text-center text-sm peer-checked:border-cm-green peer-checked:bg-cm-green/5 transition-colors">
                                         🇫🇷 Français
                                     </div>
@@ -572,6 +577,8 @@
                             <span x-text="$store.lang.t('Save Changes', 'Enregistrer')"></span>
                         </button>
                     </form>
+
+                    <div class="mt-6">@include('partials.delete-account')</div>
 
                 </div>
             </div>

@@ -23,7 +23,7 @@
         <div class="block aspect-square bg-slate-100 relative group">
     @endif
         @if(!empty($user->avatar))
-            <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $name }}"
+            <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="{{ $name }}"
                  class="w-full h-full object-cover {{ $profileUrl ? 'group-hover:scale-105 transition-transform duration-300' : '' }}">
         @else
             <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-cm-green to-emerald-700 text-white text-5xl font-bold">
@@ -50,14 +50,22 @@
             <p class="text-xs text-slate-500 truncate mt-0.5">{{ $location }}</p>
         @endif
 
-        {{-- Actions --}}
+        {{-- Actions. A failed action says why in a toast; the card only flips on success. --}}
         <div class="mt-3 space-y-2"
              x-data="{
                 pending: false,
-                done: false,
-                act: 'idle',  // 'request' | 'accept' | 'cancel'
+                done: null,   // null | 'accepted' | 'declined' | 'sent'
+                act: 'idle',  // 'request' | 'accept' | 'decline'
                 token: @js(csrf_token()),
-                async send(url, body) {
+                fail(status, data) {
+                    const t = this.$store.lang.t.bind(this.$store.lang);
+                    let message = t('Something went wrong. Please try again.', 'Une erreur s’est produite. Veuillez réessayer.');
+                    if (status === 0) message = t('Network error', 'Erreur réseau');
+                    else if (status === 419) message = t('Your session has expired. Reload the page.', 'Votre session a expiré. Rechargez la page.');
+                    else if (data.error === 'no_pending_request') message = t('This request is no longer available.', 'Cette demande n’est plus disponible.');
+                    window.dispatchEvent(new CustomEvent('toast', { detail: { type: 'error', message } }));
+                },
+                async send(url, body, outcome) {
                     if (this.pending) return;
                     this.pending = true;
                     try {
@@ -71,39 +79,52 @@
                             body: JSON.stringify(body),
                         });
                         const data = await r.json().catch(() => ({}));
-                        if (r.ok) { this.done = true; }
+                        if (r.ok) { this.done = outcome; } else { this.fail(r.status, data); }
+                    } catch (e) {
+                        this.fail(0, {});
                     } finally { this.pending = false; }
                 }
              }">
 
             @switch($mode)
                 @case('request')
+                    {{-- Stacked, not side by side: two columns are 65–69px on an iPhone and
+                         "Accepter" needs 85. --}}
                     <template x-if="!done">
-                        <div class="grid grid-cols-2 gap-2">
+                        <div class="space-y-2">
                             <button type="button"
-                                    @click="act='accept'; send('{{ route('yard.connections.accept') }}', { user_id: {{ $user->id }} })"
+                                    @click="act='accept'; send('{{ route('yard.connections.accept') }}', { user_id: {{ $user->id }} }, 'accepted')"
                                     :disabled="pending"
-                                    class="px-2 py-1.5 rounded-lg bg-cm-green text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60">
-                                <span x-show="!pending || act!=='accept'" x-text="$store.lang.t('Confirm', 'Accepter')"></span>
+                                    class="w-full px-2 py-1.5 rounded-lg bg-cm-green text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60">
+                                <span x-show="!pending || act!=='accept'" x-text="$store.lang.t('Accept', 'Accepter')"></span>
                                 <span x-show="pending && act==='accept'" x-text="$store.lang.t('Accepting…', 'Acceptation…')"></span>
                             </button>
-                            <a href="{{ $profileUrl ?? '#' }}" @class(['px-2 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-sm font-semibold text-center', 'hover:bg-slate-200' => $profileUrl, 'opacity-50 pointer-events-none' => !$profileUrl])
-                               x-text="$store.lang.t('View', 'Voir')"></a>
+                            <button type="button"
+                                    @click="act='decline'; send('{{ route('yard.connections.decline') }}', { user_id: {{ $user->id }} }, 'declined')"
+                                    :disabled="pending"
+                                    class="w-full px-2 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-sm font-semibold hover:bg-slate-200 disabled:opacity-60">
+                                <span x-show="!pending || act!=='decline'" x-text="$store.lang.t('Decline', 'Refuser')"></span>
+                                <span x-show="pending && act==='decline'" x-text="$store.lang.t('Declining…', 'Refus…')"></span>
+                            </button>
                         </div>
                     </template>
-                    <template x-if="done">
+                    <template x-if="done === 'accepted'">
                         <a href="{{ $profileUrl ?? '#' }}" @class(['block w-full text-center px-2 py-1.5 rounded-lg bg-slate-100 text-slate-700 text-sm font-semibold', 'hover:bg-slate-200' => $profileUrl, 'opacity-50 pointer-events-none' => !$profileUrl])
                            x-text="$store.lang.t('Connected ✓', 'Connecté ✓')"></a>
+                    </template>
+                    <template x-if="done === 'declined'">
+                        <button type="button" disabled class="w-full px-2 py-1.5 rounded-lg bg-slate-100 text-slate-500 text-sm font-semibold cursor-default"
+                                x-text="$store.lang.t('Request declined', 'Demande refusée')"></button>
                     </template>
                     @break
 
                 @case('suggest')
                     <template x-if="!done">
                         <button type="button"
-                                @click="act='request'; send('{{ route('yard.connections.request') }}', { user_id: {{ $user->id }} })"
+                                @click="act='request'; send('{{ route('yard.connections.request') }}', { user_id: {{ $user->id }} }, 'sent')"
                                 :disabled="pending"
                                 class="w-full px-2 py-1.5 rounded-lg bg-cm-green text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-60">
-                            <span x-show="!pending" x-text="$store.lang.t('Add', 'Ajouter')"></span>
+                            <span x-show="!pending" x-text="$store.lang.t('Connect', 'Se connecter')"></span>
                             <span x-show="pending" x-text="$store.lang.t('Sending…', 'Envoi…')"></span>
                         </button>
                     </template>

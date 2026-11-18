@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -37,7 +38,7 @@ class MessageDelivered implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('tenant.' . $this->tenantId . '.user.' . $this->senderId . '.receipts'),
+            new PrivateChannel('tenant.' . $this->tenantId . '.user.' . $this->senderId . '.receipts'),
         ];
     }
 

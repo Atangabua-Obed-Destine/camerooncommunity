@@ -14,7 +14,7 @@
                  class="yard-share-card__img" alt="" loading="lazy">
         @else
             <div class="yard-share-card__img yard-share-card__img--placeholder">
-                <span>{{ strtoupper(substr($p['kind'], 0, 1)) }}</span>
+                <span>{{ mb_strtoupper(mb_substr($p['kind'], 0, 1)) }}</span>
             </div>
         @endif
         <div class="yard-share-card__body">

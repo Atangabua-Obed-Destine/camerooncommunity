@@ -22,7 +22,7 @@
 
             <button type="button"
                     x-data
-                    @click="navigator.share ? navigator.share({title: @js($displayName), url: window.location.href}).catch(()=>{}) : (navigator.clipboard.writeText(window.location.href), $dispatch('toast', {type:'success', message:'Link copied'}))"
+                    @click="navigator.share ? navigator.share({title: @js($displayName), url: window.location.href}).catch(()=>{}) : (navigator.clipboard.writeText(window.location.href), $dispatch('toast', {type:'success', message: $store.lang.t('Link copied', 'Lien copié')}))"
                     class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-sm font-medium text-slate-700 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z"/></svg>
                 <span x-text="$store.lang.t('Share', 'Partager')">Share</span>
@@ -38,9 +38,9 @@
             <div class="relative h-44 sm:h-64 md:h-72 overflow-hidden
                 @if(!$user->cover_photo) bg-gradient-to-br from-cm-green via-emerald-500 to-cm-yellow @endif">
                 @if($user->cover_photo)
-                    <img src="{{ asset('storage/' . $user->cover_photo) }}" alt=""
+                    <img src="{{ \App\Support\StorageUrl::for($user->cover_photo) }}" alt=""
                          class="w-full h-full object-cover cursor-zoom-in"
-                         @click="$dispatch('open-image', { url: '{{ asset('storage/' . $user->cover_photo) }}' })">
+                         @click="$dispatch('open-image', { url: '{{ \App\Support\StorageUrl::for($user->cover_photo) }}' })">
                 @endif
 
                 @if($user->is_founding_member)
@@ -65,11 +65,11 @@
                     <div class="relative w-28 h-28 sm:w-36 sm:h-36 shrink-0 mx-auto sm:mx-0">
                         <div class="w-full h-full rounded-full border-4 border-white shadow-xl overflow-hidden bg-cm-green/10 flex items-center justify-center text-4xl font-bold text-cm-green">
                             @if($user->avatar)
-                                <img src="{{ asset('storage/' . $user->avatar) }}" alt=""
+                                <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt=""
                                      class="w-full h-full object-cover cursor-zoom-in"
-                                     @click="$dispatch('open-image', { url: '{{ asset('storage/' . $user->avatar) }}' })">
+                                     @click="$dispatch('open-image', { url: '{{ \App\Support\StorageUrl::for($user->avatar) }}' })">
                             @else
-                                {{ strtoupper(substr($user->username ?? $user->name, 0, 2)) }}
+                                {{ mb_strtoupper(mb_substr($user->username ?? $user->name, 0, 2)) }}
                             @endif
                         </div>
                         {{-- Online dot --}}
@@ -91,7 +91,7 @@
                             @if($user->home_region)
                                 <span class="inline-flex items-center gap-1">🏠 {{ $user->home_region }}</span>
                             @endif
-                            <span class="inline-flex items-center gap-1">📅 <span x-text="$store.lang.t('Joined', 'Rejoint')"></span> {{ $user->created_at->format('M Y') }}</span>
+                            <span class="inline-flex items-center gap-1">📅 <span x-text="$store.lang.t('Joined', 'Rejoint')"></span> {{ $user->created_at->translatedFormat('M Y') }}</span>
                         </div>
                     </div>
 
@@ -139,7 +139,7 @@
                                 </button>
                                 <div x-show="open" @click.away="open=false" x-transition x-cloak
                                      class="absolute right-0 top-full mt-2 w-52 rounded-xl border border-slate-200 bg-white py-1.5 shadow-xl z-30">
-                                    <a href="#" @click.prevent="navigator.clipboard.writeText(window.location.href); $dispatch('toast',{type:'success',message:'Link copied'}); open=false"
+                                    <a href="#" @click.prevent="navigator.clipboard.writeText(window.location.href); $dispatch('toast',{type:'success',message: $store.lang.t('Link copied', 'Lien copié')}); open=false"
                                        class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">📋 <span x-text="$store.lang.t('Copy link', 'Copier le lien')"></span></a>
                                     <a href="{{ route('yard') }}?dm={{ $user->id }}#info"
                                        class="block px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">🏷️ <span x-text="$store.lang.t('Save as a contact', 'Enregistrer comme contact')"></span></a>
@@ -159,7 +159,7 @@
         {{-- ═══════════════════════════════════════════════════════════
              STATS STRIP
            ═══════════════════════════════════════════════════════════ --}}
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 px-4 sm:px-0">
+        <div @class(['grid gap-3 mt-4 px-4 sm:px-0', config('cameroon.modules.solidarity_live') ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-3'])>
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ number_format($stats['points']) }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="$store.lang.t('Points', 'Points')"></p>
@@ -168,10 +168,13 @@
                 <p class="text-2xl font-bold text-cm-green">{{ $stats['rooms'] }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="$store.lang.t('Rooms', 'Salons')"></p>
             </div>
+            {{-- Solidarity isn't live: its count is always 0. --}}
+            @if(config('cameroon.modules.solidarity_live'))
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ $stats['contributions'] }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="$store.lang.t('Contributions', 'Contributions')"></p>
             </div>
+            @endif
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ $stats['listings'] }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="$store.lang.t('Listings', 'Annonces')"></p>
@@ -203,7 +206,7 @@
                         @if($user->language_pref)
                             <li class="flex items-start gap-2">
                                 <span>🗣️</span>
-                                <span>{{ $user->language_pref === 'fr' ? 'Français' : 'English' }}</span>
+                                <span>{{ $user->language_pref?->value === 'fr' ? 'Français' : 'English' }}</span>
                             </li>
                         @endif
                         <li class="flex items-start gap-2">
@@ -292,7 +295,9 @@
                     <h2 class="font-bold text-slate-900 mb-3" x-text="$store.lang.t('Activity', 'Activité')"></h2>
                     <ul class="text-sm text-slate-600 space-y-2">
                         <li class="flex items-center gap-2">💬 <span><span x-text="$store.lang.t('Member of', 'Membre de')"></span> <strong>{{ $stats['rooms'] }}</strong> <span x-text="$store.lang.t('rooms', 'salons')"></span></span></li>
+                        @if(config('cameroon.modules.solidarity_live'))
                         <li class="flex items-center gap-2">🤝 <span><strong>{{ $stats['contributions'] }}</strong> <span x-text="$store.lang.t('solidarity contributions', 'contributions de solidarité')"></span></span></li>
+                        @endif
                         <li class="flex items-center gap-2">🏆 <span><strong>{{ number_format($stats['points']) }}</strong> <span x-text="$store.lang.t('community points earned', 'points communautaires gagnés')"></span></span></li>
                     </ul>
                 </div>

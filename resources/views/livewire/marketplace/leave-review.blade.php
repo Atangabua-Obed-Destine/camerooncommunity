@@ -55,16 +55,18 @@
                     @error('rating') <p class="text-xs text-cm-red mt-1">{{ $message }}</p> @enderror
                 </div>
 
-                <div>
+                {{-- The counter counts in the browser: wire:model is deferred, so the
+                     server's count stayed at 0 until submit. --}}
+                <div x-data="{ count: {{ mb_strlen($comment) }} }">
                     <label class="block text-[13px] font-semibold text-slate-700 mb-1">
                         <span x-data x-text="$store.lang.t('Comment (optional)','Commentaire (optionnel)')"></span>
                     </label>
-                    <textarea wire:model="comment" rows="5" maxlength="1000"
+                    <textarea wire:model="comment" rows="5" maxlength="1000" @input="count = [...$el.value].length"
                               placeholder="{{ app()->getLocale() === 'fr' ? 'Comment s\'est passé l\'achat, l\'état de l\'article, la communication…' : 'How was the purchase, item condition, communication…' }}"
                               class="w-full rounded-xl ring-1 ring-slate-300 px-3 py-2.5 text-sm focus:ring-2 focus:ring-cm-green focus:outline-none"></textarea>
                     <div class="flex justify-between text-[11px] text-slate-500 mt-1">
                         <span x-data x-text="$store.lang.t('Be specific and respectful.','Soyez précis et respectueux.')"></span>
-                        <span>{{ mb_strlen($comment) }} / 1000</span>
+                        <span><span x-text="count">{{ mb_strlen($comment) }}</span> / 1000</span>
                     </div>
                     @error('comment') <p class="text-xs text-cm-red mt-1">{{ $message }}</p> @enderror
                 </div>

@@ -96,9 +96,9 @@
             <div class="mt-2.5 flex items-center gap-2.5">
                 <div class="w-9 h-9 rounded-full bg-cm-green/15 grid place-items-center text-cm-green font-bold uppercase overflow-hidden shrink-0">
                     @if ($user?->avatar)
-                        <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
+                        <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="" class="w-full h-full object-cover">
                     @else
-                        {{ substr($user?->name ?? 'U', 0, 1) }}
+                        {{ mb_substr($user?->name ?? 'U', 0, 1) }}
                     @endif
                 </div>
                 <div class="min-w-0">
@@ -443,7 +443,7 @@
                                     .then(res => res.json())
                                     .then(data => {
                                         if (data.display_name) {
-                                            this.selectedLabel = data.display_name;
+                                            this.selectedLabel = this.decodeName(data.display_name);
                                         }
                                     }).catch(() => {});
                             }
@@ -456,13 +456,19 @@
                                 fetch('https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&q=' + encodeURIComponent(this.q) + '&limit=5')
                                     .then(res => res.json())
                                     .then(data => {
-                                        this.results = data;
+                                        // Some OpenStreetMap names hold HTML entities ("d&apos;AKWA").
+                                        this.results = (data || []).map(r => ({ ...r, display_name: this.decodeName(r.display_name) }));
                                         this.isSearching = false;
                                     }).catch(() => this.isSearching = false);
                             }, 500);
                         },
+                        decodeName(s) {
+                            const t = document.createElement('textarea');
+                            t.innerHTML = s || '';
+                            return t.value;
+                        },
                         selectLoc(lat, lon, addressObj, name) {
-                            this.selectedLabel = name;
+                            this.selectedLabel = this.decodeName(name);
                             this.q = '';
                             this.results = [];
                             $wire.setLocationData(lat, lon, addressObj, name);
@@ -683,9 +689,9 @@
                     <div class="flex items-center gap-3">
                         <div class="w-10 h-10 rounded-full bg-cm-green/15 grid place-items-center text-cm-green font-bold uppercase overflow-hidden shrink-0">
                             @if ($user?->avatar)
-                                <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
+                                <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="" class="w-full h-full object-cover">
                             @else
-                                {{ substr($user?->name ?? 'U', 0, 1) }}
+                                {{ mb_substr($user?->name ?? 'U', 0, 1) }}
                             @endif
                         </div>
                         <div class="min-w-0">

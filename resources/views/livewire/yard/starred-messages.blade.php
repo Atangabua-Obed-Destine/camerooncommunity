@@ -1,8 +1,16 @@
 <div>
     @if($show)
     <div class="fixed inset-0 z-[80] flex items-center justify-center"
-         x-data="{}"
-         x-init="$nextTick(() => document.body.style.overflow = 'hidden')"
+         x-data="{
+             init() {
+                 $nextTick(() => document.body.style.overflow = 'hidden');
+                 window.cnOverlay?.open(this.$el, () => $wire.close());
+             },
+             destroy() {
+                 document.body.style.overflow = '';
+                 window.cnOverlay?.close(this.$el);
+             },
+         }"
          x-on:keydown.escape.window="$wire.close()">
 
         {{-- Backdrop --}}
@@ -36,9 +44,9 @@
                         {{-- Avatar (sender) --}}
                         <div class="shrink-0 w-9 h-9 rounded-full overflow-hidden bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-500">
                             @if($msg->sender_avatar)
-                                <img src="{{ asset('storage/' . $msg->sender_avatar) }}" alt="" class="w-full h-full object-cover">
+                                <img src="{{ \App\Support\StorageUrl::for($msg->sender_avatar) }}" alt="" class="w-full h-full object-cover">
                             @else
-                                {{ strtoupper(substr($msg->sender_name ?? '?', 0, 2)) }}
+                                {{ mb_strtoupper(mb_substr($msg->sender_name ?? '?', 0, 2)) }}
                             @endif
                         </div>
 
@@ -70,7 +78,7 @@
                         {{-- Unstar --}}
                         <button type="button"
                                 wire:click="unstar({{ $msg->message_id }})"
-                                class="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-colors opacity-0 group-hover:opacity-100"
+                                class="shrink-0 w-7 h-7 inline-flex items-center justify-center rounded-full text-slate-400 hover:text-amber-500 hover:bg-amber-50 transition-colors md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
                                 :title="$store.lang.t('Unstar', 'Retirer des favoris')">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
                         </button>

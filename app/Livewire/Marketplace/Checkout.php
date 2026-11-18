@@ -2,12 +2,9 @@
 
 namespace App\Livewire\Marketplace;
 
-use App\Enums\ListingStatus;
-use App\Enums\OrderStatus;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceOrder;
-use App\Services\NotificationService;
-use App\Services\Payments\PaymentDriverManager;
+use App\Services\Market\OrderService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -28,10 +25,8 @@ class Checkout extends Component
     public string $provider_ref = '';
     public string $buyer_note = '';
 
-    public function mount(string $slug, ?PaymentDriverManager $manager = null): void
+    public function mount(string $slug): void
     {
-        $manager ??= app(PaymentDriverManager::class);
-
         $this->listing = MarketplaceListing::where('slug', $slug)
             ->with('seller')
             ->firstOrFail();
@@ -41,24 +36,16 @@ class Checkout extends Component
             return;
         }
 
-        if (Auth::id() === (int) $this->listing->user_id) {
-            abort(403, "You can't buy your own listing.");
-        }
-
-        // Disallow checkout on sold / inactive listings
-        $isActive = ($this->listing->status?->value ?? $this->listing->status) === 'active';
-        if (! $isActive) {
-            abort(404);
-        }
+        // Your own listing, or one no longer on sale (unless you already have
+        // an order going for it: OrderService::checkoutBlocker).
+        match ($this->orders()->checkoutBlocker($this->listing, Auth::user())) {
+            'own_listing' => abort(403, "You can't buy your own listing."),
+            'unavailable' => abort(404),
+            default => null,
+        };
 
         // Reuse an existing open order if there is one.
-        $existing = MarketplaceOrder::where('listing_id', $this->listing->id)
-            ->where('buyer_id', Auth::id())
-            ->whereIn('status', [OrderStatus::Initiated->value, OrderStatus::AwaitingPayment->value, OrderStatus::Paid->value])
-            ->latest('id')
-            ->first();
-
-        if ($existing) {
+        if ($existing = $this->orders()->openOrderFor($this->listing, Auth::user())) {
             $this->order = $existing;
             $this->provider = $existing->provider;
             $this->provider_ref = (string) ($existing->provider_ref ?? '');
@@ -66,120 +53,71 @@ class Checkout extends Component
         }
     }
 
+    private function orders(): OrderService
+    {
+        return app(OrderService::class);
+    }
+
     #[Computed]
     public function drivers(): array
     {
-        // Build a phantom order so isAvailableFor can inspect the seller.
-        $probe = $this->order ?: new MarketplaceOrder([
-            'listing_id' => $this->listing->id,
-            'seller_id'  => $this->listing->user_id,
-            'buyer_id'   => Auth::id() ?? 0,
-            'amount'     => $this->listing->price ?? 0,
-            'currency'   => $this->listing->currency ?? 'XAF',
-        ]);
-        $probe->setRelation('seller', $this->listing->seller);
-
-        return app(PaymentDriverManager::class)->availableFor($probe);
+        return $this->orders()->driversFor($this->listing, Auth::user(), $this->order);
     }
 
     #[Computed]
     public function instructions(): ?array
     {
-        if (! $this->order) { return null; }
-        $driver = app(PaymentDriverManager::class)->find($this->order->provider);
-        return $driver?->checkoutInstructions($this->order, app()->getLocale());
+        return $this->order ? $this->orders()->instructions($this->order, app()->getLocale()) : null;
     }
 
     /** Create the order in Initiated state and show the instructions. */
-    public function startCheckout(NotificationService $notifier): void
+    public function startCheckout(): void
     {
         if (! Auth::check()) { return; }
-        $driver = app(PaymentDriverManager::class)->find($this->provider);
-        if (! $driver) {
-            $this->dispatch('toast', type: 'error', message: __('Pick a payment method'));
+
+        $result = $this->orders()->start($this->listing, Auth::user(), $this->provider);
+        if (isset($result['error'])) {
+            $this->dispatch('toast', type: 'error', message: OrderService::message($result['error']));
             return;
         }
-
-        $price = (float) ($this->listing->price ?? 0);
-        if ($price <= 0) {
-            $this->dispatch('toast', type: 'error', message: __('This listing has no fixed price, message the seller instead.'));
-            return;
-        }
-
-        $this->order = MarketplaceOrder::create([
-            'tenant_id'  => $this->listing->tenant_id,
-            'listing_id' => $this->listing->id,
-            'buyer_id'   => Auth::id(),
-            'seller_id'  => $this->listing->user_id,
-            'status'     => OrderStatus::Initiated->value,
-            'provider'   => $driver->id(),
-            'amount'     => $price,
-            'currency'   => $this->listing->currency ?? 'XAF',
-            'quantity'   => 1,
-        ]);
+        $this->order = $result['order'];
+        unset($this->instructions);
     }
 
     /** Buyer submits MoMo transaction reference. */
-    public function submitProof(NotificationService $notifier): void
+    public function submitProof(): void
     {
         if (! $this->order) { return; }
 
-        $driver = app(PaymentDriverManager::class)->find($this->order->provider);
-        if (! $driver) {
-            $this->dispatch('toast', type: 'error', message: __('Driver unavailable'));
-            return;
-        }
-
-        $result = $driver->submitProof($this->order, [
+        $result = $this->orders()->submitProof($this->order, Auth::user(), [
             'provider_ref' => $this->provider_ref,
             'buyer_note'   => $this->buyer_note,
         ]);
 
         if (! ($result['ok'] ?? false)) {
             foreach (($result['errors'] ?? []) as $field => $msg) {
-                $this->addError($field, $msg);
+                $this->addError($field, __($msg));
             }
-            $this->dispatch('toast', type: 'error', message: __($result['message'] ?? 'Could not submit'));
+            $message = isset($result['error']) ? OrderService::message($result['error']) : __($result['message'] ?? 'Could not submit');
+            $this->dispatch('toast', type: 'error', message: $message);
             return;
         }
 
         $this->order->refresh();
-
-        // Notify the seller that money should be incoming.
-        if ($this->order->seller) {
-            $notifier->send(
-                $this->order->seller,
-                'marketplace.order_payment_claimed',
-                __('Payment evidence for :ref', ['ref' => $this->order->reference]),
-                __(':buyer says they sent :amount via :provider.', [
-                    'buyer'    => Auth::user()->name ?: Auth::user()->username,
-                    'amount'   => $this->order->formattedAmount(),
-                    'provider' => $driver->label(app()->getLocale()),
-                ]),
-                [
-                    'order_id' => $this->order->id,
-                    'url'      => route('marketplace.orders'),
-                ],
-            );
-        }
-
         $this->dispatch('toast', type: 'success', message: __($result['message'] ?? 'Submitted'));
     }
 
     /** Buyer cancels before paying. */
-    public function cancelOrder(NotificationService $notifier): void
+    public function cancelOrder(): void
     {
         if (! $this->order) { return; }
-        if (! $this->order->isBuyer((int) Auth::id())) { return; }
-        if ($this->order->status === OrderStatus::Paid) {
-            $this->dispatch('toast', type: 'error', message: __('Order already paid, ask the seller to refund.'));
+
+        if ($error = $this->orders()->cancel($this->order, Auth::user())) {
+            if ($error !== 'forbidden') {
+                $this->dispatch('toast', type: 'error', message: OrderService::message($error));
+            }
             return;
         }
-
-        $this->order->forceFill([
-            'status'       => OrderStatus::Cancelled,
-            'cancelled_at' => now(),
-        ])->save();
 
         $this->dispatch('toast', type: 'success', message: __('Order cancelled'));
         $this->redirectRoute('marketplace.orders', navigate: true);

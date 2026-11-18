@@ -104,6 +104,7 @@ class MentionService
         $query = trim($query);
 
         $base = User::query()
+            ->discoverable()
             ->whereIn('id', YardRoomMember::where('room_id', $roomId)->pluck('user_id'))
             ->where('id', '!=', auth()->id())
             ->select('id', 'name', 'username', 'avatar');

@@ -206,6 +206,14 @@
         overflow: hidden; z-index: 1000;
         transform-origin: top right;
     }
+    /* On a phone the bell isn't at the right edge, so a panel anchored to it ran
+       36px off the left of an SE. Pin it under the 96px header instead. */
+    @media (max-width: 640px) {
+        .nb-panel {
+            position: fixed; top: 104px; left: 8px; right: 8px;
+            width: auto; max-width: none;
+        }
+    }
     .nb-head {
         display: flex; align-items: center; justify-content: space-between;
         padding: 12px 16px;
@@ -329,7 +337,7 @@
 
             init() {
                 if (!window.Echo || !tenantId || !userId) return;
-                this._channel = window.Echo.channel(`tenant.${tenantId}.user.${userId}`);
+                this._channel = window.Echo.private(`tenant.${tenantId}.user.${userId}`);
                 const refresh = () => {
                     this.flash();
                     try { window.Livewire?.dispatch('bell-refresh'); } catch (_) {}

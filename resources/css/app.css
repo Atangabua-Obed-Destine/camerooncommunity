@@ -1930,6 +1930,10 @@
 .yard-tick--read,
 .yard-tick__svg--read {
     color: #34B7F1; /* WhatsApp blue */
+}
+/* The pop runs once, on the icon. It also ran on the wrapper, so the two
+   compounded (0.72 → 1.25 → 1). */
+.yard-tick__svg--read {
     animation: yard-tick-blue-pop 320ms ease-out;
 }
 @keyframes yard-tick-pulse {
@@ -2224,6 +2228,21 @@
 }
 .comm-tabs__tab:hover {
     color: var(--color-slate-700, #334155);
+}
+/* Five tabs are 736px wide: on a phone they scroll sideways, or Search and
+   Blocked (the only place to unblock someone) are off-screen. */
+@media (max-width: 640px) {
+    .comm-tabs {
+        overflow-x: auto;
+        scrollbar-width: none;
+        padding: 0 8px;
+    }
+    .comm-tabs::-webkit-scrollbar { display: none; }
+    .comm-tabs__tab {
+        flex-shrink: 0;
+        white-space: nowrap;
+        padding: 12px 12px;
+    }
 }
 .comm-tabs__tab--active {
     color: var(--color-slate-800, #1e293b);
@@ -2869,9 +2888,11 @@
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%);
+    /* The individual property, not transform: x-transition.scale writes
+       transform, which used to wipe the centring while it animated. */
+    translate: -50% -50%;
     z-index: 1001;
-    width: 340px;
+    width: min(340px, calc(100vw - 32px));
     max-height: 480px;
     background: #fff;
     border-radius: 14px;
@@ -6722,6 +6743,43 @@
     cursor: pointer;
 }
 .yard-share-modal__room-send:hover { background: #065f46; }
+/* The markup wraps each input in the styled box and puts the row in a button;
+   these had no rules, so the inputs drew their own borders and each row
+   stacked down the middle. */
+.yard-share-modal__note-input,
+.yard-share-modal__search-input {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    padding: 0;
+}
+.yard-share-modal__room { padding: 0; }
+.yard-share-modal__room-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+}
+.yard-share-modal__room-btn:hover { background: #f9fafb; }
+.yard-share-modal__room-btn:disabled { opacity: 0.6; cursor: wait; }
+.yard-share-modal__room-cta {
+    flex-shrink: 0;
+    background: #047857;
+    color: #fff;
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
 .yard-share-modal__empty {
     padding: 24px;
     text-align: center;
@@ -7023,6 +7081,7 @@
     .cn-app .yard-share-modal__room-name { font-size: 18px; }
     .cn-app .yard-share-modal__room-type { font-size: 14px; }
     .cn-app .yard-share-modal__room-send { font-size: 15px; }
+    .cn-app .yard-share-modal__room-cta { font-size: 15px; }
     .cn-app .yard-share-modal__empty { font-size: 18px; }
 }
 /* ===== MOBILE MESSAGE SELECTION =====
@@ -7317,3 +7376,20 @@
     }
 }
 
+/* ── Reduced motion ──
+   For members who turn on Reduce Motion (iOS, macOS, Android, Windows). Nothing
+   honoured it: slides, pops, bounces and transitions all ran in full. Motion is
+   cut to an instant; loading spinners keep turning, so waiting still reads as
+   waiting. */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+    .animate-spin {
+        animation-duration: 1s !important;
+        animation-iteration-count: infinite !important;
+    }
+}

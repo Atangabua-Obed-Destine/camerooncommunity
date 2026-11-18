@@ -15,10 +15,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 
 // ─── Legal pages (public) ───
-Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
-Route::view('/terms', 'legal.terms')->name('legal.terms');
-Route::view('/contact', 'pages.contact')->name('contact');
-Route::view('/about', 'pages.about')->name('about');
+// The four pages the mobile app opens in an in-app browser (?app=1&lang=fr).
+Route::middleware(\App\Http\Middleware\StaticPageContext::class)->group(function () {
+    Route::view('/privacy', 'legal.privacy')->name('legal.privacy');
+    Route::view('/terms', 'legal.terms')->name('legal.terms');
+    Route::view('/contact', 'pages.contact')->name('contact');
+    Route::view('/about', 'pages.about')->name('about');
+});
 
 // ─── PWA (public — must stay outside auth/verified/location/onboarded) ───
 // Served as routes so start_url/scope adapt to the subdirectory in dev vs the
@@ -35,55 +38,20 @@ Route::post('/api/language', [LanguageController::class, 'update'])->name('langu
 Route::post('/api/kamer/chat', [HomeController::class, 'kamerChat'])->name('kamer.chat.public');
 
 // ─── IP-based geolocation proxy (avoids browser CORS + ipapi.co rate-limits) ───
-Route::get('/api/geo/ip', function (\Illuminate\Http\Request $request) {
-    $ip = $request->ip() ?: '';
-    $cacheKey = 'geo:ip:' . $ip;
-
-    return response()->json(
-        \Illuminate\Support\Facades\Cache::remember($cacheKey, now()->addHours(6), function () use ($ip) {
-            try {
-                // Resolve the visitor's IP rather than the server's. ipapi.co
-                // accepts /{ip}/json/. For local/private IPs (127.0.0.1, ::1,
-                // 10.x, 192.168.x) fall back to bare /json/ which uses the
-                // requesting host's public IP (good enough for dev).
-                $isPrivate = ! $ip
-                    || $ip === '127.0.0.1'
-                    || $ip === '::1'
-                    || str_starts_with($ip, '10.')
-                    || str_starts_with($ip, '192.168.')
-                    || preg_match('/^172\.(1[6-9]|2[0-9]|3[0-1])\./', $ip);
-                $url = $isPrivate
-                    ? 'https://ipapi.co/json/'
-                    : 'https://ipapi.co/' . $ip . '/json/';
-                $resp = \Illuminate\Support\Facades\Http::timeout(5)->get($url);
-                if ($resp->successful()) {
-                    $data = $resp->json();
-                    return [
-                        'latitude' => $data['latitude'] ?? null,
-                        'longitude' => $data['longitude'] ?? null,
-                        'country_name' => $data['country_name'] ?? null,
-                        'country_code' => $data['country_code'] ?? null,
-                        'region' => $data['region'] ?? null,
-                        'city' => $data['city'] ?? null,
-                    ];
-                }
-            } catch (\Throwable $e) {
-                // Swallow — caller will detect the empty payload and fall back gracefully.
-            }
-            return ['error' => 'unavailable'];
-        })
-    );
-})->name('geo.ip');
+Route::get('/api/geo/ip', fn (\Illuminate\Http\Request $request) => response()->json(
+    app(\App\Services\LocationService::class)->placeForIp($request->ip())
+))->name('geo.ip');
 
 // ─── Auth Routes (guests only) ───
 Route::middleware('guest')->group(function () {
     Route::get('/register', \App\Livewire\Auth\RegisterWizard::class)->name('register');
     Route::get('/login', [LoginController::class, 'showLogin'])->name('login');
-    Route::post('/login', [LoginController::class, 'login']);
+    // Password guessing and reset-mail flooding: the same limit the app's login has.
+    Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:10,1');
     Route::get('/forgot-password', [PasswordResetController::class, 'showRequest'])->name('password.request');
-    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
+    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'showReset'])->name('password.reset');
-    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->name('password.update');
+    Route::post('/reset-password', [PasswordResetController::class, 'reset'])->middleware('throttle:6,1')->name('password.update');
 
     // Google OAuth
     Route::get('/auth/google', [\App\Http\Controllers\Auth\GoogleAuthController::class, 'redirect'])->name('auth.google');
@@ -93,6 +61,10 @@ Route::middleware('guest')->group(function () {
 // ─── Auth Routes (authenticated) ───
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
+
+    // Delete your own account (anonymised; see App\Services\AccountDeletion).
+    Route::delete('/account', [\App\Http\Controllers\AccountController::class, 'destroy'])
+        ->middleware('throttle:5,1')->name('account.destroy');
 
     // Email verification
     Route::get('/email/verify', [VerificationController::class, 'notice'])->name('verification.notice');
@@ -124,6 +96,7 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
     Route::get('/yard/users/search', [YardController::class, 'searchUsers'])->name('yard.users.search');
     Route::post('/yard/connections/request', [YardController::class, 'requestConnection'])->name('yard.connections.request');
     Route::post('/yard/connections/accept', [YardController::class, 'acceptConnection'])->name('yard.connections.accept');
+    Route::post('/yard/connections/decline', [YardController::class, 'declineConnection'])->name('yard.connections.decline');
     Route::post('/yard/connections/cancel', [YardController::class, 'cancelConnection'])->name('yard.connections.cancel');
     Route::post('/yard/connections/disconnect', [YardController::class, 'disconnectConnection'])->name('yard.connections.disconnect');
     Route::get('/yard/connections/state/{userId}', [YardController::class, 'connectionState'])
@@ -311,21 +284,10 @@ Route::middleware(['auth', 'verified', 'location', 'onboarded'])->group(function
             ->whereNumber('listing')->name('edit');
     });
 
-    // Coming Soon modules
-    $comingSoonModules = [
-        'easygoparcel' => 'EasyGoParcel',
-        'roadfam' => 'RoadFam',
-        'camevents' => 'CamEvents',
-        'kamernest' => 'KamerNest',
-        'workconnect' => 'WorkConnect',
-        'kamereats' => 'KamerEats',
-        'kamersos' => 'KamerSOS',
-        'camstories' => 'CamStories',
-        'kamerpulse' => 'KamerPulse',
-        'kamersend' => 'KamerSend',
-    ];
-
-    foreach ($comingSoonModules as $slug => $name) {
+    // Coming Soon modules. The list lives in config/cameroon.php because the
+    // mobile app reads the same one from /api/v1/configuration to decide what
+    // to grey out, and two copies would drift.
+    foreach (config('cameroon.modules.coming_soon', []) as $slug => $name) {
         Route::get("/{$slug}", fn () => view('modules.coming-soon', ['moduleName' => $name, 'moduleSlug' => $slug]))
             ->name("module.{$slug}");
     }

@@ -12,7 +12,7 @@ class MarketplaceSavedSearch extends Model
 
     protected $fillable = [
         'user_id', 'name', 'filters',
-        'notify_email', 'notify_push', 'last_notified_at',
+        'notify_email', 'notify_push', 'last_notified_at', 'last_seen_at',
     ];
 
     protected function casts(): array
@@ -22,6 +22,7 @@ class MarketplaceSavedSearch extends Model
             'notify_email' => 'boolean',
             'notify_push' => 'boolean',
             'last_notified_at' => 'datetime',
+            'last_seen_at' => 'datetime',
         ];
     }
 

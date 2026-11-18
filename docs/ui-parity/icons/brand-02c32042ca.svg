@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <circle cx="100" cy="100" r="90" fill="none" stroke="#334155" stroke-width="1"/>
+  <circle cx="100" cy="100" r="70" fill="none" stroke="#334155" stroke-width="0.5"/>
+  <circle cx="100" cy="100" r="50" fill="none" stroke="#334155" stroke-width="0.5"/>
+  <circle cx="98" cy="92" r="6" fill="#243a5c"/>
+  <circle cx="98" cy="92" r="3" fill="#FCD116"/>
+  <circle cx="95" cy="96" r="3" fill="#334155" opacity="0.5"/>
+  <circle cx="90" cy="98" r="3" fill="#334155" opacity="0.5"/>
+  <circle cx="115" cy="98" r="3" fill="#334155" opacity="0.5"/>
+  <circle cx="78" cy="90" r="3" fill="#334155" opacity="0.5"/>
+  <line x1="98" y1="92" x2="60" y2="55" stroke="#243a5c" stroke-width="0.5" opacity="0.3"/>
+  <line x1="98" y1="92" x2="140" y2="50" stroke="#243a5c" stroke-width="0.5" opacity="0.3"/>
+  <line x1="98" y1="92" x2="45" y2="75" stroke="#243a5c" stroke-width="0.5" opacity="0.3"/>
+  <circle cx="60" cy="55" r="4" fill="#CE1126" opacity="0.6" style="animation-delay: 0.5s"/>
+  <text x="60" y="48" text-anchor="middle">UK</text>
+  <circle cx="140" cy="50" r="3" fill="#CE1126" opacity="0.4"/>
+  <text x="140" y="44" text-anchor="middle">DE</text>
+  <circle cx="45" cy="75" r="3" fill="#CE1126" opacity="0.4"/>
+  <text x="45" y="69" text-anchor="middle">FR</text>
+</svg>

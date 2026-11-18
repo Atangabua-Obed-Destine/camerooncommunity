@@ -16,7 +16,10 @@ return [
     |
     */
 
-    'enabled' => env('TELESCOPE_ENABLED', true),
+    // Off unless asked for. It records every request, query and model change,
+    // members' messages included, into the database: a debugging tool, not
+    // something to leave running in production. TELESCOPE_ENABLED=true locally.
+    'enabled' => env('TELESCOPE_ENABLED', false),
 
     /*
     |--------------------------------------------------------------------------

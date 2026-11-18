@@ -4,6 +4,7 @@ namespace App\Livewire\Marketplace;
 
 use App\Enums\OfferStatus;
 use App\Models\MarketplaceOffer;
+use App\Services\OfferService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -55,12 +56,17 @@ class MyOffers extends Component
         return [
             'sent' => MarketplaceOffer::where('buyer_id', $userId)->count(),
             'received' => MarketplaceOffer::where('seller_id', $userId)->count(),
+            // Waiting on me: offers to answer as a seller, counters to answer as a buyer.
             'pendingReceived' => MarketplaceOffer::where('seller_id', $userId)
-                ->whereIn('status', [OfferStatus::Pending, OfferStatus::Countered])
+                ->where('status', OfferStatus::Pending)
+                ->count(),
+            'countersToAnswer' => MarketplaceOffer::where('buyer_id', $userId)
+                ->where('status', OfferStatus::Countered)
                 ->count(),
         ];
     }
 
+    /** The offer, if this member is on the given side of it. */
     protected function ownedOffer(int $id, string $side): MarketplaceOffer
     {
         $column = $side === 'seller' ? 'seller_id' : 'buyer_id';
@@ -69,49 +75,44 @@ class MyOffers extends Component
             ->firstOrFail();
     }
 
-    public function withdrawOffer(int $id): void
+    private function after(bool $done, string $type, string $message): void
     {
-        $offer = $this->ownedOffer($id, 'buyer');
-        if (! $offer->status->isOpen()) {
-            return;
-        }
-        $offer->update(['status' => OfferStatus::Withdrawn, 'responded_at' => now()]);
-        unset($this->offers);
-        $this->dispatch('toast', type: 'info', message: __('Offer withdrawn.'));
+        unset($this->offers, $this->stats);
+        $done
+            ? $this->dispatch('toast', type: $type, message: $message)
+            : $this->dispatch('toast', type: 'error', message: __('This offer has already been answered.'));
     }
 
-    public function acceptOffer(int $id): void
+    public function withdrawOffer(int $id, OfferService $offers): void
     {
-        $offer = $this->ownedOffer($id, 'seller');
-        if (! $offer->status->isOpen()) {
-            return;
-        }
-        MarketplaceOffer::where('listing_id', $offer->listing_id)
-            ->where('id', '!=', $offer->id)
-            ->whereIn('status', [OfferStatus::Pending, OfferStatus::Countered])
-            ->update(['status' => OfferStatus::Rejected, 'responded_at' => now()]);
-
-        $offer->update(['status' => OfferStatus::Accepted, 'responded_at' => now()]);
-        unset($this->offers, $this->stats);
-        $this->dispatch('toast', type: 'success', message: __('Offer accepted.'));
+        $this->after($offers->withdraw($this->ownedOffer($id, 'buyer'), Auth::user()), 'info', __('Offer withdrawn.'));
     }
 
-    public function rejectOffer(int $id): void
+    public function acceptCounter(int $id, OfferService $offers): void
     {
-        $offer = $this->ownedOffer($id, 'seller');
-        if (! $offer->status->isOpen()) {
-            return;
-        }
-        $offer->update(['status' => OfferStatus::Rejected, 'responded_at' => now()]);
-        unset($this->offers, $this->stats);
-        $this->dispatch('toast', type: 'info', message: __('Offer rejected.'));
+        $this->after($offers->acceptCounter($this->ownedOffer($id, 'buyer'), Auth::user()), 'success', __('Counter-offer accepted.'));
+    }
+
+    public function declineCounter(int $id, OfferService $offers): void
+    {
+        $this->after($offers->declineCounter($this->ownedOffer($id, 'buyer'), Auth::user()), 'info', __('Counter-offer declined.'));
+    }
+
+    public function acceptOffer(int $id, OfferService $offers): void
+    {
+        $this->after($offers->accept($this->ownedOffer($id, 'seller'), Auth::user()), 'success', __('Offer accepted.'));
+    }
+
+    public function rejectOffer(int $id, OfferService $offers): void
+    {
+        $this->after($offers->reject($this->ownedOffer($id, 'seller'), Auth::user()), 'info', __('Offer rejected.'));
     }
 
     public function startCounter(int $id): void
     {
         $offer = $this->ownedOffer($id, 'seller');
         $this->counteringOfferId = $offer->id;
-        $this->counterAmount = (string) $offer->amount;
+        $this->counterAmount = (string) (int) $offer->amount;
     }
 
     public function cancelCounter(): void
@@ -120,7 +121,7 @@ class MyOffers extends Component
         $this->counterAmount = '';
     }
 
-    public function submitCounter(): void
+    public function submitCounter(OfferService $offers): void
     {
         if (! $this->counteringOfferId) {
             return;
@@ -129,28 +130,9 @@ class MyOffers extends Component
             'counterAmount' => ['required', 'numeric', 'min:1'],
         ]);
 
-        $original = $this->ownedOffer($this->counteringOfferId, 'seller');
-        if (! $original->status->isOpen()) {
-            $this->cancelCounter();
-            return;
-        }
-
-        $original->update(['status' => OfferStatus::Countered, 'counter_amount' => $this->counterAmount, 'responded_at' => now()]);
-
-        MarketplaceOffer::create([
-            'listing_id' => $original->listing_id,
-            'buyer_id' => $original->buyer_id,
-            'seller_id' => $original->seller_id,
-            'parent_offer_id' => $original->id,
-            'amount' => $this->counterAmount,
-            'currency' => $original->currency,
-            'status' => OfferStatus::Pending,
-            'message' => null,
-        ]);
-
+        $done = $offers->counter($this->ownedOffer($this->counteringOfferId, 'seller'), Auth::user(), (float) $this->counterAmount);
         $this->cancelCounter();
-        unset($this->offers, $this->stats);
-        $this->dispatch('toast', type: 'success', message: __('Counter-offer sent.'));
+        $this->after($done, 'success', __('Counter-offer sent.'));
     }
 
     public function render()

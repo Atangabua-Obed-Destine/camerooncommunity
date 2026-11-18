@@ -1403,9 +1403,12 @@ document.addEventListener('alpine:init', () => {
                 },
 
                 // ── Timer helpers ──
-                _startTimer() {
-                    this.recSeconds = 0;
-                    this.recTimerLabel = '0:00';
+                // `resume` keeps counting after a pause (it used to restart at 0:00).
+                _startTimer(resume = false) {
+                    if (!resume) {
+                        this.recSeconds = 0;
+                        this.recTimerLabel = '0:00';
+                    }
                     this._recTimer = setInterval(() => {
                         this.recSeconds++;
                         const m = Math.floor(this.recSeconds / 60);
@@ -1532,7 +1535,7 @@ document.addEventListener('alpine:init', () => {
                     if (this.recPaused) {
                         this.mediaRecorder.resume();
                         this.recPaused = false;
-                        this._startTimer();
+                        this._startTimer(true);
                     } else {
                         this.mediaRecorder.pause();
                         this.recPaused = true;

@@ -153,7 +153,7 @@ class CreateCampaign extends Component
 
         $this->isDrafting = true;
         $aiService = app(\App\Services\AIService::class);
-        $lang = auth()->user()?->language_pref ?? 'en';
+        $lang = auth()->user()?->language_pref?->value ?? 'en';
 
         $draft = $aiService->draftCampaignDescription($this->draftSituation, $lang);
 

@@ -82,7 +82,7 @@
                             <span class="text-lg">🤝</span>
                         </div>
                         <div>
-                            <p class="text-sm font-extrabold text-white" x-text="$store.lang.t('Solidarity', 'Solidarité')"></p>
+                            <p class="text-sm font-extrabold text-white" x-text="$store.lang.t('Solidarity · Coming soon', 'Solidarité · Bientôt')"></p>
                             <p class="text-xs font-bold text-white/90" x-text="$store.lang.t('Crowdfund & support each other', 'Financez et soutenez-vous mutuellement')"></p>
                         </div>
                     </div>
@@ -131,13 +131,14 @@
         {{-- ════════════════════════════════════════════════════════════ --}}
         {{-- RIGHT PANEL — Login Form                                     --}}
         {{-- ════════════════════════════════════════════════════════════ --}}
-        <div class="flex-1 lg:min-h-screen bg-slate-50/50 flex items-center justify-center overflow-y-auto relative">
+        {{-- items-start + my-auto: centred when it fits, scrolls from the top when it doesn't. items-center pushed the top out of reach on short phones. --}}
+        <div class="flex-1 lg:min-h-screen bg-slate-50/50 flex items-start justify-center overflow-y-auto relative">
             {{-- Cameroon Flag Ribbon (desktop only — mobile shows it on the nav) --}}
             <div class="hidden lg:block">
                 <x-cameroon-ribbon size="sm" />
             </div>
 
-            <div class="w-full max-w-md px-5 sm:px-8 py-10 lg:py-6 relative z-10">
+            <div class="w-full max-w-md px-5 sm:px-8 py-10 lg:py-6 my-auto relative z-10">
 
                 {{-- User Icon --}}
                 <div class="flex justify-center mb-5">

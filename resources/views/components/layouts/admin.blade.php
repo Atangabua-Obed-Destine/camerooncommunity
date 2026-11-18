@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    {{-- Echo authorises private channels here (resources/js/bootstrap.js). --}}
+    <meta name="broadcast-auth" content="{{ url('/broadcasting/auth') }}">
     <title>{{ $title ?? 'Admin' }} | {{ $__siteName ?? 'Cameroon Network' }}</title>
     @if($__siteFavicon ?? null)
     <link rel="icon" type="image/png" href="{{ $__siteFavicon }}">

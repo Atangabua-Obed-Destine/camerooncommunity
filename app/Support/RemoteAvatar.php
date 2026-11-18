@@ -9,11 +9,12 @@ use Illuminate\Support\Str;
 /**
  * Copies a remote profile picture (Google sign-in) onto our own disk.
  *
- * Every avatar in the app is rendered as asset('storage/' . $user->avatar), so
- * an absolute URL in that column produces
+ * Avatars used to be rendered as asset('storage/' . $user->avatar), so an
+ * absolute URL in that column produced
  * https://ourdomain/storage/https://lh3.googleusercontent.com/... and a 404.
- * Rather than teach 30+ call sites about two kinds of avatar, the column only
- * ever holds a path on the public disk.
+ * StorageUrl::for() now copes with both, but the column should still only
+ * hold a path on the public disk: Google's URLs expire, and they tell Google
+ * who is looking at whose profile.
  */
 class RemoteAvatar
 {

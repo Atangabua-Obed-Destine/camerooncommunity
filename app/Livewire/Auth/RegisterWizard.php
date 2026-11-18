@@ -3,15 +3,13 @@
 namespace App\Livewire\Auth;
 
 use App\Enums\Language;
-use App\Models\PlatformSetting;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\YardRoom;
 use App\Services\LocationService;
-use Illuminate\Auth\Events\Registered;
+use App\Services\Registration;
+use App\Support\PasswordPolicy;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -93,6 +91,43 @@ class RegisterWizard extends Component
                 ? $google['locale']
                 : 'en';
         }
+
+        // ?step= is in the address, so a link or a reload can land on a step whose
+        // earlier fields were never filled. Those fields' errors only show on their
+        // own step, so step 3 would fail with nothing on screen. Go back to the
+        // first step that isn't complete.
+        $this->step = max(1, min($this->step, $this->totalSteps));
+        for ($earlier = 1; $earlier < $this->step; $earlier++) {
+            if (! $this->stepIsComplete($earlier)) {
+                $this->step = $earlier;
+                break;
+            }
+        }
+    }
+
+    private function stepIsComplete(int $step): bool
+    {
+        $current = $this->step;
+        $this->step = $step;
+        $rules = $this->rules();
+        $this->step = $current;
+
+        return validator($this->all(), $rules)->passes();
+    }
+
+    /** How many founding members a tenant has: its setting, else 20. */
+    public static function foundingCap(?Tenant $tenant): int
+    {
+        return Registration::foundingCap($tenant);
+    }
+
+    /**
+     * Founding seats still free. The review step promised "You could be a
+     * Founding Member" to everyone, long after the seats were gone.
+     */
+    public function foundingSeatsLeft(): int
+    {
+        return Registration::foundingSeatsLeft();
     }
 
     protected function rules(): array
@@ -103,9 +138,9 @@ class RegisterWizard extends Component
                 'current_region' => 'nullable|string|max:100',
             ],
             2 => [
-                'username' => 'required|string|min:2|max:50|regex:/^[a-zA-Z0-9 _-]+$/',
-                'email' => 'required|email|max:255|unique:users,email',
-                'password' => $this->isGoogle ? 'nullable' : 'required|string|min:8|confirmed|regex:/[A-Z]/|regex:/[0-9]/',
+                'username' => Registration::usernameRules(),
+                'email' => Registration::emailRules(),
+                'password' => $this->isGoogle ? 'nullable' : PasswordPolicy::rules(),
                 'phone' => 'nullable|string|max:20',
             ],
             3 => [
@@ -117,11 +152,7 @@ class RegisterWizard extends Component
 
     protected function messages(): array
     {
-        return [
-            'username.regex' => __('Username can only contain letters, numbers, spaces, hyphens and underscores.'),
-            'password.regex' => __('Password must contain at least one uppercase letter and one number.'),
-            'terms.accepted' => __('You must accept the Terms of Service and Privacy Policy.'),
-        ];
+        return Registration::messages();
     }
 
     public function updated(string $property): void
@@ -187,25 +218,9 @@ class RegisterWizard extends Component
         $this->current_lng = $lng;
         $this->current_country = $country;
 
-        $region = trim($region);
-        $city = trim($city);
-
-        // Normalize UK regions to ITL1 (e.g. "England" / "Greater London"
-        // → "London") so the user sees the same value that will be saved.
-        if (in_array($country, ['United Kingdom', 'UK', 'Great Britain'], true)) {
-            $valid = config('cameroon.seeded_regions.GB', []);
-            $cityMap = config('cameroon.gb_city_to_region', []);
-            $aliasMap = config('cameroon.gb_region_aliases', []);
-
-            // Prefer city lookup — geo providers return broad regions like
-            // "England" for any English city, so the city is more accurate.
-            if ($city && isset($cityMap[Str::lower($city)])) {
-                $region = $cityMap[Str::lower($city)];
-            } elseif ($region && ! in_array($region, $valid, true)) {
-                $key = Str::lower($region);
-                $region = $cityMap[$key] ?? ($aliasMap[$key] ?? $region);
-            }
-        }
+        // Normalised exactly as registration will save it, so the locked
+        // field shows what will be saved (the app asks the same method).
+        $region = app(LocationService::class)->signupRegion($country, $region, $city, $lat, $lng);
 
         $this->current_region = $region;
         $this->gps_detected = true;
@@ -224,9 +239,7 @@ class RegisterWizard extends Component
         $countryRooms = 0;
 
         if ($this->current_country) {
-            $countryUsers = User::withoutGlobalScopes()
-                ->where('current_country', $this->current_country)
-                ->count();
+            $countryUsers = Registration::countryMemberCount($this->current_country);
             $countryRooms = YardRoom::where('country', $this->current_country)
                 ->where('is_active', true)
                 ->count();
@@ -349,98 +362,28 @@ class RegisterWizard extends Component
             'current_country' => 'required|string|max:100',
             'username' => 'required|string|min:2|max:50|regex:/^[a-zA-Z0-9 _-]+$/',
             'email' => 'required|email|max:255|unique:users,email',
-            'password' => $this->isGoogle ? 'nullable' : 'required|string|min:8|confirmed|regex:/[A-Z]/|regex:/[0-9]/',
+            'password' => $this->isGoogle ? 'nullable' : PasswordPolicy::rules(),
             'country_of_origin' => 'required|string|max:100',
             'language_pref' => 'required|in:en,fr',
         ]);
 
-        // Generate unique username: join words, lowercase, append a hyphen
-        // and 5 random alphanumeric chars (guaranteed mix of letters/digits)
-        $baseUsername = strtolower(preg_replace('/\s+/', '', trim($this->username)));
-        $suffix = chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122)); // e.g. a3k7b
-        $finalUsername = $baseUsername . '-' . $suffix;
-
-        // Ensure uniqueness (extremely unlikely collision but be safe)
-        while (User::withoutGlobalScopes()->where('username', $finalUsername)->exists()) {
-            $suffix = chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122)) . rand(0, 9) . chr(rand(97, 122));
-            $finalUsername = $baseUsername . '-' . $suffix;
-        }
-
-        $tenant = Tenant::first();
-
-        // Normalize the location BEFORE creating the user so that UK regions
-        // like "England" are mapped to a valid ITL1 region (London, Scotland,
-        // ...) using city name + coordinates. This ensures regional rooms are
-        // suggested correctly on first yard visit.
-        $normalizedRegion = $this->current_region ?: null;
-        if (in_array($this->current_country, ['United Kingdom', 'UK', 'Great Britain'], true)) {
-            try {
-                $svc = app(LocationService::class);
-                $tmpUser = new User([
-                    'tenant_id' => $tenant->id,
-                    'current_country' => $this->current_country,
-                    'current_region' => $this->current_region ?: null,
-                ]);
-                $tmpUser->saveQuietly();
-                $svc->handleUserLocation(
-                    $tmpUser,
-                    $this->current_country,
-                    '',
-                    $this->current_region ?: null,
-                    $this->current_lat,
-                    $this->current_lng,
-                );
-                $tmpUser->refresh();
-                $normalizedRegion = $tmpUser->current_region;
-                $tmpUser->delete();
-            } catch (\Throwable $e) {
-                logger()->warning('Register UK normalization failed: ' . $e->getMessage());
-            }
-        }
-
-        $user = User::withoutGlobalScopes()->create([
-            'tenant_id' => $tenant->id,
-            'uuid' => Str::uuid(),
-            'name' => trim($this->username),
-            'username' => $finalUsername,
+        $registration = app(Registration::class);
+        $user = $registration->register([
+            'username' => $this->username,
             'email' => $this->email,
-            'password' => $this->isGoogle ? null : Hash::make($this->password),
+            'password' => $this->isGoogle ? null : $this->password,
             'google_id' => $this->isGoogle ? ($this->googleId ?: null) : null,
-            'avatar' => $this->isGoogle && $this->googleAvatar ? $this->googleAvatar : null,
-            'phone' => $this->phone ?: null,
+            'avatar' => $this->isGoogle ? ($this->googleAvatar ?: null) : null,
+            'phone' => $this->phone,
             'country_of_origin' => $this->country_of_origin,
-            'home_region' => $this->home_region ?: null,
-            'home_city' => $this->home_city ?: null,
+            'home_region' => $this->home_region,
+            'home_city' => $this->home_city,
             'language_pref' => $this->language_pref,
             'current_country' => $this->current_country,
-            'current_region' => $normalizedRegion,
+            'current_region' => $this->current_region,
             'current_lat' => $this->current_lat,
             'current_lng' => $this->current_lng,
-            // Treat the location chosen during signup as the user's active
-            // location. This ensures National/Regional room suggestions are
-            // available immediately on first yard visit, without waiting for
-            // the IP/GPS auto-detection cycle to bootstrap them.
-            'active_country' => $this->current_country,
-            'active_region' => $normalizedRegion,
-            'location_updated_at' => now(),
-            'is_active' => true,
         ]);
-
-        // Check founding member status
-        $foundingCap = (int) ($tenant->settings['founding_member_cap'] ?? 20);
-        $totalUsers = User::withoutGlobalScopes()->where('tenant_id', $tenant->id)->count();
-        if ($totalUsers <= $foundingCap) {
-            $user->update(['is_founding_member' => true]);
-        }
-
-        // If admin has disabled email verification, auto-mark the user as verified
-        // so the `verified` middleware on protected routes does not block them.
-        // Google sign-ups always count as verified because Google has already
-        // confirmed the email address on our behalf.
-        $requireVerification = (string) PlatformSetting::getValue('require_email_verification', '0') === '1';
-        if ($this->isGoogle || ! $requireVerification) {
-            $user->forceFill(['email_verified_at' => now()])->save();
-        }
 
         // Clear the Google sign-up stash so a refresh of /register doesn't
         // re-prefill another visitor's session with stale data.
@@ -450,28 +393,9 @@ class RegisterWizard extends Component
 
         Auth::login($user, remember: true);
 
-        // Seed Kamer chat with a personalised AI welcome message
-        try {
-            $welcome = app(\App\Services\AIService::class)->welcomeMessage(
-                $user->name,
-                $this->current_country ?? 'abroad',
-                $this->language_pref ?? 'en',
-            );
-            if ($welcome) {
-                session(['kamer_chat_history' => [
-                    ['role' => 'assistant', 'content' => $welcome],
-                ]]);
-            }
-        } catch (\Throwable $e) {
-            logger()->warning('Kamer welcome message failed: ' . $e->getMessage());
-        }
-
-        try {
-            if ($requireVerification && ! $this->isGoogle) {
-                event(new Registered($user));
-            }
-        } catch (\Throwable $e) {
-            logger()->warning('Registration event failed: ' . $e->getMessage());
+        // Kamer's first message, shown on /welcome.
+        if ($welcome = $registration->welcomeMessage($user)) {
+            session(['kamer_chat_history' => [['role' => 'assistant', 'content' => $welcome]]]);
         }
 
         $this->redirect(route('onboarding'), navigate: true);

@@ -28,7 +28,7 @@
                 <div class="h-40 sm:h-52 relative overflow-hidden
                     @if(!$user->cover_photo) bg-gradient-to-r from-cm-green via-cm-green/80 to-cm-yellow @endif">
                     @if($user->cover_photo)
-                        <img src="{{ asset('storage/' . $user->cover_photo) }}" alt=""
+                        <img src="{{ \App\Support\StorageUrl::for($user->cover_photo) }}" alt=""
                              class="w-full h-full object-cover">
                         {{-- Subtle dark gradient at bottom so the avatar/name area below is readable --}}
                         <div class="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/30 to-transparent pointer-events-none"></div>
@@ -86,9 +86,9 @@
                     <button @click="showAvatarMenu = !showAvatarMenu"
                             class="w-24 h-24 rounded-full border-4 border-white shadow-lg overflow-hidden flex items-center justify-center text-3xl font-bold text-cm-green bg-cm-green/10 relative group cursor-pointer">
                         @if($user->avatar)
-                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
+                            <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="" class="w-full h-full object-cover">
                         @else
-                            {{ strtoupper(substr($user->name, 0, 2)) }}
+                            {{ mb_strtoupper(mb_substr($user->name, 0, 2)) }}
                         @endif
                         {{-- Camera overlay on hover --}}
                         <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -141,14 +141,14 @@
                         @if($user->home_region)
                             <span>🏠 {{ $user->home_region }}</span>
                         @endif
-                        <span>📅 <span x-text="$store.lang.t('Joined', 'Rejoint')"></span> {{ $user->created_at->format('M Y') }}</span>
+                        <span>📅 <span x-text="$store.lang.t('Joined', 'Rejoint')"></span> {{ $user->created_at->translatedFormat('M Y') }}</span>
                     </div>
                 </div>
             </div>
         </div>
 
         {{-- Stats Cards --}}
-        <div class="grid grid-cols-3 gap-3">
+        <div @class(['grid gap-3', config('cameroon.modules.solidarity_live') ? 'grid-cols-3' : 'grid-cols-2'])>
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ number_format($totalPoints) }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="$store.lang.t('Points', 'Points')"></p>
@@ -157,10 +157,13 @@
                 <p class="text-2xl font-bold text-cm-green">{{ $roomsJoined }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="$store.lang.t('Rooms', 'Salons')"></p>
             </div>
+            {{-- Solidarity isn't live: its count is always 0. --}}
+            @if(config('cameroon.modules.solidarity_live'))
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 text-center">
                 <p class="text-2xl font-bold text-cm-green">{{ $contributions }}</p>
                 <p class="text-xs text-slate-500 mt-0.5" x-text="$store.lang.t('Contributions', 'Contributions')"></p>
             </div>
+            @endif
         </div>
 
         {{-- Badges --}}
@@ -203,13 +206,13 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1" x-text="$store.lang.t('Language', 'Langue')"></label>
                     <div class="flex gap-3">
                         <label class="flex-1 cursor-pointer">
-                            <input type="radio" name="language_pref" value="en" {{ $user->language_pref === 'en' ? 'checked' : '' }} class="peer sr-only">
+                            <input type="radio" name="language_pref" value="en" {{ $user->language_pref?->value === 'en' ? 'checked' : '' }} class="peer sr-only">
                             <div class="rounded-xl border-2 border-slate-200 px-4 py-3 text-center text-sm peer-checked:border-cm-green peer-checked:bg-cm-green/5 transition-colors">
                                 🇬🇧 English
                             </div>
                         </label>
                         <label class="flex-1 cursor-pointer">
-                            <input type="radio" name="language_pref" value="fr" {{ $user->language_pref === 'fr' ? 'checked' : '' }} class="peer sr-only">
+                            <input type="radio" name="language_pref" value="fr" {{ $user->language_pref?->value === 'fr' ? 'checked' : '' }} class="peer sr-only">
                             <div class="rounded-xl border-2 border-slate-200 px-4 py-3 text-center text-sm peer-checked:border-cm-green peer-checked:bg-cm-green/5 transition-colors">
                                 🇫🇷 Français
                             </div>
@@ -283,6 +286,8 @@
                     <svg class="w-4 h-4 text-red-400 group-hover:text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                 </button>
             </form>
+
+            @include('partials.delete-account')
         </div>
         </div>
         </main>

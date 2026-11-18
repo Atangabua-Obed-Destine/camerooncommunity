@@ -51,7 +51,8 @@
     </div>
 </div>
 
-<div x-show="show && isMobile" x-cloak x-transition.opacity
+{{-- Hidden while Kamer is open: it sat over Kamer's message box (z 70 over 50). --}}
+<div x-show="show && isMobile && ! kamerOpen" x-cloak x-transition.opacity
      style="position:fixed; left:0; right:0; bottom:0; z-index:70; display:flex; justify-content:center; padding:12px; pointer-events:none;">
 
     <div style="pointer-events:auto; width:100%; max-width:460px; background:#ffffff; border-radius:16px;
@@ -172,6 +173,9 @@
             // The "it is already installed" notice.
             alreadyInstalled: false,
 
+            // Kamer AI is open (it sets this class on <html>); the banner waits.
+            kamerOpen: false,
+
             // Set once the browser confirms the app is on this device. Kept
             // apart from the getter below, which only says whether THIS window
             // is the installed app.
@@ -210,6 +214,10 @@
             },
 
             init() {
+                new MutationObserver(() => {
+                    this.kamerOpen = document.documentElement.classList.contains('cn-kamer-open');
+                }).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
                 // Keep the phone check live, so rotating or resizing shows/hides it
                 // without a reload.
                 const mq = window.matchMedia('(max-width: 767px)');

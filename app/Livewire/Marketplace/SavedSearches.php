@@ -3,7 +3,7 @@
 namespace App\Livewire\Marketplace;
 
 use App\Models\MarketplaceSavedSearch;
-use App\Support\MarketplaceQueryBuilder;
+use App\Services\Market\SavedSearchService;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -21,33 +21,16 @@ class SavedSearches extends Component
      * All saved searches for the current user, decorated with:
      *   - matches_url  : full /marketplace URL that reproduces the search
      *   - summary      : human readable filter blurb (locale-aware)
-     *   - new_matches  : count of listings published since last_notified_at
+     *   - new_matches  : count of listings published since the member last looked (last_seen_at)
      */
     #[Computed]
     public function searches()
     {
         $user = auth()->user();
-        if (! $user) { return collect(); }
-
-        $rows = MarketplaceSavedSearch::where('user_id', $user->id)
-            ->orderByDesc('updated_at')
-            ->get();
-
-        $locale = app()->getLocale();
-        return $rows->map(function (MarketplaceSavedSearch $s) use ($locale) {
-            $filters = is_array($s->filters) ? $s->filters : [];
-            $since = $s->last_notified_at ?? $s->created_at;
-            $newMatches = MarketplaceQueryBuilder::build($filters)
-                ->where('published_at', '>', $since)
-                ->count();
-            $s->setAttribute('matches_url', MarketplaceQueryBuilder::toUrl($filters));
-            $s->setAttribute('summary', MarketplaceQueryBuilder::summarize($filters, $locale));
-            $s->setAttribute('new_matches', $newMatches);
-            return $s;
-        });
+        return $user ? $this->service()->list($user, app()->getLocale()) : collect();
     }
 
-    /** Total "new since last notified" — surfaced as a sidebar badge. */
+    /** Total "new since last seen", surfaced as a sidebar badge. */
     #[Computed]
     public function totalNewMatches(): int
     {
@@ -74,12 +57,10 @@ class SavedSearches extends Component
         $s = $this->ownedSearch($this->editingId);
         if (! $s) { return; }
 
-        $name = trim($this->editName);
-        if ($name === '') {
+        if (! $this->service()->rename($s, $this->editName)) {
             $this->dispatch('toast', type: 'error', message: __('Name cannot be empty'));
             return;
         }
-        $s->update(['name' => mb_substr($name, 0, 120)]);
         $this->cancelRename();
         unset($this->searches);
         $this->dispatch('toast', type: 'success', message: __('Renamed'));
@@ -89,7 +70,7 @@ class SavedSearches extends Component
     {
         $s = $this->ownedSearch($id);
         if (! $s) { return; }
-        $s->update(['notify_email' => ! $s->notify_email]);
+        $this->service()->setNotify($s, 'email', ! $s->notify_email);
         unset($this->searches);
     }
 
@@ -97,7 +78,7 @@ class SavedSearches extends Component
     {
         $s = $this->ownedSearch($id);
         if (! $s) { return; }
-        $s->update(['notify_push' => ! $s->notify_push]);
+        $this->service()->setNotify($s, 'push', ! $s->notify_push);
         unset($this->searches);
     }
 
@@ -105,7 +86,7 @@ class SavedSearches extends Component
     {
         $s = $this->ownedSearch($id);
         if (! $s) { return; }
-        $s->delete();
+        $this->service()->delete($s);
         unset($this->searches, $this->totalNewMatches);
         $this->dispatch('toast', type: 'success', message: __('Saved search deleted'));
         $this->dispatch('savedSearchesUpdated');
@@ -116,15 +97,14 @@ class SavedSearches extends Component
     {
         $s = $this->ownedSearch($id);
         if (! $s) { return; }
-        $s->update(['last_notified_at' => now()]);
+        $this->service()->markSeen($s);
         unset($this->searches, $this->totalNewMatches);
         $this->dispatch('savedSearchesUpdated');
     }
 
     public function markAllSeen(): void
     {
-        MarketplaceSavedSearch::where('user_id', auth()->id())
-            ->update(['last_notified_at' => now()]);
+        $this->service()->markAllSeen(auth()->user());
         unset($this->searches, $this->totalNewMatches);
         $this->dispatch('toast', type: 'success', message: __('All caught up'));
         $this->dispatch('savedSearchesUpdated');
@@ -138,9 +118,12 @@ class SavedSearches extends Component
 
     protected function ownedSearch(int $id): ?MarketplaceSavedSearch
     {
-        return MarketplaceSavedSearch::where('id', $id)
-            ->where('user_id', auth()->id())
-            ->first();
+        return auth()->user() ? $this->service()->owned(auth()->user(), $id) : null;
+    }
+
+    private function service(): SavedSearchService
+    {
+        return app(SavedSearchService::class);
     }
 
     public function render()

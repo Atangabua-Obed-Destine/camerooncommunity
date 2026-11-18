@@ -12,7 +12,11 @@
     @endif
 
     {{-- Slide-over Panel --}}
+    {{-- Back and Escape close it: on a phone it covers the whole screen. --}}
     <div x-data="{ show: @entangle('isOpen') }"
+         x-overlay="show"
+         x-effect="document.documentElement.classList.toggle('cn-kamer-open', show)"
+         @keydown.escape.window="if (show) show = false"
          x-show="show"
          x-transition:enter="transition ease-out duration-300"
          x-transition:enter-start="translate-x-full"
@@ -94,11 +98,7 @@
         @if(count($messages) <= 2)
         <div class="px-4 pb-2 shrink-0">
             <div class="flex flex-wrap gap-2">
-                @php
-                    $suggestions = auth()->user()?->language_pref === 'fr'
-                        ? ['Que puis-je faire ici ?', 'Comment fonctionne la Solidarité ?', 'Aide-moi à trouver des Camerounais près de moi']
-                        : ['What can I do here?', 'How does Solidarity work?', 'Help me find Cameroonians near me'];
-                @endphp
+                @php($suggestions = app(\App\Services\KamerConversation::class)->suggestions($this->lang()))
                 @foreach($suggestions as $s)
                 <button wire:click="sendSuggestion(@js($s))"
                         wire:loading.attr="disabled"
@@ -112,12 +112,13 @@
 
         {{-- Input --}}
         <div class="p-3 border-t border-slate-200 bg-white shrink-0">
-            <form wire:submit.prevent="send" class="flex items-end gap-2">
+            <form wire:submit.prevent="send" class="flex items-end gap-2"
+                  x-data @kamer-thinking.window="$wire.reply()">
                 <div class="flex-1 relative">
                     <textarea wire:model="input"
                               rows="1"
                               class="w-full rounded-xl border-slate-200 bg-slate-50 px-4 py-2.5 text-sm resize-none focus:ring-cm-green focus:border-cm-green focus:bg-white transition-colors"
-                              placeholder="{{ auth()->user()?->language_pref === 'fr' ? 'Demandez à Kamer...' : 'Ask Kamer anything...' }}"
+                              placeholder="{{ $this->lang() === 'fr' ? 'Demandez à Kamer...' : 'Ask Kamer anything...' }}"
                               @keydown.enter.prevent="if (!event.shiftKey) { $wire.send() }"
                               x-data
                               x-on:input="$el.style.height = 'auto'; $el.style.height = Math.min($el.scrollHeight, 120) + 'px'"
@@ -125,7 +126,8 @@
                 </div>
                 <button type="submit"
                         class="w-10 h-10 rounded-xl bg-cm-green text-white flex items-center justify-center hover:bg-cm-green/90 transition-colors shrink-0 disabled:opacity-50"
-                        {{ $isLoading || trim($input) === '' ? 'disabled' : '' }}>
+                        {{-- Follows the box as you type: the server only re-renders on send. --}}
+                        :disabled="$wire.isLoading || ! ($wire.input || '').trim()">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m0 0l-7 7m7-7l7 7" transform="rotate(90 12 12)"/>
                     </svg>

@@ -196,6 +196,11 @@ class MarketplaceListing extends Model
         if ($priceType === ListingPriceType::Contact) {
             return $lang === 'fr' ? 'Prix sur demande' : 'Contact for price';
         }
+        // A draft not priced yet (publishing requires one): not "0 XAF",
+        // which reads as giving it away.
+        if ($this->price === null || $this->price === '') {
+            return $lang === 'fr' ? 'Prix non défini' : 'No price yet';
+        }
         $currency = $this->currency ?: 'XAF';
         $amount = number_format((float) $this->price, 0, '.', ',');
         $base = "$amount $currency";

@@ -8,6 +8,7 @@ use App\Models\MarketplaceFavorite;
 use App\Models\MarketplaceListing;
 use App\Models\MarketplaceListingView;
 use App\Models\MarketplaceOffer;
+use App\Services\OfferService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
@@ -65,43 +66,17 @@ class ListingDetail extends Component
     /** FB-style prefilled first message, greeting the seller by first name. */
     protected function defaultInquiry(): string
     {
-        $first = trim((string) \Illuminate\Support\Str::of($this->listing->seller?->name ?? '')->before(' '));
-        $first = $first !== '' ? ' ' . $first : '';
-
-        return app()->getLocale() === 'fr'
-            ? trim("Bonjour{$first}, cet article est-il toujours disponible ?")
-            : trim("Hi{$first}, is this still available?");
+        return app(\App\Services\Market\ListingService::class)->defaultInquiry($this->listing);
     }
 
     protected function recordView(): void
     {
-        $sessionHash = hash('sha256', request()->ip() . '|' . request()->userAgent());
-        $alreadyToday = MarketplaceListingView::query()
-            ->where('listing_id', $this->listing->id)
-            ->where('session_hash', $sessionHash)
-            ->whereDate('viewed_at', today())
-            ->exists();
-
-        if ($alreadyToday) {
-            return;
-        }
-
-        $country = Auth::user()?->current_country;
-        $region = Auth::user()?->current_region;
-
-        MarketplaceListingView::create([
-            'listing_id' => $this->listing->id,
-            'user_id' => Auth::id(),
-            'session_hash' => $sessionHash,
-            'country' => $country ? mb_substr($country, 0, 4) : null,
-            'region' => $region ? mb_substr($region, 0, 80) : null,
-            'source' => mb_substr((string) request()->query('src', 'direct'), 0, 40),
-            'viewed_at' => now(),
-        ]);
-
-        DB::table('marketplace_listings')->where('id', $this->listing->id)->increment('views_count');
-        $this->listing->refresh();
-        $this->listing->recomputeRankScore();
+        app(\App\Services\Market\ListingService::class)->recordView(
+            $this->listing,
+            Auth::user(),
+            hash('sha256', request()->ip() . '|' . request()->userAgent()),
+            (string) request()->query('src', 'direct'),
+        );
     }
 
     public function toggleFavorite(): void
@@ -110,34 +85,14 @@ class ListingDetail extends Component
             $this->redirectRoute('login');
             return;
         }
-        $userId = Auth::id();
-        $fav = MarketplaceFavorite::where('listing_id', $this->listing->id)
-            ->where('user_id', $userId)
-            ->first();
-
-        if ($fav) {
-            $fav->delete();
-            DB::table('marketplace_listings')->where('id', $this->listing->id)->decrement('favorites_count');
-        } else {
-            MarketplaceFavorite::create([
-                'listing_id' => $this->listing->id,
-                'user_id' => $userId,
-            ]);
-            DB::table('marketplace_listings')->where('id', $this->listing->id)->increment('favorites_count');
-        }
+        app(\App\Services\Market\ListingService::class)->toggleFavorite($this->listing, Auth::user());
         $this->listing->refresh();
-        $this->listing->recomputeRankScore();
         $this->dispatch('favorite-toggled');
     }
 
     public function isFavorited(): bool
     {
-        if (! Auth::check()) {
-            return false;
-        }
-        return MarketplaceFavorite::where('listing_id', $this->listing->id)
-            ->where('user_id', Auth::id())
-            ->exists();
+        return app(\App\Services\Market\ListingService::class)->isFavorited($this->listing, Auth::user());
     }
 
     public function setMedia(int $idx): void
@@ -150,19 +105,7 @@ class ListingDetail extends Component
     #[Computed]
     public function similarListings()
     {
-        return MarketplaceListing::query()
-            ->active()
-            ->where('id', '!=', $this->listing->id)
-            ->where(function ($q) {
-                $q->where('category_id', $this->listing->category_id);
-                if ($this->listing->region) {
-                    $q->orWhere('region', $this->listing->region);
-                }
-            })
-            ->with(['media' => fn ($q) => $q->orderBy('position')->limit(1), 'category'])
-            ->orderByDesc('rank_score')
-            ->limit(8)
-            ->get();
+        return app(\App\Services\Market\ListingService::class)->similar($this->listing, Auth::user());
     }
 
     #[Computed]
@@ -184,6 +127,7 @@ class ListingDetail extends Component
         if (! Auth::check() || ! $this->listing->isOwnedBy(Auth::id())) {
             return collect();
         }
+        // Pending ones are the seller's to answer; countered ones show as waiting.
         return MarketplaceOffer::where('listing_id', $this->listing->id)
             ->whereIn('status', [OfferStatus::Pending->value, OfferStatus::Countered->value])
             ->with('buyer')
@@ -207,11 +151,9 @@ class ListingDetail extends Component
     #[Computed]
     public function canLeaveReview(): bool
     {
-        if (! Auth::check()) { return false; }
-        if (Auth::id() === (int) $this->listing->user_id) { return false; }
-        $isSold = ($this->listing->status?->value ?? $this->listing->status) === 'sold';
-        if (! $isSold) { return false; }
-        return (int) $this->listing->buyer_id === Auth::id();
+        // The review page's own rule, which also lets in the buyer of one of
+        // several units (the listing stays up, so it never reads as sold).
+        return app(\App\Services\Market\ReviewService::class)->canReview($this->listing, Auth::user());
     }
 
     #[Computed]
@@ -255,35 +197,42 @@ class ListingDetail extends Component
         }
         \Illuminate\Support\Facades\RateLimiter::hit($rlKey, 3600);
 
-        // Withdraw any existing pending offer from this buyer.
-        MarketplaceOffer::where('listing_id', $this->listing->id)
-            ->where('buyer_id', Auth::id())
-            ->where('status', OfferStatus::Pending->value)
-            ->update(['status' => OfferStatus::Withdrawn->value, 'responded_at' => now()]);
-
-        MarketplaceOffer::create([
-            'listing_id' => $this->listing->id,
-            'buyer_id'   => Auth::id(),
-            'seller_id'  => $this->listing->user_id,
-            'amount'     => (float) $this->offerAmount,
-            'currency'   => $this->listing->currency,
-            'message'    => $this->offerMessage ?: null,
-            'status'     => OfferStatus::Pending->value,
-        ]);
+        app(OfferService::class)->make($this->listing, Auth::user(), (float) $this->offerAmount, $this->offerMessage);
 
         $this->showOfferModal = false;
         $this->dispatch('toast', message: __('Offer sent ✓'), type: 'success');
         unset($this->myOffer);
     }
 
-    public function withdrawOffer(int $offerId): void
+    public function withdrawOffer(int $offerId, OfferService $offers): void
     {
-        $offer = MarketplaceOffer::where('id', $offerId)
+        $this->answered($offers->withdraw($this->buyerOffer($offerId), Auth::user()), __('Offer withdrawn.'));
+    }
+
+    public function acceptCounter(int $offerId, OfferService $offers): void
+    {
+        $this->answered($offers->acceptCounter($this->buyerOffer($offerId), Auth::user()), __('Counter-offer accepted.'));
+    }
+
+    public function declineCounter(int $offerId, OfferService $offers): void
+    {
+        $this->answered($offers->declineCounter($this->buyerOffer($offerId), Auth::user()), __('Counter-offer declined.'));
+    }
+
+    protected function buyerOffer(int $id): MarketplaceOffer
+    {
+        return MarketplaceOffer::where('id', $id)
+            ->where('listing_id', $this->listing->id)
             ->where('buyer_id', Auth::id())
-            ->whereIn('status', [OfferStatus::Pending->value, OfferStatus::Countered->value])
             ->firstOrFail();
-        $offer->update(['status' => OfferStatus::Withdrawn->value, 'responded_at' => now()]);
-        unset($this->myOffer);
+    }
+
+    private function answered(bool $done, string $message): void
+    {
+        unset($this->myOffer, $this->pendingOffers);
+        $done
+            ? $this->dispatch('toast', message: $message, type: 'success')
+            : $this->dispatch('toast', message: __('This offer has already been answered.'), type: 'error');
     }
 
     /**
@@ -298,48 +247,30 @@ class ListingDetail extends Component
             $this->redirectRoute('login');
             return;
         }
-        if ($this->listing->isOwnedBy($buyer->id)) {
-            return;
-        }
-        $seller = $this->listing->seller;
-        if (! $seller) {
-            return;
-        }
 
         $text = trim($this->inquiryMessage);
-        if ($text === '') {
+        if ($text === '' || $this->listing->isOwnedBy($buyer->id) || ! $this->listing->seller) {
             return;
         }
 
-        // Rate-limit: 20 inquiries per user per hour to deter spam.
-        $rlKey = 'mp:inquiry:' . $buyer->id;
-        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rlKey, 20)) {
-            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($rlKey);
-            $this->dispatch('toast', type: 'error',
-                message: __('Too many messages. Try again in :n minutes.', ['n' => (int) ceil($seconds / 60)]));
-            return;
-        }
-
-        $svc = app(\App\Services\MarketplaceChatService::class);
-        $result = $svc->openConversation($buyer, $seller, $this->listing);
+        $result = app(\App\Services\Market\ListingService::class)->inquire($this->listing, $buyer, $text);
 
         if (isset($result['error'])) {
-            $msg = $result['error'] === 'blocked'
-                ? __('You can no longer message this user.')
-                : __('Could not open the conversation.');
+            $msg = match ($result['error']) {
+                'rate_limited' => __('Too many messages. Try again in :n minutes.', ['n' => $result['retry_minutes'] ?? 60]),
+                'blocked' => __('You can no longer message this user.'),
+                default => __('Could not open the conversation.'),
+            };
             $this->dispatch('toast', type: 'error', message: $msg);
             return;
         }
 
-        $svc->postMessage($result['room'], $buyer, $text);
-        \Illuminate\Support\Facades\RateLimiter::hit($rlKey, 3600);
-
         // Open the floating dock on this conversation so the buyer can keep chatting.
-        $this->dispatch('open-gomarket-chat', sellerId: $seller->id, listingId: $this->listing->id);
+        $this->dispatch('open-gomarket-chat', sellerId: $this->listing->seller->id, listingId: $this->listing->id);
         $this->dispatch('toast', type: 'success', message: __('Message sent ✓'));
 
         $this->inquiryMessage = $this->defaultInquiry();
-        unset($this->hasMessaged); // Clear cache
+        unset($this->hasMessaged);
     }
 
     public function messageAgain(): void
@@ -364,37 +295,17 @@ class ListingDetail extends Component
     #[Computed]
     public function hasMessaged(): bool
     {
-        if (! Auth::check() || $this->listing->isOwnedBy(Auth::id())) {
-            return false;
-        }
-
-        return \App\Models\YardMessage::where('user_id', Auth::id())
-            ->where('message_type', \App\Enums\MessageType::ShareCard->value)
-            ->where('shareable_type', MarketplaceListing::class)
-            ->where('shareable_id', $this->listing->id)
-            ->exists();
+        return app(\App\Services\Market\ListingService::class)->hasMessaged($this->listing, Auth::user());
     }
 
-    public function acceptOffer(int $offerId): void
+    public function acceptOffer(int $offerId, OfferService $offers): void
     {
-        $offer = $this->ownedOffer($offerId);
-        $offer->update(['status' => OfferStatus::Accepted->value, 'responded_at' => now()]);
-
-        // Auto-reject all other open offers on this listing.
-        MarketplaceOffer::where('listing_id', $this->listing->id)
-            ->where('id', '!=', $offerId)
-            ->whereIn('status', [OfferStatus::Pending->value, OfferStatus::Countered->value])
-            ->update(['status' => OfferStatus::Rejected->value, 'responded_at' => now()]);
-
-        unset($this->pendingOffers);
-        $this->dispatch('toast', message: __('Offer accepted ✓'), type: 'success');
+        $this->answered($offers->accept($this->ownedOffer($offerId), Auth::user()), __('Offer accepted ✓'));
     }
 
-    public function rejectOffer(int $offerId): void
+    public function rejectOffer(int $offerId, OfferService $offers): void
     {
-        $offer = $this->ownedOffer($offerId);
-        $offer->update(['status' => OfferStatus::Rejected->value, 'responded_at' => now()]);
-        unset($this->pendingOffers);
+        $this->answered($offers->reject($this->ownedOffer($offerId), Auth::user()), __('Offer rejected.'));
     }
 
     public function startCounter(int $offerId): void
@@ -404,29 +315,15 @@ class ListingDetail extends Component
         $this->counterAmount = (string) (int) $offer->amount;
     }
 
-    public function submitCounter(): void
+    public function submitCounter(OfferService $offers): void
     {
         $this->validate(['counterAmount' => 'required|numeric|min:1']);
         if (! $this->counteringOfferId) { return; }
 
-        $original = $this->ownedOffer($this->counteringOfferId);
-        $original->update(['status' => OfferStatus::Countered->value, 'responded_at' => now()]);
-
-        MarketplaceOffer::create([
-            'listing_id'      => $this->listing->id,
-            'buyer_id'        => $original->buyer_id,
-            'seller_id'       => Auth::id(),
-            'amount'          => (float) $this->counterAmount,
-            'currency'        => $this->listing->currency,
-            'status'          => OfferStatus::Countered->value,
-            'parent_offer_id' => $original->id,
-            'counter_amount'  => (float) $this->counterAmount,
-        ]);
-
+        $done = $offers->counter($this->ownedOffer($this->counteringOfferId), Auth::user(), (float) $this->counterAmount);
         $this->counteringOfferId = null;
         $this->counterAmount = '';
-        unset($this->pendingOffers);
-        $this->dispatch('toast', message: __('Counter-offer sent ✓'), type: 'success');
+        $this->answered($done, __('Counter-offer sent ✓'));
     }
 
     public function cancelCounter(): void
@@ -511,63 +408,26 @@ class ListingDetail extends Component
             return;
         }
 
-        // Block owner reporting themselves.
-        if ($this->listing->isOwnedBy(Auth::id())) {
-            $this->showReportModal = false;
-            return;
-        }
-
-        // Rate-limit: 5 reports per user per hour.
-        $rlKey = 'mp:report:' . Auth::id();
-        if (\Illuminate\Support\Facades\RateLimiter::tooManyAttempts($rlKey, 5)) {
-            $seconds = \Illuminate\Support\Facades\RateLimiter::availableIn($rlKey);
-            $this->dispatch('toast', type: 'error',
-                message: __('Too many reports. Try again in :n minutes.', ['n' => (int) ceil($seconds / 60)]));
-            return;
-        }
-
         $this->validate([
             'reportReason'  => 'required|in:' . collect(\App\Enums\ReportReason::cases())->pluck('value')->implode(','),
             'reportDetails' => 'nullable|string|max:1000',
         ]);
 
-        // One report per user per listing.
-        $exists = \App\Models\Report::query()
-            ->where('reportable_type', MarketplaceListing::class)
-            ->where('reportable_id', $this->listing->id)
-            ->where('reporter_id', Auth::id())
-            ->exists();
+        $error = app(\App\Services\Market\ListingService::class)->report($this->listing, Auth::user(), $this->reportReason, $this->reportDetails);
 
-        if ($exists) {
-            $this->showReportModal = false;
-            $this->dispatch('toast', type: 'info', message: __('You already reported this listing.'));
+        if ($error === 'rate_limited') {
+            $this->dispatch('toast', type: 'error', message: __('Too many reports. Try again in :n minutes.', ['n' => 60]));
             return;
-        }
-
-        \App\Models\Report::create([
-            'reporter_id'     => Auth::id(),
-            'reportable_type' => MarketplaceListing::class,
-            'reportable_id'   => $this->listing->id,
-            'reason'          => $this->reportReason,
-            'description'     => $this->reportDetails ?: null,
-            'status'          => \App\Enums\ReportStatus::Pending,
-        ]);
-
-        \Illuminate\Support\Facades\RateLimiter::hit($rlKey, 3600);
-
-        // Auto-flag listing after 3 distinct reports.
-        $count = \App\Models\Report::query()
-            ->where('reportable_type', MarketplaceListing::class)
-            ->where('reportable_id', $this->listing->id)
-            ->count();
-        if ($count >= 3 && \Illuminate\Support\Facades\Schema::hasColumn('marketplace_listings', 'is_flagged')) {
-            DB::table('marketplace_listings')->where('id', $this->listing->id)->update(['is_flagged' => true]);
         }
 
         $this->showReportModal = false;
         unset($this->hasReported);
-        $this->dispatch('toast', type: 'success',
-            message: __('Thanks, our team will review this listing.'));
+
+        match ($error) {
+            'already_reported' => $this->dispatch('toast', type: 'info', message: __('You already reported this listing.')),
+            null => $this->dispatch('toast', type: 'success', message: __('Thanks, our team will review this listing.')),
+            default => null,
+        };
     }
 
     // ─── Block seller ─────────────────────────────────────────────
@@ -578,25 +438,14 @@ class ListingDetail extends Component
             $this->redirectRoute('login');
             return;
         }
-        $sellerId = (int) $this->listing->user_id;
-        if ($sellerId === Auth::id()) {
+
+        if (! app(\App\Services\Market\ListingService::class)->blockSeller($this->listing, Auth::user())) {
             return;
         }
 
-        $a = min(Auth::id(), $sellerId);
-        $b = max(Auth::id(), $sellerId);
-
-        \App\Models\UserConnection::updateOrCreate(
-            ['user_a_id' => $a, 'user_b_id' => $b],
-            [
-                'status'        => \App\Models\UserConnection::STATUS_BLOCKED,
-                'requested_by'  => Auth::id(),
-                'responded_at'  => now(),
-            ],
-        );
-
         $this->dispatch('toast', type: 'success', message: __('Seller blocked. Their listings will be hidden.'));
-        $this->redirectRoute('marketplace.feed');
+        // marketplace.feed never existed: blocking ended on an error page.
+        $this->redirectRoute('marketplace.index');
     }
 
     // ─── Trust badges (cached on the model side) ─────────────────

@@ -66,6 +66,17 @@ class GoogleAuthController extends Controller
             return $this->loginAndRedirect($existingByGoogle, $avatar);
         }
 
+        // Linking by email, or creating an account from it, needs Google to have
+        // verified that the address belongs to this person. Otherwise anyone
+        // could add someone else's email to a Google account and take theirs.
+        $raw = (array) ($googleUser->user ?? []);
+        $verified = filter_var($raw['email_verified'] ?? $raw['verified_email'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if (! $verified) {
+            return redirect()->route('login')->withErrors([
+                'email' => __('Google did not return an email address. Please use a Google account with a verified email.'),
+            ]);
+        }
+
         // 2) Existing email → link Google account
         $existingByEmail = User::withoutGlobalScopes()->where('email', $email)->first();
         if ($existingByEmail) {

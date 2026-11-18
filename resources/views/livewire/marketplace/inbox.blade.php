@@ -13,7 +13,7 @@
 @endphp
 <div class="min-h-[calc(100vh-96px)] bg-slate-100"
      x-data="{ scrollDown() { $nextTick(() => { const t = $refs.thread; if (t) t.scrollTop = t.scrollHeight; }); } }"
-     x-init="scrollDown()"
+     x-init="scrollDown(); if (window.matchMedia('(min-width: 1024px)').matches) $wire.showingBothPanes()"
      @inbox-scroll.window="scrollDown()">
     <div class="max-w-6xl mx-auto px-2 sm:px-4 py-4">
 
@@ -21,12 +21,12 @@
         @if ($channel)
             <div wire:key="inbox-echo-{{ $activeId }}"
                  x-data="{ ch: @js($channel), c: null, h: null,
-                    init() { if (!window.Echo || !this.ch) return; this.c = window.Echo.channel(this.ch); this.h = () => $wire.dispatch('inbox-refresh'); this.c.listen('.MessageSent', this.h); },
+                    init() { if (!window.Echo || !this.ch) return; this.c = window.Echo.private(this.ch); this.h = () => $wire.dispatch('inbox-refresh'); this.c.listen('.MessageSent', this.h); },
                     destroy() { try { this.c?.stopListening('.MessageSent', this.h); } catch(e){} } }"></div>
         @endif
 
         <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 overflow-hidden lg:grid lg:grid-cols-[340px_1fr]"
-             style="height: calc(100vh - 150px); min-height: 480px;">
+             style="height: calc(100vh - 150px); height: calc(100dvh - 150px); min-height: 480px;">
 
             {{-- ─── Conversation list ─── --}}
             <aside class="flex-col border-r border-slate-200 min-h-0 {{ $this->threadOpen ? 'hidden lg:flex' : 'flex' }}">
@@ -60,7 +60,7 @@
                                 @if ($c->listing && $c->listing->coverUrl())
                                     <img src="{{ $c->listing->coverUrl() }}" alt="" class="w-full h-full object-cover">
                                 @elseif ($c->partner?->avatar)
-                                    <img src="{{ asset('storage/' . $c->partner->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
+                                    <img src="{{ \App\Support\StorageUrl::for($c->partner->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
                                 @else
                                     <span class="text-lg">🛍️</span>
                                 @endif
@@ -101,7 +101,7 @@
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
                             </button>
                             <div class="w-9 h-9 rounded-full bg-cm-green/15 grid place-items-center text-cm-green font-bold overflow-hidden shrink-0">
-                                @if ($aPartner?->avatar)<img src="{{ asset('storage/' . $aPartner->avatar) }}" alt="" class="w-full h-full object-cover">@else{{ strtoupper(mb_substr($pName,0,1)) }}@endif
+                                @if ($aPartner?->avatar)<img src="{{ \App\Support\StorageUrl::for($aPartner->avatar) }}" alt="" class="w-full h-full object-cover">@else{{ strtoupper(mb_substr($pName,0,1)) }}@endif
                             </div>
                             <div class="min-w-0 flex-1">
                                 @if ($aPartner && $aPartner->username)

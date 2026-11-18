@@ -6,8 +6,8 @@
     {{-- Backdrop --}}
     {{-- Back closes this instead of leaving the Yard. --}}
     <div class="comm-backdrop" wire:click="close" x-data="{
-             init() { window.cnOverlay?.open(this, () => $wire.close()); },
-             destroy() { window.cnOverlay?.close(this); },
+             init() { window.cnOverlay?.open(this.$el, () => $wire.close()); },
+             destroy() { window.cnOverlay?.close(this.$el); },
          }" x-transition.opacity></div>
 
     {{-- Modal --}}

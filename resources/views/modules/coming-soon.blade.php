@@ -6,8 +6,7 @@
             {{-- Icon --}}
             <div class="w-24 h-24 mx-auto rounded-3xl bg-cm-green/10 flex items-center justify-center text-5xl mb-6">
                 @switch($moduleSlug)
-                    @case('marche') 🛒 @break
-                    @case('easygoparcell') 📦 @break
+                    @case('easygoparcel') 📦 @break
                     @case('roadfam') 🚗 @break
                     @case('camevents') 🎉 @break
                     @case('kamernest') 🏠 @break

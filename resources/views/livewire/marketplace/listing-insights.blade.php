@@ -41,17 +41,17 @@
                 <div class="text-[11px] text-slate-500 mt-0.5">{{ number_format($s['unique']) }} {{ $lang === 'fr' ? 'uniques' : 'unique' }}</div>
             </div>
             <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-4">
-                <div class="text-[11px] uppercase font-bold tracking-wide text-slate-500">{{ $lang === 'fr' ? 'Favoris' : 'Favorites' }}</div>
+                <div class="text-[11px] uppercase font-bold tracking-wide text-slate-500">{{ $lang === 'fr' ? 'Enregistrements' : 'Saves' }}</div>
                 <div class="text-2xl font-extrabold text-cm-red mt-1">{{ number_format($s['favorites']) }}</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">❤</div>
             </div>
             <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-4">
                 <div class="text-[11px] uppercase font-bold tracking-wide text-slate-500">{{ $lang === 'fr' ? 'Offres' : 'Offers' }}</div>
-                <div class="text-2xl font-extrabold text-cm-yellow mt-1">{{ number_format($s['offers']) }}</div>
+                <div class="text-2xl font-extrabold text-yellow-700 mt-1">{{ number_format($s['offers']) }}</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">{{ $s['accepted'] }} {{ $lang === 'fr' ? 'acceptées' : 'accepted' }}</div>
             </div>
             <div class="bg-white rounded-2xl shadow-sm ring-1 ring-slate-200 p-4">
-                <div class="text-[11px] uppercase font-bold tracking-wide text-slate-500">{{ $lang === 'fr' ? 'Conversion' : 'Engagement' }}</div>
+                <div class="text-[11px] uppercase font-bold tracking-wide text-slate-500">{{ $lang === 'fr' ? 'Engagement' : 'Engagement' }}</div>
                 <div class="text-2xl font-extrabold text-cm-green mt-1">{{ $s['ctr'] }}%</div>
                 <div class="text-[11px] text-slate-500 mt-0.5">{{ $s['orders'] }} {{ $lang === 'fr' ? 'commandes' : 'orders' }} · {{ $s['paid'] }} {{ $lang === 'fr' ? 'payées' : 'paid' }}</div>
             </div>
@@ -74,7 +74,7 @@
                         <div class="w-full bg-cm-green/70 hover:bg-cm-green rounded-t transition cursor-default"
                              style="height: {{ $h }}%"></div>
                         <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 hidden group-hover:block whitespace-nowrap text-[10px] font-bold bg-slate-900 text-white px-1.5 py-0.5 rounded">
-                            {{ $point['count'] }} · {{ \Illuminate\Support\Carbon::parse($point['date'])->format('M j') }}
+                            {{ $point['count'] }} · {{ \Illuminate\Support\Carbon::parse($point['date'])->translatedFormat('j M') }}
                         </div>
                     </div>
                 @endforeach

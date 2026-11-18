@@ -3,6 +3,7 @@
 namespace App\Events;
 
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -30,7 +31,7 @@ class CallSignal implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         $channels = [
-            new Channel('tenant.' . $this->tenantId . '.room.' . $this->roomId),
+            new PrivateChannel('tenant.' . $this->tenantId . '.room.' . $this->roomId),
         ];
 
         // Signalling is point to point, so send it to the recipient's own call
@@ -40,7 +41,7 @@ class CallSignal implements ShouldBroadcastNow
         // connected with no audio flowing. Everyone in a call is on their own
         // .calls channel, which is how the call reached them to begin with.
         if ($this->toUserId > 0) {
-            $channels[] = new Channel('tenant.' . $this->tenantId . '.user.' . $this->toUserId . '.calls');
+            $channels[] = new PrivateChannel('tenant.' . $this->tenantId . '.user.' . $this->toUserId . '.calls');
         }
 
         return $channels;

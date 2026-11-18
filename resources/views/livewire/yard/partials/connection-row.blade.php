@@ -1,25 +1,25 @@
 @php
     /** @var \App\Models\User $u */
     /** @var string $state */
-    $initial = strtoupper(substr($u->username ?? $u->name ?? '?', 0, 1));
+    $initial = mb_strtoupper(mb_substr($u->username ?? $u->name ?? '?', 0, 1));
     $colors = ['bg-blue-600', 'bg-violet-600', 'bg-emerald-600', 'bg-amber-600', 'bg-rose-600', 'bg-cyan-600'];
     $colorIdx = crc32($u->name ?? '') % count($colors);
     $avatarColor = $colors[$colorIdx];
 @endphp
-<div class="flex items-center gap-3 px-3 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors"
+<div class="flex flex-wrap items-center gap-x-3 gap-y-2 min-w-0 px-3 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors"
      x-data wire:key="conn-row-{{ $u->id }}-{{ $state }}">
     <div class="w-10 h-10 rounded-full {{ $avatarColor }} flex items-center justify-center shrink-0 overflow-hidden"
          role="button" tabindex="0" style="cursor:pointer;"
          @click="$dispatch('open-user-preview', { id: {{ $u->id }} })"
          @keydown.enter="$dispatch('open-user-preview', { id: {{ $u->id }} })">
         @if($u->avatar)
-            <img src="{{ asset('storage/' . $u->avatar) }}" alt="" class="w-full h-full object-cover">
+            <img src="{{ \App\Support\StorageUrl::for($u->avatar) }}" alt="" class="w-full h-full object-cover">
         @else
             <span class="text-white font-bold text-sm">{{ $initial }}</span>
         @endif
     </div>
 
-    <div class="flex-1 min-w-0" role="button" tabindex="0" style="cursor:pointer;"
+    <div class="flex-1 min-w-[9rem]" role="button" tabindex="0" style="cursor:pointer;"
          @click="$dispatch('open-user-preview', { id: {{ $u->id }} })"
          @keydown.enter="$dispatch('open-user-preview', { id: {{ $u->id }} })">
         <p class="text-sm font-semibold text-slate-800 truncate">{{ $u->name }}</p>
@@ -31,7 +31,7 @@
         </p>
     </div>
 
-    <div class="flex items-center gap-2 shrink-0">
+    <div class="flex items-center justify-end gap-2 shrink-0 ml-auto">
         @switch($state)
             @case('connected')
                 <button wire:click="openDm({{ $u->id }})"

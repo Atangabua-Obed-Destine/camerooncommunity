@@ -111,7 +111,7 @@ class ContributeModal extends Component
 
         $this->isSuggesting = true;
         $aiService = app(\App\Services\AIService::class);
-        $lang = auth()->user()?->language_pref ?? 'en';
+        $lang = auth()->user()?->language_pref?->value ?? 'en';
 
         $suggestion = $aiService->suggestContributionMessage(
             $this->campaign->title,

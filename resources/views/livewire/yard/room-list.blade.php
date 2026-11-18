@@ -43,7 +43,11 @@
     @endphp
     @if($activeFilter === 'archived')
     {{-- WhatsApp-style "Archived" header banner: appears in place of the filter pills --}}
-    <div class="yard-archived-bar">
+    <div class="yard-archived-bar"
+         x-data="{
+             init() { window.cnOverlay?.open(this.$el, () => $wire.setFilter('all')); },
+             destroy() { window.cnOverlay?.close(this.$el); },
+         }">
         <button type="button" wire:click="setFilter('all')" class="yard-archived-bar__back" :title="$store.lang.t('Back', 'Retour')">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/></svg>
         </button>
@@ -171,14 +175,14 @@
             <div class="yard-room__avatar {{ $avatarBgClass }} relative">
                 @if($room->room_type === \App\Enums\RoomType::DirectMessage)
                     @if($room->dm_other_avatar)
-                        <img src="{{ asset('storage/' . $room->dm_other_avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                        <img src="{{ \App\Support\StorageUrl::for($room->dm_other_avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                     @elseif($room->dm_other_name)
-                        <span class="text-lg font-bold text-white">{{ strtoupper(substr($room->dm_other_name, 0, 1)) }}</span>
+                        <span class="text-lg font-bold text-white">{{ mb_strtoupper(mb_substr($room->dm_other_name, 0, 1)) }}</span>
                     @else
                         <span class="text-lg">💬</span>
                     @endif
                 @elseif($room->avatar)
-                    <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                    <img src="{{ \App\Support\StorageUrl::for($room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                 @else
                     <span class="text-lg">{{ $roomIcons[$room->room_type->value] ?? '💬' }}</span>
                 @endif
@@ -386,7 +390,7 @@
                  :title="$store.lang.t('Locked, switch back to this location to reopen', 'Verrouillé, revenez à ce lieu pour rouvrir')">
                 <div class="yard-room__avatar {{ $room->avatar ? ($roomColors[$room->room_type->value] ?? 'bg-slate-400') : \App\Support\AvatarPalette::colorClass('room:' . $room->id) }} relative opacity-60">
                     @if($room->avatar)
-                        <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                        <img src="{{ \App\Support\StorageUrl::for($room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                     @else
                         <span class="text-lg">{{ $roomIcons[$room->room_type->value] ?? '💬' }}</span>
                     @endif
@@ -421,6 +425,8 @@
          JOIN PREVIEW MODAL — Interactive AI-powered room welcome
     ═══════════════════════════════════════════════════════════ --}}
     @if($showJoinPreview && $previewRoomId)
+    {{-- Teleported to <body>: inside the chat panels a fixed overlay can't cover the header (see partials/user-preview). --}}
+    @teleport('body')
     <div class="fixed inset-0 z-[60] flex items-end sm:items-center justify-center"
          x-data="{ entering: false }"
          x-init="$nextTick(() => entering = true)"
@@ -571,6 +577,7 @@
             </div>
         </div>
     </div>
+    @endteleport
     @endif
 
     {{-- ═══════════════════════════════════════════════════════════
@@ -581,11 +588,13 @@
          ═══════════════════════════════════════════════════════════ --}}
     @if($showLocationSwitcher)
     {{-- Back closes this instead of leaving the Yard. --}}
+    {{-- Teleported to <body>: inside the chat panels a fixed overlay can't cover the header (see partials/user-preview). --}}
+    @teleport('body')
     <div class="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
          x-data="{
              entering: false,
-             init() { $nextTick(() => this.entering = true); window.cnOverlay?.open(this, () => $wire.closeLocationSwitcher()); },
-             destroy() { window.cnOverlay?.close(this); },
+             init() { $nextTick(() => this.entering = true); window.cnOverlay?.open(this.$el, () => $wire.closeLocationSwitcher()); },
+             destroy() { window.cnOverlay?.close(this.$el); },
          }"
          @keydown.escape.window="$wire.closeLocationSwitcher()">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -723,5 +732,6 @@
             </div>
         </div>
     </div>
+    @endteleport
     @endif
 </div>

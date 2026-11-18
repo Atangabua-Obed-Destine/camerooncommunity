@@ -6,7 +6,6 @@ use App\Enums\ListingCondition;
 use App\Enums\ListingFulfillment;
 use App\Models\MarketplaceCategory;
 use App\Models\MarketplaceListing;
-use App\Models\MarketplaceSavedSearch;
 use App\Support\MarketplaceQueryBuilder;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -105,6 +104,16 @@ class FeedBrowse extends Component
         // a listing in Littoral without first noticing a filter they never set.
         //
         // The whole market shows by default; their own area simply comes first.
+        // An area in the link (?loc=, a saved search's "View matches"): pin it.
+        // Only the label travels in the URL, so it used to show in the pill
+        // while nothing was filtered.
+        if ($this->locLabel !== '' && $this->locLat === null) {
+            $key = \App\Support\CameroonGeo::matchRegion($this->locLabel);
+            $this->setLocation($key !== ''
+                ? \App\Support\CameroonGeo::regionLabels()[$key][app()->getLocale() === 'fr' ? 'fr' : 'en']
+                : $this->locLabel);
+        }
+
         if ($u = auth()->user()) {
             $this->homeRegion = (string) ($u->current_region ?? '');
 
@@ -207,7 +216,7 @@ class FeedBrowse extends Component
     public function listings()
     {
         $q = MarketplaceQueryBuilder::build($this->currentFilters())
-            ->with(['user', 'category', 'media' => fn ($m) => $m->limit(1)]);
+            ->with(['user', 'category', 'cover']);
 
         MarketplaceQueryBuilder::applyRadius($q, $this->locLat, $this->locLng, $this->radius);
 
@@ -248,7 +257,7 @@ class FeedBrowse extends Component
         $centroids = config('cameroon.region_centroids', \App\Support\CameroonGeo::centroids());
 
         $rowsQuery = MarketplaceQueryBuilder::build($this->currentFilters())
-            ->with(['media' => fn ($m) => $m->limit(1)])
+            ->with(['cover'])
             ->limit(120);
         MarketplaceQueryBuilder::applyRadius($rowsQuery, $this->locLat, $this->locLng, $this->radius);
         $rows = $rowsQuery->get(['id', 'slug', 'title', 'price', 'price_type', 'currency', 'region']);
@@ -309,36 +318,23 @@ class FeedBrowse extends Component
         $user = auth()->user();
         if (! $user) { return; }
 
+        // The area too, when it is a region: it used to be left out, so a
+        // search saved for Douala alerted on the whole country.
         $filters = $this->currentFilters();
-        if ($filters === []) {
-            $this->dispatch('toast', type: 'error', message: __('Pick at least one filter before saving'));
+        $loc = $this->locLat !== null ? \App\Support\CameroonGeo::matchRegion($this->locLabel) : '';
+        if ($loc !== '') {
+            $filters += ['loc' => $loc, 'radius' => $this->radius];
+        }
+
+        $result = app(\App\Services\Market\SavedSearchService::class)->save($user, $filters, $name);
+        if (isset($result['error'])) {
+            $this->dispatch('toast', type: 'error', message: \App\Services\Market\SavedSearchService::message($result['error']));
             return;
         }
 
-        // Cap per user to avoid runaway alerts.
-        if (MarketplaceSavedSearch::where('user_id', $user->id)->count() >= 20) {
-            $this->dispatch('toast', type: 'error', message: __('You can save up to 20 searches'));
-            return;
-        }
-
-        $label = trim((string) $name);
-        if ($label === '') {
-            $label = \Illuminate\Support\Str::limit(MarketplaceQueryBuilder::summarize($filters, app()->getLocale()), 100);
-        }
-
-        MarketplaceSavedSearch::create([
-            'tenant_id'    => $user->tenant_id,
-            'user_id'      => $user->id,
-            'name'         => $label,
-            'filters'      => $filters,
-            'notify_email' => false,
-            'notify_push'  => true,
-            // Seed last_notified_at to now so we never spam the user with
-            // the entire existing feed on first scheduler run.
-            'last_notified_at' => now(),
-        ]);
-
-        $this->dispatch('toast', type: 'success', message: __('Search saved, we\u2019ll alert you when new matches arrive'));
+        $this->dispatch('toast', type: 'success', message: $result['existing']
+            ? __('You already saved this search')
+            : __('Search saved, we’ll alert you when new matches arrive'));
         $this->dispatch('savedSearchesUpdated');
     }
 

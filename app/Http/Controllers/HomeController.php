@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\MessageType;
 use App\Models\ComingSoonSignup;
+use App\Models\MarketplaceListing;
 use App\Models\User;
+use App\Models\YardMessage;
 use App\Support\MarketplaceQueryBuilder;
 use App\Services\AIService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
 
 class HomeController extends Controller
 {
     public function index()
     {
-        $memberCount = User::count();
-        $regionCount = User::whereNotNull('current_region')
-            ->distinct('current_region')
-            ->count('current_region');
+        $stats = self::communityStats();
 
         // Authenticated visitors get the in-app feed (uses the standard app
         // layout / Facebook-style header). Guests still see the marketing
@@ -29,8 +30,9 @@ class HomeController extends Controller
             : ['items' => collect(), 'label' => '', 'region' => ''];
 
         return view($view, [
-            'memberCount'     => $memberCount,
-            'regionCount'     => max($regionCount, 1),
+            'memberCount'     => $stats['members'],
+            'regionCount'     => $stats['regions'],
+            'stats'           => $stats,
             'nearbyListings'  => $nearby['items'],
             'nearbyLabel'     => $nearby['label'],
             'nearbyRegion'    => $nearby['region'],
@@ -38,49 +40,41 @@ class HomeController extends Controller
     }
 
     /**
-     * Listings to show on the home feed, the viewer's own area first.
+     * The platform's real figures, as shown on the homepage. No floors and no
+     * fixed numbers: published claims about the platform have to be true
+     * (UK DMCC Act 2024). Cached for ten minutes so a busy homepage does not
+     * count every message on each visit.
      *
-     * Their region leads; if it cannot fill the row the rest comes from their
-     * country, then from anywhere, so a member in a quiet region still sees a
-     * full shelf instead of an empty one. Ordering is what carries the
-     * "near me first" promise — nothing is hidden.
+     * @return array{members: int, countries: int, regions: int, listings: int, messages: int}
+     */
+    public static function communityStats(): array
+    {
+        $tenantId = app()->bound('currentTenant') ? app('currentTenant')?->id : null;
+
+        return Cache::remember("home:community-stats:{$tenantId}", now()->addMinutes(10), function () {
+            $members = User::query()->where('is_active', true)->whereNull('anonymised_at');
+
+            return [
+                'members'   => (clone $members)->count(),
+                'countries' => (clone $members)->whereNotNull('current_country')->where('current_country', '!=', '')
+                    ->distinct()->count('current_country'),
+                'regions'   => (clone $members)->whereNotNull('current_region')->where('current_region', '!=', '')
+                    ->distinct()->count('current_region'),
+                'listings'  => MarketplaceListing::active()->count(),
+                'messages'  => YardMessage::query()->where('is_deleted', false)
+                    ->whereNotIn('message_type', [MessageType::System->value, MessageType::CallLog->value])
+                    ->count(),
+            ];
+        });
+    }
+
+    /**
+     * Listings to show on the home feed, the viewer's own area first. Shared
+     * with the app's Home (App\Services\Market\NearbyListings).
      */
     private function listingsNearUser(User $user, int $limit = 8): array
     {
-        $region  = trim((string) ($user->current_region ?? ''));
-        $country = trim((string) ($user->current_country ?? ''));
-
-        $items = collect();
-
-        if ($region !== '') {
-            $items = MarketplaceQueryBuilder::build(['region' => $region, 'sort' => 'newest'])
-                ->limit($limit)
-                ->get();
-        }
-
-        if ($items->count() < $limit && $country !== '') {
-            $items = $items->concat(
-                MarketplaceQueryBuilder::build(['country' => $country, 'sort' => 'newest'])
-                    ->whereNotIn('id', $items->pluck('id')->all())
-                    ->limit($limit - $items->count())
-                    ->get()
-            );
-        }
-
-        if ($items->count() < $limit) {
-            $items = $items->concat(
-                MarketplaceQueryBuilder::build(['sort' => 'newest'])
-                    ->whereNotIn('id', $items->pluck('id')->all())
-                    ->limit($limit - $items->count())
-                    ->get()
-            );
-        }
-
-        return [
-            'items'  => $items,
-            'label'  => $region !== '' ? $region : $country,
-            'region' => $region,
-        ];
+        return app(\App\Services\Market\NearbyListings::class)->forUser($user, $limit);
     }
 
     /**

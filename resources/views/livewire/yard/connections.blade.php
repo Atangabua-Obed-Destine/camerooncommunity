@@ -5,8 +5,8 @@
     @if($show)
     {{-- Back closes this instead of leaving the Yard. --}}
     <div class="comm-backdrop" wire:click="close" x-data="{
-             init() { window.cnOverlay?.open(this, () => $wire.close()); },
-             destroy() { window.cnOverlay?.close(this); },
+             init() { window.cnOverlay?.open(this.$el, () => $wire.close()); },
+             destroy() { window.cnOverlay?.close(this.$el); },
          }" x-transition.opacity></div>
 
     <div class="comm-modal" x-data x-transition.scale.95.origin.center x-trap.noscroll="true">
@@ -61,7 +61,7 @@
         </div>
 
         {{-- Body --}}
-        <div class="comm-grid" style="grid-template-columns: 1fr;">
+        <div class="comm-grid" style="grid-template-columns: minmax(0, 1fr);">
 
             {{-- ── MY CONNECTIONS ── --}}
             @if($tab === 'mine')
@@ -133,10 +133,10 @@
                             {{-- Avatar --}}
                             <div class="relative flex-shrink-0">
                                 @if($u->avatar)
-                                    <img src="{{ asset('storage/' . $u->avatar) }}" alt="{{ $u->name }}" class="w-12 h-12 rounded-full object-cover">
+                                    <img src="{{ \App\Support\StorageUrl::for($u->avatar) }}" alt="{{ $u->name }}" class="w-12 h-12 rounded-full object-cover">
                                 @else
                                     <div class="w-12 h-12 rounded-full bg-gradient-to-br {{ \App\Support\AvatarPalette::colorClass('user:' . $u->id) }} flex items-center justify-center text-white font-bold text-sm">
-                                        {{ substr($u->username ?? $u->name, 0, 1) }}
+                                        {{ mb_strtoupper(mb_substr($u->username ?? $u->name, 0, 1)) }}
                                     </div>
                                 @endif
                                 {{-- Blocked badge --}}

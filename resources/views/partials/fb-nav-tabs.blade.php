@@ -7,7 +7,7 @@
         - The Yard      (live)
         - GoMarket      (live)
         - GoParcel  (coming soon)
-        - RoadFam       (coming soon)
+        - GoRide        (coming soon)
         - GoPartner   (coming soon)
 
     Props (in $__data):

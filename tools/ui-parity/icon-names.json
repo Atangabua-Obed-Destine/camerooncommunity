@@ -1,0 +1,635 @@
+{
+    "note": "Written by tools/ui-parity/icons.php when run with a Heroicons package. Geometry hash => the Heroicon it matches. Lets a run without the package name the same icons.",
+    "matches": {
+        "011308f3eb": {
+            "library": "feather-icons",
+            "set": "feather",
+            "name": "copy",
+            "version": "4.29.2"
+        },
+        "030a1a1d8a": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "refresh",
+            "version": "1.0.6"
+        },
+        "040c20888a": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "support",
+            "version": "1.0.6"
+        },
+        "072c47492c": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "magnifying-glass",
+            "version": "2.2.0"
+        },
+        "093d6e1c1b": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "envelope",
+            "version": "2.2.0"
+        },
+        "0b7573ab2b": {
+            "library": "feather-icons",
+            "set": "feather",
+            "name": "edit",
+            "version": "4.29.2"
+        },
+        "0c52e10cf2": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "eye-off",
+            "version": "1.0.6"
+        },
+        "0c5e2bab05": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "chat-bubble-bottom-center-text",
+            "version": "2.2.0"
+        },
+        "104e275c41": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "eye",
+            "version": "1.0.6"
+        },
+        "15642ff9d0": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "lock-open",
+            "version": "2.2.0"
+        },
+        "1a5dd90bce": {
+            "library": "heroicons",
+            "set": "v2/24/solid",
+            "name": "user",
+            "version": "2.2.0"
+        },
+        "1bcc19df47": {
+            "library": "lucide-static",
+            "set": "lucide",
+            "name": "check",
+            "version": "1.70.0"
+        },
+        "1cb051e981": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "bookmark",
+            "version": "1.0.6"
+        },
+        "1fee3874b8": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "bell",
+            "version": "1.0.6"
+        },
+        "201a4caa96": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "trash",
+            "version": "1.0.6"
+        },
+        "21098dfe4e": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "chevron-left",
+            "version": "2.2.0"
+        },
+        "225d3e21f9": {
+            "library": "feather-icons",
+            "set": "feather",
+            "name": "camera",
+            "version": "4.29.2"
+        },
+        "233966ad04": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "chevron-down",
+            "version": "1.0.6"
+        },
+        "2954ee6d22": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "exclamation-circle",
+            "version": "2.2.0"
+        },
+        "2b80102688": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "arrow-left",
+            "version": "2.2.0"
+        },
+        "2bcc917d66": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "arrow-down",
+            "version": "1.0.6"
+        },
+        "2be8ace972": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "arrow-right",
+            "version": "1.0.6"
+        },
+        "2dd8eaf77f": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "star",
+            "version": "2.2.0"
+        },
+        "31efb8cd29": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "ellipsis-vertical",
+            "version": "2.2.0"
+        },
+        "36bf143337": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "shopping-cart",
+            "version": "1.0.6"
+        },
+        "3a5aca2c6c": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "arrow-right-on-rectangle",
+            "version": "2.2.0"
+        },
+        "42387a36e7": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "sparkles",
+            "version": "2.2.0"
+        },
+        "452676c307": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "trash",
+            "version": "2.2.0"
+        },
+        "460d79464f": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "home",
+            "version": "1.0.6"
+        },
+        "46a1452c7c": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "arrow-right",
+            "version": "2.2.0"
+        },
+        "4a15a2e605": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "truck",
+            "version": "2.2.0"
+        },
+        "4b2bdb74d8": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "users",
+            "version": "2.2.0"
+        },
+        "4dffcb37a6": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "document-text",
+            "version": "1.0.6"
+        },
+        "51e1222b28": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "user",
+            "version": "2.2.0"
+        },
+        "537353c1f0": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "translate",
+            "version": "1.0.6"
+        },
+        "55ea840b31": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "arrow-sm-right",
+            "version": "1.0.6"
+        },
+        "58a6b58c85": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "cube",
+            "version": "1.0.6"
+        },
+        "58c657b6ad": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "video-camera",
+            "version": "2.2.0"
+        },
+        "598a116b2e": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "cog",
+            "version": "1.0.6"
+        },
+        "59fd61b836": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "check-circle",
+            "version": "2.2.0"
+        },
+        "5cd7e15d06": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "arrow-sm-up",
+            "version": "1.0.6"
+        },
+        "5eda19f724": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "clock",
+            "version": "2.2.0"
+        },
+        "60a856622d": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "mail",
+            "version": "1.0.6"
+        },
+        "61852cad6b": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "paper-clip",
+            "version": "1.0.6"
+        },
+        "6683603081": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "chevron-left",
+            "version": "1.0.6"
+        },
+        "6b5beb24f2": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "heart",
+            "version": "2.2.0"
+        },
+        "6d519d241f": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "arrow-left",
+            "version": "1.0.6"
+        },
+        "75b8b75a6b": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "share",
+            "version": "2.2.0"
+        },
+        "774b99432a": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "arrow-path",
+            "version": "2.2.0"
+        },
+        "77c592076c": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "user-plus",
+            "version": "2.0.18"
+        },
+        "79fa218348": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "shield-check",
+            "version": "1.0.6"
+        },
+        "7b06a5a6aa": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "lock-closed",
+            "version": "1.0.6"
+        },
+        "7cb19fa703": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "no-symbol",
+            "version": "2.2.0"
+        },
+        "7cda5961fa": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "camera",
+            "version": "2.2.0"
+        },
+        "7e9bd69e3d": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "menu-alt-2",
+            "version": "1.0.6"
+        },
+        "7fdc421821": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "plus",
+            "version": "1.0.6"
+        },
+        "80e86d2541": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "globe-alt",
+            "version": "2.2.0"
+        },
+        "8511068522": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "check",
+            "version": "1.0.6"
+        },
+        "8556c698f0": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "minus",
+            "version": "2.2.0"
+        },
+        "85949d2eb0": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "adjustments-horizontal",
+            "version": "2.2.0"
+        },
+        "891e697b22": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "clock",
+            "version": "1.0.6"
+        },
+        "89bf96ea5c": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "arrow-left-end-on-rectangle",
+            "version": "2.2.0"
+        },
+        "8a0aae533d": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "speaker-wave",
+            "version": "2.2.0"
+        },
+        "8aae38a50b": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "arrow-narrow-up",
+            "version": "1.0.6"
+        },
+        "8b38a04659": {
+            "library": "feather-icons",
+            "set": "feather",
+            "name": "mic",
+            "version": "4.29.2"
+        },
+        "8df665ab97": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "eye",
+            "version": "2.2.0"
+        },
+        "8e5a93c142": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "chevron-right",
+            "version": "1.0.6"
+        },
+        "92bec75a49": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "exclamation-triangle",
+            "version": "2.2.0"
+        },
+        "974f911b89": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "menu",
+            "version": "1.0.6"
+        },
+        "9b8d4e1bfb": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "face-smile",
+            "version": "2.2.0"
+        },
+        "9c310f39cd": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "no-symbol",
+            "version": "2.2.0"
+        },
+        "9fb7f6902a": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "pencil-alt",
+            "version": "1.0.6"
+        },
+        "9ffca3b74b": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "chevron-right",
+            "version": "2.2.0"
+        },
+        "a0240c575e": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "language",
+            "version": "2.2.0"
+        },
+        "a066925eda": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "x-mark",
+            "version": "2.2.0"
+        },
+        "a4469966f2": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "user",
+            "version": "1.0.6"
+        },
+        "a916883485": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "map",
+            "version": "1.0.6"
+        },
+        "ad811bd0bd": {
+            "library": "feather-icons",
+            "set": "feather",
+            "name": "menu",
+            "version": "4.29.2"
+        },
+        "b08562dce6": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "information-circle",
+            "version": "1.0.6"
+        },
+        "b59684232a": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "phone",
+            "version": "2.2.0"
+        },
+        "b6d950e49c": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "user-group",
+            "version": "1.0.6"
+        },
+        "b7e0be4c86": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "archive",
+            "version": "1.0.6"
+        },
+        "bd4bd62e1b": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "paper-airplane",
+            "version": "1.0.6"
+        },
+        "bda6cd0ab3": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "plus",
+            "version": "2.2.0"
+        },
+        "c47ad486d9": {
+            "library": "feather-icons",
+            "set": "feather",
+            "name": "image",
+            "version": "4.29.2"
+        },
+        "c5ab5fed70": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "arrow-sm-down",
+            "version": "1.0.6"
+        },
+        "c7cb227820": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "bookmark",
+            "version": "1.0.6"
+        },
+        "ccaffb30e9": {
+            "library": "lucide-static",
+            "set": "lucide",
+            "name": "search",
+            "version": "1.70.0"
+        },
+        "cf6c711188": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "shopping-cart",
+            "version": "2.2.0"
+        },
+        "d2ac5bb272": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "check",
+            "version": "2.2.0"
+        },
+        "d3554e6c77": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "reply",
+            "version": "1.0.6"
+        },
+        "d4ae064fcd": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "user-circle",
+            "version": "2.2.0"
+        },
+        "d6572a4cfe": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "chat-bubble-left-right",
+            "version": "2.2.0"
+        },
+        "d7cd8b3279": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "microphone",
+            "version": "2.2.0"
+        },
+        "db3f0c0977": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "bars-3",
+            "version": "2.2.0"
+        },
+        "dd5450b97b": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "chat-bubble-bottom-center",
+            "version": "2.2.0"
+        },
+        "e17d0a1ead": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "cube",
+            "version": "2.2.0"
+        },
+        "e2ddcb4dd5": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "user-group",
+            "version": "2.2.0"
+        },
+        "e53f4c6ecd": {
+            "library": "feather-icons",
+            "set": "feather",
+            "name": "pause",
+            "version": "4.29.2"
+        },
+        "e8fbad2037": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "x-mark",
+            "version": "2.2.0"
+        },
+        "eb75138084": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "search",
+            "version": "1.0.6"
+        },
+        "ee16037840": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "clipboard",
+            "version": "1.0.6"
+        },
+        "f26f3445cb": {
+            "library": "heroicons",
+            "set": "v2/24/outline",
+            "name": "lock-closed",
+            "version": "2.2.0"
+        },
+        "fa55421130": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "chat",
+            "version": "1.0.6"
+        },
+        "fb96e02d62": {
+            "library": "heroicons",
+            "set": "v1/outline",
+            "name": "location-marker",
+            "version": "1.0.6"
+        }
+    }
+}

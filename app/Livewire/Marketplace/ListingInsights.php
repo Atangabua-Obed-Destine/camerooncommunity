@@ -2,15 +2,9 @@
 
 namespace App\Livewire\Marketplace;
 
-use App\Enums\OfferStatus;
-use App\Enums\OrderStatus;
 use App\Models\MarketplaceListing;
-use App\Models\MarketplaceListingView;
-use App\Models\MarketplaceOffer;
-use App\Models\MarketplaceOrder;
-use Illuminate\Support\Carbon;
+use App\Services\Market\ListingInsightsService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -39,81 +33,34 @@ class ListingInsights extends Component
 
     public function setRange(int $days): void
     {
-        $this->days = in_array($days, [7, 30, 90], true) ? $days : 30;
+        $this->days = app(ListingInsightsService::class)->days($days);
     }
 
     /** Daily view counts for the active window (zero-filled). */
     #[Computed]
     public function viewsSeries(): array
     {
-        $from = Carbon::today()->subDays($this->days - 1);
-
-        $rows = MarketplaceListingView::query()
-            ->selectRaw('DATE(viewed_at) as d, COUNT(*) as c')
-            ->where('listing_id', $this->listing->id)
-            ->where('viewed_at', '>=', $from)
-            ->groupBy('d')
-            ->pluck('c', 'd')
-            ->all();
-
-        $out = [];
-        for ($i = 0; $i < $this->days; $i++) {
-            $day = $from->copy()->addDays($i)->toDateString();
-            $out[] = ['date' => $day, 'count' => (int) ($rows[$day] ?? 0)];
-        }
-        return $out;
+        return app(ListingInsightsService::class)->viewsSeries($this->listing, $this->days);
     }
 
     /** Top viewer regions for the active window. */
     #[Computed]
     public function topRegions(): array
     {
-        $from = Carbon::today()->subDays($this->days - 1);
-        return MarketplaceListingView::query()
-            ->selectRaw('COALESCE(NULLIF(region, ""), "Unknown") as region, COUNT(*) as c')
-            ->where('listing_id', $this->listing->id)
-            ->where('viewed_at', '>=', $from)
-            ->groupBy('region')
-            ->orderByDesc('c')
-            ->limit(6)
-            ->get()
-            ->map(fn ($r) => ['region' => $r->region, 'count' => (int) $r->c])
-            ->all();
+        return app(ListingInsightsService::class)->topRegions($this->listing, $this->days);
     }
 
     /** Source breakdown for the active window. */
     #[Computed]
     public function topSources(): array
     {
-        $from = Carbon::today()->subDays($this->days - 1);
-        return MarketplaceListingView::query()
-            ->selectRaw('COALESCE(NULLIF(source, ""), "direct") as source, COUNT(*) as c')
-            ->where('listing_id', $this->listing->id)
-            ->where('viewed_at', '>=', $from)
-            ->groupBy('source')
-            ->orderByDesc('c')
-            ->limit(6)
-            ->get()
-            ->map(fn ($r) => ['source' => $r->source, 'count' => (int) $r->c])
-            ->all();
+        return app(ListingInsightsService::class)->topSources($this->listing, $this->days);
     }
 
     #[Computed]
     public function stats(): array
     {
-        $from   = Carbon::today()->subDays($this->days - 1);
-        $views  = MarketplaceListingView::query()->where('listing_id', $this->listing->id)->where('viewed_at', '>=', $from)->count();
-        $unique = MarketplaceListingView::query()->where('listing_id', $this->listing->id)->where('viewed_at', '>=', $from)->distinct('session_hash')->count('session_hash');
-
-        $favorites = DB::table('marketplace_favorites')->where('listing_id', $this->listing->id)->where('created_at', '>=', $from)->count();
-        $offers    = MarketplaceOffer::query()->where('listing_id', $this->listing->id)->where('created_at', '>=', $from)->count();
-        $accepted  = MarketplaceOffer::query()->where('listing_id', $this->listing->id)->where('status', OfferStatus::Accepted->value)->where('updated_at', '>=', $from)->count();
-        $orders    = MarketplaceOrder::query()->where('listing_id', $this->listing->id)->where('created_at', '>=', $from)->count();
-        $paid      = MarketplaceOrder::query()->where('listing_id', $this->listing->id)->whereIn('status', [OrderStatus::Paid->value, OrderStatus::Released->value])->where('created_at', '>=', $from)->count();
-
-        $ctr = $views > 0 ? round(($favorites + $offers) / $views * 100, 1) : 0.0;
-
-        return compact('views', 'unique', 'favorites', 'offers', 'accepted', 'orders', 'paid', 'ctr');
+        return app(ListingInsightsService::class)->stats($this->listing, $this->days);
     }
 
     public function render()

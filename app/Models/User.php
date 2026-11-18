@@ -12,12 +12,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
-    use BelongsToTenant, HasFactory, HasRoles, Notifiable, SoftDeletes;
+    use BelongsToTenant, HasApiTokens, HasFactory, HasRoles, Notifiable, SoftDeletes;
 
     protected $fillable = [
         'uuid',
@@ -71,6 +72,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'location_updated_at' => 'datetime',
             'last_active_at' => 'datetime',
             'onboarded_at' => 'datetime',
+            'anonymised_at' => 'datetime',
             'password' => 'hashed',
             'language_pref' => Language::class,
             'account_type' => AccountType::class,
@@ -161,6 +163,17 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * True when the other member has blocked this one (not the other way round).
+     * Profiles 404 for the blocked side only; the blocker still sees the page,
+     * with Unblock on it.
+     */
+    public function isBlockedBy(int $otherUserId): bool
+    {
+        $c = $this->connectionWith($otherUserId);
+        return $c !== null && $c->status === UserConnection::STATUS_BLOCKED && (int) $c->requested_by === $otherUserId;
+    }
+
+    /**
      * True when either side has blocked the other.
      */
     public function hasBlockedOrIsBlockedBy(int $otherUserId): bool
@@ -176,9 +189,11 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function blockedOrBlockingUserIds(): array
     {
-        static $cache = [];
-        if (isset($cache[$this->id])) {
-            return $cache[$this->id];
+        // Remembered on this object, for the request. It used to be a static
+        // keyed by user id, which lives as long as the PHP process: in a queue
+        // worker or Reverb a block made after the first call was never seen.
+        if ($this->blockedIdsMemo !== null) {
+            return $this->blockedIdsMemo;
         }
 
         $rows = UserConnection::where('status', UserConnection::STATUS_BLOCKED)
@@ -187,12 +202,15 @@ class User extends Authenticatable implements MustVerifyEmail
             })
             ->get(['user_a_id', 'user_b_id']);
 
-        return $cache[$this->id] = $rows
-            ->map(fn ($r) => $r->user_a_id === $this->id ? $r->user_b_id : $r->user_a_id)
+        return $this->blockedIdsMemo = $rows
+            ->map(fn ($r) => (int) ($r->user_a_id === $this->id ? $r->user_b_id : $r->user_a_id))
             ->unique()
             ->values()
             ->all();
     }
+
+    /** @var array<int>|null see blockedOrBlockingUserIds() */
+    protected ?array $blockedIdsMemo = null;
 
     /**
      * The custom name *this* user has saved for `$otherUserId`, or null.
@@ -223,5 +241,45 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->username
             ? route('marketplace.seller', ['username' => $this->username])
             : route('profile');
+    }
+
+    /**
+     * An absolute URL for the avatar, or null to fall back to initials.
+     *
+     * Two shapes are stored in `avatar`: a path on our own disk, and a full
+     * URL for accounts that arrived through Google. The blade avatar component
+     * has always told them apart inline; the app needs the same answer and has
+     * no `asset()` of its own, so the rule lives here now and both callers can
+     * share it.
+     */
+    /** Deleted their account (App\Services\AccountDeletion). */
+    public function isAnonymised(): bool
+    {
+        return $this->anonymised_at !== null;
+    }
+
+    /**
+     * Members who can be found: in search, People, suggestions, @mentions and
+     * by profile link. Deleted accounts are left out. Not a global scope on
+     * purpose: their old messages still need $message->user.
+     */
+    public function scopeDiscoverable($query)
+    {
+        return $query->whereNull($this->qualifyColumn('anonymised_at'));
+    }
+
+    public function avatarUrl(): ?string
+    {
+        return $this->publicUrlFor($this->avatar);
+    }
+
+    public function coverUrl(): ?string
+    {
+        return $this->publicUrlFor($this->cover_photo);
+    }
+
+    private function publicUrlFor(?string $path): ?string
+    {
+        return \App\Support\StorageUrl::for($path);
     }
 }

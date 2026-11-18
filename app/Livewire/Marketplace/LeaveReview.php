@@ -2,10 +2,8 @@
 
 namespace App\Livewire\Marketplace;
 
-use App\Enums\ListingStatus;
 use App\Models\MarketplaceListing;
-use App\Models\MarketplaceReview;
-use App\Services\NotificationService;
+use App\Services\Market\ReviewService;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -32,30 +30,17 @@ class LeaveReview extends Component
 
         abort_unless($this->canReview(), 403);
 
-        $existing = MarketplaceReview::where('listing_id', $this->listing->id)
-            ->where('reviewer_id', Auth::id())
-            ->first();
-        if ($existing) {
+        if ($existing = app(ReviewService::class)->mine($this->listing, Auth::user())) {
             $this->existingId = $existing->id;
             $this->rating = $existing->rating;
             $this->comment = (string) $existing->comment;
         }
     }
 
-    /**
-     * Who may write a review for this listing?
-     *   - Sold listings: only the attributed buyer.
-     *   - Anyone else: not allowed (no "anonymous" reviews — Phase 7 may add buyer-verified-via-DM).
-     */
+    /** Sold to you, or bought through a completed order: ReviewService::canReview. */
     public function canReview(): bool
     {
-        if (! Auth::check()) { return false; }
-        if (Auth::id() === (int) $this->listing->user_id) { return false; } // can't review own listing
-
-        $isSold = $this->listing->status === ListingStatus::Sold
-            || (is_string($this->listing->status) && $this->listing->status === 'sold');
-
-        return $isSold && (int) $this->listing->buyer_id === Auth::id();
+        return app(ReviewService::class)->canReview($this->listing, Auth::user());
     }
 
     public function setRating(int $r): void
@@ -63,7 +48,7 @@ class LeaveReview extends Component
         $this->rating = max(0, min(5, $r));
     }
 
-    public function save(NotificationService $notifier): void
+    public function save(): void
     {
         if (! $this->canReview()) {
             $this->dispatch('toast', type: 'error', message: __('Not allowed'));
@@ -74,43 +59,10 @@ class LeaveReview extends Component
             'comment' => 'nullable|string|max:1000',
         ]);
 
-        $isNew = ! $this->existingId;
+        $saved = app(ReviewService::class)->save($this->listing, Auth::user(), $this->rating, $this->comment);
+        $this->existingId = $saved['review']->id;
 
-        $review = MarketplaceReview::updateOrCreate(
-            [
-                'listing_id'  => $this->listing->id,
-                'reviewer_id' => Auth::id(),
-            ],
-            [
-                'tenant_id'         => $this->listing->tenant_id,
-                'seller_id'         => $this->listing->user_id,
-                'rating'            => $this->rating,
-                'comment'           => trim($this->comment) ?: null,
-                'is_buyer_verified' => true,
-            ]
-        );
-
-        $this->existingId = $review->id;
-
-        if ($isNew && $this->listing->seller) {
-            $reviewerName = Auth::user()->name ?: Auth::user()->username;
-            $notifier->send(
-                $this->listing->seller,
-                'marketplace.review_received',
-                __(':name left you a :stars-star review', [
-                    'name'  => $reviewerName,
-                    'stars' => $this->rating,
-                ]),
-                \Illuminate\Support\Str::limit((string) $this->comment, 140) ?: __('No comment'),
-                [
-                    'listing_id' => $this->listing->id,
-                    'review_id'  => $review->id,
-                    'url'        => route('marketplace.show', ['slug' => $this->listing->slug]),
-                ],
-            );
-        }
-
-        $this->dispatch('toast', type: 'success', message: $isNew ? __('Review posted, thanks!') : __('Review updated'));
+        $this->dispatch('toast', type: 'success', message: $saved['created'] ? __('Review posted, thanks!') : __('Review updated'));
         $this->redirectRoute('marketplace.show', ['slug' => $this->listing->slug], navigate: true);
     }
 

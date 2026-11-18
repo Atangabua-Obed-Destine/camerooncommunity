@@ -74,9 +74,14 @@ class CallAnswerReachesCallerTest extends TestCase
     }
 
     /** @return array<int, string> */
+    /** Channel names without the private- prefix; each must be private (routes/channels.php). */
     private function channelNames($event): array
     {
-        return array_map(fn ($c) => (string) $c, $event->broadcastOn());
+        return array_map(function ($c) {
+            $this->assertInstanceOf(\Illuminate\Broadcasting\PrivateChannel::class, $c, 'Call channels are private.');
+
+            return \Illuminate\Support\Str::after((string) $c, 'private-');
+        }, $event->broadcastOn());
     }
 
     public function test_answering_tells_the_caller_on_their_own_call_channel(): void

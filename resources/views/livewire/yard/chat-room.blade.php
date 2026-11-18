@@ -94,16 +94,16 @@
             @if($room->room_type === \App\Enums\RoomType::DirectMessage)
                 @php $dmPartner = $room->members()->where('user_id', '!=', auth()->id())->with('user:id,name,username,avatar')->first()?->user; @endphp
                 @if($dmPartner?->avatar)
-                    <img src="{{ asset('storage/' . $dmPartner->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                    <img src="{{ \App\Support\StorageUrl::for($dmPartner->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                 @else
-                    <span class="w-full h-full rounded-full flex items-center justify-center text-sm font-bold text-white {{ \App\Support\AvatarPalette::colorClass('user:' . ($dmPartner?->id ?? $dmPartner?->name ?? '?')) }}">{{ strtoupper(substr($dmPartner?->username ?? $dmPartner?->name ?? '?', 0, 1)) }}</span>
+                    <span class="w-full h-full rounded-full flex items-center justify-center text-sm font-bold text-white {{ \App\Support\AvatarPalette::colorClass('user:' . ($dmPartner?->id ?? $dmPartner?->name ?? '?')) }}">{{ mb_strtoupper(mb_substr($dmPartner?->username ?? $dmPartner?->name ?? '?', 0, 1)) }}</span>
                 @endif
                 @if($this->dmPartnerStatus && $this->dmPartnerStatus['is_online'])
                     <span class="yard-online-dot yard-online-dot--header"></span>
                 @endif
             @else
                 @if($room->avatar)
-                    <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                    <img src="{{ \App\Support\StorageUrl::for($room->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                 @else
                     @switch($room->room_type)
                         @case(\App\Enums\RoomType::National)     <span>🇨🇲</span> @break
@@ -558,9 +558,9 @@
                     @endphp
                     <button class="yard-msg__avatar {{ $msg->user?->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . ($msg->user_id ?? $msg->user?->name ?? '?')) }}" @click="$dispatch('open-user-preview', { id: {{ $msg->user_id }} })">
                         @if($msg->user?->avatar)
-                            <img src="{{ asset('storage/' . $msg->user->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                            <img src="{{ \App\Support\StorageUrl::for($msg->user->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
-                            {{ strtoupper(substr($msgDisplayName, 0, 1)) }}
+                            {{ mb_strtoupper(mb_substr($msgDisplayName, 0, 1)) }}
                         @endif
                     </button>
                     @endunless
@@ -944,6 +944,8 @@
     {{-- Calls are off for now.
          Opened by the call buttons, and by the server when a request gets
          through from a browser running older code. --}}
+    {{-- Teleported to <body>: inside the chat panels a fixed overlay can't cover the header (see partials/user-preview). --}}
+    @teleport('body')
     <div x-show="callsNotice" x-cloak x-overlay="callsNotice"
          @calls-unavailable.window="callsNotice = true"
          @keydown.escape.window="callsNotice = false"
@@ -969,6 +971,7 @@
                     x-text="$store.lang.t('Close', 'Fermer')"></button>
         </div>
     </div>
+    @endteleport
 
     {{-- Jump to the newest message.
          Appears once the thread is scrolled away from the bottom, and counts
@@ -1779,6 +1782,8 @@
          Forward Message Modal
          ══════════════════════════════════════════════════════════════════ --}}
     {{-- Back closes this instead of leaving the chat. --}}
+    {{-- Teleported to <body>: inside the chat panels a fixed overlay can't cover the header (see partials/user-preview). --}}
+    @teleport('body')
     <div x-data="forwardModal()" x-overlay="show" x-cloak
          @open-forward.window="openForward($event.detail.msgId, $event.detail.msgIds)"
          @keydown.escape.window="show = false">
@@ -1805,11 +1810,11 @@
                         @click="doForward({{ $fwdRoom->id }})">
                     <span class="yard-forward-modal__avatar">
                         @if($fwdRoom->avatar)
-                            <img src="{{ asset('storage/' . $fwdRoom->avatar) }}" alt="{{ $fwdRoom->name }}"
+                            <img src="{{ \App\Support\StorageUrl::for($fwdRoom->avatar) }}" alt="{{ $fwdRoom->name }}"
                                  class="w-full h-full rounded-full object-cover">
                         @elseif($isDm)
                             <span class="w-full h-full rounded-full flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br {{ \App\Support\AvatarPalette::colorClass($paletteKey) }}">
-                                {{ strtoupper(substr($fwdRoom->name, 0, 1)) }}
+                                {{ mb_strtoupper(mb_substr($fwdRoom->name, 0, 1)) }}
                             </span>
                         @else
                             @switch($fwdRoom->room_type)
@@ -1826,6 +1831,7 @@
             </div>
         </div>
     </div>
+    @endteleport
 
     {{-- The profile popup now lives in partials/user-preview.blade.php, mounted
          globally, and is opened with $dispatch('open-user-preview', { id }). --}}
@@ -1857,10 +1863,13 @@
     <div wire:ignore x-overlay="$wire.searchActive"
          x-overlay-close="$wire.toggleSearch()" class="contents"></div>
 
+    {{-- Teleported to <body>: inside the chat panels a fixed overlay can't cover the header (see partials/user-preview). --}}
+    @teleport('body')
     <div x-show="lightboxOpen" x-transition.opacity @click="lightboxOpen = false"
          class="yard-lightbox" x-cloak>
         <img :src="lightboxSrc" class="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl">
     </div>
+    @endteleport
 
     @else
     {{-- Empty state --}}

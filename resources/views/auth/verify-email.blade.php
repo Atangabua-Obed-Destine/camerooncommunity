@@ -6,7 +6,7 @@
             <div class="text-center mb-8">
                 <a href="{{ route('home') }}" class="inline-flex items-center">
                     @if($__siteLogo ?? null)
-                        <img src="{{ $__siteLogo }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain">
+                        <img src="{{ \App\Services\SiteSettings::logoOnLightUrl() }}" alt="{{ $__siteName ?? 'Cameroon Network' }}" class="h-14 object-contain">
                     @else
                         <span class="text-3xl">🇨🇲</span>
                     @endif

@@ -13,7 +13,7 @@
     <div class="w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0 text-white
                 {{ $activeRoomId === $room->id && $room->avatar ? 'bg-cm-green/10' : ($room->avatar ? 'bg-slate-100' : \App\Support\AvatarPalette::colorClass('room:' . $room->id)) }}">
         @if($room->avatar)
-            <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-11 h-11 rounded-full object-cover">
+            <img src="{{ \App\Support\StorageUrl::for($room->avatar) }}" alt="" class="w-11 h-11 rounded-full object-cover">
         @else
             {{ $roomIcons }}
         @endif

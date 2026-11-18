@@ -1,6 +1,13 @@
 <div class="min-h-[calc(100vh-96px)] bg-slate-100">
     <div class="max-w-5xl mx-auto px-3 sm:px-4 py-6">
 
+        {{-- The way back: Orders had none at all. --}}
+        <a href="{{ route('marketplace.index') }}" wire:navigate
+               class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs px-3.5 py-2 rounded-full transition shrink-0 mb-3">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                GoMarket
+            </a>
+
         {{-- Header --}}
         <div class="flex items-end justify-between mb-4">
             <div>
@@ -136,7 +143,11 @@
                                     @if ($o->status === \App\Enums\OrderStatus::Released && $tab === 'buying' && $o->listing)
                                         <a href="{{ route('marketplace.review', ['slug' => $o->listing->slug]) }}" wire:navigate
                                            class="text-xs font-semibold text-cm-yellow hover:underline px-2 py-1.5">
-                                            ★ <span x-data x-text="$store.lang.t('Leave a review','Laisser un avis')"></span>
+                                            @if (app(\App\Services\Market\OrderService::class)->hasReviewed($o, auth()->user()))
+                                                ★ <span x-data x-text="$store.lang.t('Edit your review','Modifier votre avis')"></span>
+                                            @else
+                                                ★ <span x-data x-text="$store.lang.t('Leave a review','Laisser un avis')"></span>
+                                            @endif
                                         </a>
                                     @endif
                                 </div>

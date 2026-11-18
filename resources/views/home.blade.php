@@ -273,7 +273,7 @@
                                                     </div>
                                                 </div>
                                                 <div class="bg-cm-yellow/10 border border-cm-yellow/30 rounded-lg px-3 py-2">
-                                                    <p class="text-[10px] font-semibold text-cm-green flex items-center gap-1">🕊️ Solidarity</p>
+                                                    <p class="text-[10px] font-semibold text-cm-green flex items-center gap-1">🕊️ Solidarity · <span x-text="$store.lang.t('coming soon', 'bientôt')">coming soon</span></p>
                                                     <p class="text-[10px] text-slate-600 mt-0.5">In Memory of Mama Ngozi</p>
                                                     <div class="mt-1.5 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full bg-cm-green rounded-full" style="width: 65%"></div></div>
                                                     <p class="text-[9px] text-slate-500 mt-1">£650 of £1,000 · 15 contributors</p>
@@ -351,13 +351,13 @@
                                         {{-- Stats bar at bottom --}}
                                         <div class="absolute bottom-4 left-4 right-4 flex justify-around text-center">
                                             <div>
-                                                <p class="text-cm-yellow text-lg font-extrabold">6</p>
-                                                <p class="text-white/50 text-[9px]">Continents</p>
+                                                <p class="text-cm-yellow text-lg font-extrabold">{{ number_format($stats['members']) }}</p>
+                                                <p class="text-white/50 text-[9px]" x-text="$store.lang.t('Members', 'Membres')">Members</p>
                                             </div>
                                             <div class="w-px bg-white/10"></div>
                                             <div>
-                                                <p class="text-cm-yellow text-lg font-extrabold">30+</p>
-                                                <p class="text-white/50 text-[9px]">Countries</p>
+                                                <p class="text-cm-yellow text-lg font-extrabold">{{ number_format($stats['countries']) }}</p>
+                                                <p class="text-white/50 text-[9px]" x-text="$store.lang.t('Countries', 'Pays')">Countries</p>
                                             </div>
                                             <div class="w-px bg-white/10"></div>
                                             <div>
@@ -380,7 +380,7 @@
                                                 </div>
                                             </div>
                                             <div class="bg-cm-green px-4 py-3">
-                                                <p class="text-white text-sm font-semibold text-center">🕊️ Solidarity Campaigns</p>
+                                                <p class="text-white text-sm font-semibold text-center">🕊️ <span x-text="$store.lang.t('Solidarity · Coming soon', 'Solidarité · Bientôt')">Solidarity · Coming soon</span></p>
                                             </div>
                                             <div class="p-4 space-y-3 h-[342px] bg-slate-50">
                                                 {{-- Campaign 1 --}}
@@ -575,7 +575,7 @@
                 $modules = [
                     ['name' => 'GoConnect', 'nameFr' => 'GoConnect', 'icon' => '💬', 'desc' => 'Real-time chat rooms for your country and city', 'descFr' => 'Salons de discussion en temps réel pour votre pays et ville', 'live' => true],
                     ['name' => 'Solidarity', 'nameFr' => 'Solidarité', 'icon' => '🤝', 'desc' => 'Community fundraising for those in need', 'descFr' => 'Collectes communautaires pour ceux dans le besoin', 'live' => false],
-                    ['name' => 'Marché', 'nameFr' => 'Marché', 'icon' => '🛒', 'desc' => 'Buy and sell within the community', 'descFr' => 'Achetez et vendez au sein de la communauté', 'live' => false],
+                    ['name' => 'GoMarket', 'nameFr' => 'GoMarket', 'icon' => '🛒', 'desc' => 'Buy and sell within the community', 'descFr' => 'Achetez et vendez au sein de la communauté', 'live' => true],
                     ['name' => 'GoParcel', 'nameFr' => 'GoParcel', 'icon' => '📦', 'desc' => 'Send parcels home with trusted travellers', 'descFr' => 'Envoyez des colis au pays avec des voyageurs de confiance', 'live' => false],
                     ['name' => 'GoRide', 'nameFr' => 'GoRide', 'icon' => '🚗', 'desc' => 'Ride sharing for community events and travel', 'descFr' => 'Covoiturage pour événements et voyages communautaires', 'live' => false],
                     ['name' => 'CamEvents', 'nameFr' => 'CamEvents', 'icon' => '🎉', 'desc' => 'Discover and create community events', 'descFr' => 'Découvrez et créez des événements communautaires', 'live' => false],
@@ -753,7 +753,7 @@
                 {{-- Right: Copy --}}
                 <div class="order-1 lg:order-2 space-y-6">
                     <div class="inline-flex items-center gap-2 rounded-full bg-cm-yellow/20 px-4 py-2 text-sm font-semibold text-cm-yellow-dark">
-                        🤝 <span x-text="$store.lang.t('Solidarity', 'Solidarité')"></span>
+                        🤝 <span x-text="$store.lang.t('Solidarity · Coming soon', 'Solidarité · Bientôt')"></span>
                     </div>
                     <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
                         x-text="$store.lang.t('Because community shows up for each other.', 'Parce que la communauté se soutient.')"></h2>
@@ -842,10 +842,11 @@
             <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
                 @php
                     $stats = [
-                        ['value' => max($memberCount, 150), 'label' => 'Members in the UK', 'labelFr' => 'Membres au Royaume-Uni', 'suffix' => '+'],
-                        ['value' => max($regionCount, 12), 'label' => 'Regions with active communities', 'labelFr' => 'Régions avec communautés actives', 'suffix' => ''],
-                        ['value' => 8, 'label' => 'Solidarity campaigns completed', 'labelFr' => 'Campagnes de solidarité complétées', 'suffix' => ''],
-                        ['value' => 2400, 'label' => 'Messages sent in GoConnect', 'labelFr' => 'Messages envoyés dans GoConnect', 'suffix' => '+'],
+                        // Real figures only (HomeController::communityStats).
+                        ['value' => $stats['members'], 'label' => 'Members', 'labelFr' => 'Membres', 'suffix' => ''],
+                        ['value' => $stats['regions'], 'label' => 'Regions represented', 'labelFr' => 'Régions représentées', 'suffix' => ''],
+                        ['value' => $stats['listings'], 'label' => 'Listings on GoMarket', 'labelFr' => 'Annonces sur GoMarket', 'suffix' => ''],
+                        ['value' => $stats['messages'], 'label' => 'Messages sent in GoConnect', 'labelFr' => 'Messages envoyés dans GoConnect', 'suffix' => ''],
                     ];
                 @endphp
 
@@ -862,64 +863,10 @@
         </div>
     </section>
 
-    {{-- ═══════════════════════════════════════════════════════════════
-         SECTION 8 — TESTIMONIALS
-         ═══════════════════════════════════════════════════════════════ --}}
-    <section class="hidden md:block py-20 lg:py-28 bg-white" data-animate>
-        <div class="mx-auto max-w-[1440px] px-6 sm:px-10 lg:px-12">
-            <div class="text-center max-w-3xl mx-auto mb-16">
-                <h2 class="text-3xl sm:text-4xl font-bold text-slate-900"
-                    x-text="$store.lang.t('What Cameroonians in the UK are saying', 'Ce que disent les Camerounais au Royaume-Uni')"></h2>
-                <div class="mt-4 h-1 w-16 bg-cm-red mx-auto rounded-full"></div>
-            </div>
-
-            <div class="grid md:grid-cols-3 gap-8">
-                @php
-                    $testimonials = [
-                        [
-                            'name' => 'Afi Tanyi',
-                            'city' => 'London',
-                            'initial' => 'AT',
-                            'color' => 'bg-cm-green',
-                            'quote' => 'When I first moved to London, I didn\'t know a single person. GoConnect connected me with 50 Cameroonians in my city within the first week. It\'s like having a piece of home.',
-                            'quoteFr' => 'Quand je suis arrivée à Londres, je ne connaissais personne. GoConnect m\'a connectée avec 50 Camerounais dans ma ville en une semaine. C\'est comme avoir un morceau de chez soi.',
-                        ],
-                        [
-                            'name' => 'Emmanuel Fru',
-                            'city' => 'Manchester',
-                            'initial' => 'EF',
-                            'color' => 'bg-cm-red',
-                            'quote' => 'When I lost my mother, the community raised £2,000 in 3 days through Solidarity. I never felt alone. This platform saved my family in our darkest moment.',
-                            'quoteFr' => 'Quand j\'ai perdu ma mère, la communauté a collecté 2 000£ en 3 jours grâce à la Solidarité. Je ne me suis jamais senti seul. Cette plateforme a sauvé ma famille.',
-                        ],
-                        [
-                            'name' => 'Ngozi Mbah',
-                            'city' => 'Birmingham',
-                            'initial' => 'NM',
-                            'color' => 'bg-cm-yellow-dark',
-                            'quote' => 'I found my flat through KamerNest, send packages home through GoParcel, and found my best friend in the Birmingham Room. This app is everything.',
-                            'quoteFr' => 'J\'ai trouvé mon appartement sur KamerNest, j\'envoie des colis au pays via GoParcel, et j\'ai trouvé ma meilleure amie dans le Salon de Birmingham. Cette appli est tout.',
-                        ],
-                    ];
-                @endphp
-
-                @foreach($testimonials as $testimonial)
-                    <div class="bg-slate-50 rounded-2xl p-8 relative">
-                        <svg class="absolute top-6 right-6 w-8 h-8 text-cm-green/10" fill="currentColor" viewBox="0 0 24 24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10H14.017zM0 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151C7.546 6.068 5.983 8.789 5.983 11H10v10H0z"/></svg>
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="w-12 h-12 rounded-full {{ $testimonial['color'] }} flex items-center justify-center text-sm font-bold text-white">{{ $testimonial['initial'] }}</div>
-                            <div>
-                                <p class="font-bold text-slate-900">{{ $testimonial['name'] }}</p>
-                                <p class="text-sm text-slate-500">{{ $testimonial['city'] }}, UK</p>
-                            </div>
-                        </div>
-                        <p class="text-slate-600 leading-relaxed italic"
-                           x-text="$store.lang.t('{{ addslashes($testimonial['quote']) }}', '{{ addslashes($testimonial['quoteFr']) }}')"></p>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
+    {{-- SECTION 8 — TESTIMONIALS: removed 2026-11-12. The three quotes were invented
+         (one praised Solidarity, two named modules that do not exist), and fake
+         testimonials are unlawful in the UK. Bring the section back with quotes
+         real members have agreed to share. --}}
 
     {{-- ═══════════════════════════════════════════════════════════════
          SECTION 9 — THE VISION

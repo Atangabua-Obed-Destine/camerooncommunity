@@ -86,9 +86,9 @@
                     class="wa-add-member__user {{ $isSelected ? 'wa-add-member__user--selected' : '' }}">
                 <div class="wa-add-member__avatar">
                     @if($user->avatar)
-                        <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                        <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                     @else
-                        <span>{{ strtoupper(substr($user->username ?? $user->name, 0, 1)) }}</span>
+                        <span>{{ mb_strtoupper(mb_substr($user->username ?? $user->name, 0, 1)) }}</span>
                     @endif
                 </div>
                 <div class="flex-1 min-w-0 text-left">
@@ -152,7 +152,7 @@
         {{-- DM partner cover photo (Facebook/WhatsApp-style banner) --}}
         @if($isDm && $dmPartner?->cover_photo)
             <div class="wa-info-hero__cover">
-                <img src="{{ asset('storage/' . $dmPartner->cover_photo) }}" alt="" class="w-full h-full object-cover">
+                <img src="{{ \App\Support\StorageUrl::for($dmPartner->cover_photo) }}" alt="" class="w-full h-full object-cover">
                 <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-white to-transparent pointer-events-none"></div>
             </div>
         @endif
@@ -163,9 +163,9 @@
             // expression and silently emits an unterminated PHP open tag.
             $heroPhoto = null;
             if ($isDm && $dmPartner?->avatar) {
-                $heroPhoto = asset('storage/' . $dmPartner->avatar);
+                $heroPhoto = \App\Support\StorageUrl::for($dmPartner->avatar);
             } elseif (! $isDm && $room->avatar) {
-                $heroPhoto = asset('storage/' . $room->avatar);
+                $heroPhoto = \App\Support\StorageUrl::for($room->avatar);
             }
             $heroPhotoName = $isDm && $dmPartner
                 ? auth()->user()->displayNameFor($dmPartner)
@@ -177,11 +177,11 @@
              x-data style="cursor:zoom-in"
              @click="$dispatch('open-user-photo', { url: @js($heroPhoto), name: @js($heroPhotoName), bg: @js($heroBgClass) })">
             @if($isDm && $dmPartner?->avatar)
-                <img src="{{ asset('storage/' . $dmPartner->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
+                <img src="{{ \App\Support\StorageUrl::for($dmPartner->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
             @elseif($isDm && $dmPartner)
-                <span class="text-6xl font-bold text-white">{{ strtoupper(substr($dmPartner->username ?? $dmPartner->name ?? '?', 0, 1)) }}</span>
+                <span class="text-6xl font-bold text-white">{{ mb_strtoupper(mb_substr($dmPartner->username ?? $dmPartner->name ?? '?', 0, 1)) }}</span>
             @elseif($room->avatar)
-                <img src="{{ asset('storage/' . $room->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
+                <img src="{{ \App\Support\StorageUrl::for($room->avatar) }}" alt="" class="w-full h-full object-cover rounded-full">
             @else
                 <span class="text-4xl">{{ match($room->room_type->value) { 'national' => '🇨🇲', 'regional' => '🌍', 'city' => '📍', 'private_group' => '👥', default => '💬' } }}</span>
             @endif
@@ -244,10 +244,10 @@
         <p class="wa-info-hero__sub">
             @if($isDm && $dmPartner)
                 @php $dmRealHandle = $dmPartner->username ?? $dmPartner->name; @endphp
+                {{-- The handle, under a saved name. Never the email: this panel
+                     opens on any DM, a marketplace buyer's included. --}}
                 @if(isset($dmDisplayName) && $dmDisplayName !== $dmRealHandle)
-                    <span class="text-slate-400">@</span>{{ $dmRealHandle }}{{ $dmPartner->email ? ' · ' . $dmPartner->email : '' }}
-                @else
-                    {{ $dmPartner->email ?? '' }}
+                    <span class="text-slate-400">@</span>{{ $dmRealHandle }}
                 @endif
             @else
                 {{ ucfirst(str_replace('_', ' ', $room->room_type->value)) }} · <span class="text-cm-green font-semibold">{{ $room->members_count }} <span x-text="$store.lang.t('members', 'membres')"></span></span>
@@ -479,9 +479,9 @@
                 <div class="wa-info-request__user">
                     <div class="wa-info-member__avatar {{ $reqUser->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . $reqUser->id) }}">
                         @if($reqUser->avatar)
-                            <img src="{{ asset('storage/' . $reqUser->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                            <img src="{{ \App\Support\StorageUrl::for($reqUser->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
-                            <span class="text-white">{{ strtoupper(substr($reqUser->username ?? $reqUser->name, 0, 1)) }}</span>
+                            <span class="text-white">{{ mb_strtoupper(mb_substr($reqUser->username ?? $reqUser->name, 0, 1)) }}</span>
                         @endif
                     </div>
                     <div class="flex-1 min-w-0">
@@ -568,9 +568,9 @@
                          @click="$dispatch('open-user-preview', { id: {{ $member->id }} })"
                          @keydown.enter="$dispatch('open-user-preview', { id: {{ $member->id }} })">
                         @if($member->avatar)
-                            <img src="{{ asset('storage/' . $member->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
+                            <img src="{{ \App\Support\StorageUrl::for($member->avatar) }}" alt="" class="w-full h-full rounded-full object-cover">
                         @else
-                            <span class="text-white">{{ strtoupper(substr($member->username ?? $member->name, 0, 1)) }}</span>
+                            <span class="text-white">{{ mb_strtoupper(mb_substr($member->username ?? $member->name, 0, 1)) }}</span>
                         @endif
                     </div>
                     <div class="flex-1 min-w-0">
@@ -635,9 +635,9 @@
                 <div class="wa-info-member">
                     <div class="wa-info-member__avatar {{ $past->avatar ? '' : \App\Support\AvatarPalette::colorClass('user:' . $past->id) }}">
                         @if($past->avatar)
-                            <img src="{{ asset('storage/' . $past->avatar) }}" alt="" class="w-full h-full rounded-full object-cover opacity-70">
+                            <img src="{{ \App\Support\StorageUrl::for($past->avatar) }}" alt="" class="w-full h-full rounded-full object-cover opacity-70">
                         @else
-                            <span class="text-white opacity-80">{{ strtoupper(substr($past->username ?? $past->name, 0, 1)) }}</span>
+                            <span class="text-white opacity-80">{{ mb_strtoupper(mb_substr($past->username ?? $past->name, 0, 1)) }}</span>
                         @endif
                     </div>
                     <div class="flex-1 min-w-0">

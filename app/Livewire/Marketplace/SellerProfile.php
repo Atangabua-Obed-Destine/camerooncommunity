@@ -2,18 +2,12 @@
 
 namespace App\Livewire\Marketplace;
 
-use App\Enums\ListingStatus;
 use App\Livewire\Concerns\InteractsWithFollows;
-use App\Models\CommunityPointsLog;
-use App\Models\MarketplaceListing;
-use App\Models\SolidarityContribution;
 use App\Models\User;
-use App\Models\UserBadge;
 use App\Models\UserConnection;
 use App\Models\YardRoom;
-use App\Models\YardRoomMember;
 use App\Services\ConnectionService;
-use App\Support\MarketplaceQueryBuilder;
+use App\Services\Market\SellerProfileService;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\On;
@@ -46,17 +40,9 @@ class SellerProfile extends Component
 
     public function mount(string $username): void
     {
-        $viewer = auth()->user();
-
-        $seller = User::where('username', $username)
-            ->where('tenant_id', $viewer->tenant_id)
-            ->firstOrFail();
-
-        if (method_exists($viewer, 'hasBlockedOrIsBlockedBy') && $viewer->hasBlockedOrIsBlockedBy($seller->id)) {
-            abort(404);
-        }
-
-        $this->user = $seller;
+        // Hidden from someone they blocked. The blocker gets the page, which
+        // offers Unblock: a 404 both ways meant that button never appeared.
+        $this->user = app(SellerProfileService::class)->find(auth()->user(), $username) ?? abort(404);
     }
 
     public function updating($name): void
@@ -69,26 +55,9 @@ class SellerProfile extends Component
     #[Computed]
     public function listings()
     {
-        // On your own profile you should see everything you have posted, including
-        // drafts and paused items, which forFeed() hides. Other visitors still
-        // only ever see the public feed.
-        $q = MarketplaceListing::query()
-            ->when(
-                $this->isSelf(),
-                fn ($q) => $q->where('status', '!=', ListingStatus::Removed->value),
-                fn ($q) => $q->forFeed(),
-            )
-            ->where('user_id', $this->user->id)
-            ->with(['category', 'media' => fn ($m) => $m->limit(1)]);
-
-        $term = trim($this->search);
-        if ($term !== '') {
-            $q->where('title', 'like', '%' . $term . '%');
-        }
-
-        MarketplaceQueryBuilder::applySort($q, $this->sort);
-
-        return $q->paginate(18);
+        return app(SellerProfileService::class)
+            ->listings(auth()->user(), $this->user, $this->search, $this->sort)
+            ->paginate(18);
     }
 
     /**
@@ -236,22 +205,7 @@ class SellerProfile extends Component
     #[Computed]
     public function connectionState(): string
     {
-        if ($this->isSelf()) {
-            return 'self';
-        }
-
-        $c = $this->connection;
-
-        if (! $c) {
-            return 'none';
-        }
-
-        return match ($c->status) {
-            UserConnection::STATUS_ACCEPTED => 'connected',
-            UserConnection::STATUS_PENDING  => $c->requested_by === auth()->id() ? 'outgoing' : 'incoming',
-            UserConnection::STATUS_BLOCKED  => $c->requested_by === auth()->id() ? 'blocked-by-me' : 'blocked-by-them',
-            default                         => 'none',
-        };
+        return app(SellerProfileService::class)->connectionState(auth()->user(), $this->user);
     }
 
     /** True when the viewer is looking at their own profile. */
@@ -286,29 +240,20 @@ class SellerProfile extends Component
     #[Computed]
     public function badges()
     {
-        return UserBadge::where('user_id', $this->user->id)->get();
+        return app(SellerProfileService::class)->badges($this->user);
     }
 
     /** Community stats carried over from the old profile page. */
     #[Computed]
     public function communityStats(): array
     {
-        return [
-            'points'        => (int) CommunityPointsLog::where('user_id', $this->user->id)->sum('points_awarded'),
-            'rooms'         => YardRoomMember::where('user_id', $this->user->id)->count(),
-            'contributions' => SolidarityContribution::where('contributor_id', $this->user->id)->count(),
-        ];
+        return app(SellerProfileService::class)->communityStats($this->user);
     }
 
     #[Computed]
     public function stats(): array
     {
-        return [
-            'active'        => MarketplaceListing::query()->forFeed()->where('user_id', $this->user->id)->count(),
-            'rating_avg'    => round((float) $this->user->sellerReviews()->avg('rating'), 1),
-            'rating_count'  => (int) $this->user->sellerReviews()->count(),
-            'followers'     => $this->followerCount($this->user->id),
-        ];
+        return app(SellerProfileService::class)->stats($this->user);
     }
 
     public function render()

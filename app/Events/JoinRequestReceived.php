@@ -4,6 +4,7 @@ namespace App\Events;
 
 use App\Models\YardJoinRequest;
 use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -25,7 +26,7 @@ class JoinRequestReceived implements ShouldBroadcastNow
     public function broadcastOn(): array
     {
         return [
-            new Channel('tenant.' . $this->joinRequest->room->tenant_id . '.room.' . $this->joinRequest->room_id),
+            new PrivateChannel('tenant.' . $this->joinRequest->room->tenant_id . '.room.' . $this->joinRequest->room_id),
         ];
     }
 

@@ -47,23 +47,7 @@ class LocationService
         // city → region map first, then the county/country alias map.
         // If we get "England" as the region, try to reverse-geocode with coordinates.
         if (in_array($country, ['United Kingdom', 'UK', 'Great Britain'], true)) {
-            // First try normal normalization with what we already have
-            $normalized = $this->normalizeUkRegion($city, $region);
-
-            // If that failed and we have coordinates, ask Nominatim for richer
-            // location candidates (city / state_district / county) and try each.
-            if (! $normalized && $lat && $lng) {
-                $candidates = $this->reverseGeocodeCandidates($lat, $lng);
-                foreach ($candidates as $candidate) {
-                    $normalized = $this->normalizeUkRegion($candidate, $region);
-                    if ($normalized) {
-                        $city = $candidate;
-                        break;
-                    }
-                }
-            }
-
-            $region = $normalized;
+            [$region, $city] = $this->ukRegionAndCity($city, $region, $lat, $lng);
         }
 
         // Everyone else. The geocoder answered with a country but no region:
@@ -132,6 +116,147 @@ class LocationService
     /**
      * Explicitly join a user to a room (called when user chooses to join).
      */
+    /**
+     * The ITL1 region (London, South East, …) for a UK location, or null. Pure:
+     * no user, no save. The register wizard shows this before the account
+     * exists, so what is shown is what is saved.
+     */
+    public function normaliseUkRegion(string $city, ?string $region, ?float $lat = null, ?float $lng = null): ?string
+    {
+        return $this->ukRegionAndCity($city, $region, $lat, $lng)[0];
+    }
+
+    /** @return array{0: ?string, 1: string} the region, and the city that matched */
+    private function ukRegionAndCity(string $city, ?string $region, ?float $lat, ?float $lng): array
+    {
+        // First try normal normalization with what we already have
+        $normalized = $this->normalizeUkRegion($city, $region);
+
+        // If that failed and we have coordinates, ask Nominatim for richer
+        // location candidates (city / state_district / county) and try each.
+        if (! $normalized && $lat && $lng) {
+            foreach ($this->reverseGeocodeCandidates($lat, $lng) as $candidate) {
+                $normalized = $this->normalizeUkRegion($candidate, $region);
+                if ($normalized) {
+                    $city = $candidate;
+                    break;
+                }
+            }
+        }
+
+        return [$normalized, $city];
+    }
+
+    /**
+     * The region a signup shows and saves, from what the geocoder said. UK
+     * regions become ITL1 ("London", not "England"): the city first, because
+     * geocoders answer "England" for any English city, then the alias maps,
+     * then the coordinates. Elsewhere the region is kept as given.
+     */
+    public function signupRegion(string $country, string $region, string $city, ?float $lat, ?float $lng): string
+    {
+        $region = trim($region);
+        $city = trim($city);
+
+        if (! in_array($country, Registration::UK_NAMES, true)) {
+            return $region;
+        }
+
+        $valid = config('cameroon.seeded_regions.GB', []);
+        $cityMap = config('cameroon.gb_city_to_region', []);
+        $aliasMap = config('cameroon.gb_region_aliases', []);
+
+        if ($city && isset($cityMap[Str::lower($city)])) {
+            $region = $cityMap[Str::lower($city)];
+        } elseif ($region && ! in_array($region, $valid, true)) {
+            $key = Str::lower($region);
+            $region = $cityMap[$key] ?? ($aliasMap[$key] ?? $region);
+        }
+
+        if (! in_array($region, $valid, true)) {
+            try {
+                $region = $this->normaliseUkRegion($city, $region ?: null, $lat, $lng) ?? $region;
+            } catch (\Throwable $e) {
+                logger()->warning('UK region lookup failed: '.$e->getMessage());
+            }
+        }
+
+        return $region;
+    }
+
+    /**
+     * Country, region and city for a position, in English, at the zoom the
+     * web's register wizard asks Nominatim for (10: city level). Done on the
+     * server for the app, so Nominatim sees one identified client (its usage
+     * policy asks for that) and what is shown is what will be saved.
+     *
+     * @return array{country: string, region: string, city: string}|null
+     */
+    public function placeFor(float $lat, float $lng): ?array
+    {
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(8)
+                ->withUserAgent('CameroonNetwork/1.0 (+https://cameroonnetwork.org)')
+                ->get('https://nominatim.openstreetmap.org/reverse', [
+                    'lat' => $lat,
+                    'lon' => $lng,
+                    'format' => 'json',
+                    'accept-language' => 'en',
+                    'zoom' => 10,
+                ]);
+        } catch (\Throwable $e) {
+            logger()->warning('Nominatim place lookup failed: '.$e->getMessage());
+
+            return null;
+        }
+
+        $a = $response->successful() ? ($response->json('address') ?? []) : [];
+        if (empty($a['country'])) {
+            return null;
+        }
+
+        return [
+            'country' => (string) $a['country'],
+            'region' => (string) ($a['state'] ?? $a['region'] ?? ''),
+            'city' => (string) ($a['city'] ?? $a['town'] ?? $a['village'] ?? $a['municipality'] ?? $a['suburb'] ?? $a['county'] ?? ''),
+        ];
+    }
+
+    /**
+     * Where an IP address is, through ipapi.co, cached for six hours. Private
+     * addresses (a dev machine) ask about the server's own public address.
+     *
+     * @return array{latitude: ?float, longitude: ?float, country_name: ?string, country_code: ?string, region: ?string, city: ?string}|array{error: string}
+     */
+    public function placeForIp(?string $ip): array
+    {
+        $ip = $ip ?: '';
+
+        return \Illuminate\Support\Facades\Cache::remember('geo:ip:'.$ip, now()->addHours(6), function () use ($ip) {
+            try {
+                $private = ! $ip || ! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE);
+                $resp = \Illuminate\Support\Facades\Http::timeout(5)
+                    ->get($private ? 'https://ipapi.co/json/' : "https://ipapi.co/{$ip}/json/");
+                if ($resp->successful()) {
+                    $d = $resp->json();
+
+                    return [
+                        'latitude' => $d['latitude'] ?? null,
+                        'longitude' => $d['longitude'] ?? null,
+                        'country_name' => $d['country_name'] ?? null,
+                        'country_code' => $d['country_code'] ?? null,
+                        'region' => $d['region'] ?? null,
+                        'city' => $d['city'] ?? null,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // The caller sees the error payload and falls back.
+            }
+
+            return ['error' => 'unavailable'];
+        });
+    }
+
     public function joinRoom(User $user, YardRoom $room): void
     {
         // Private groups require admin approval — don't auto-join

@@ -2,15 +2,15 @@
 
 namespace App\Livewire\Onboarding;
 
-use App\Enums\RoomType;
 use App\Models\User;
-use App\Models\YardRoom;
-use App\Models\YardRoomMember;
-use App\Services\AIService;
-use App\Services\LocationService;
+use App\Services\Onboarding;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 
+/**
+ * /welcome. The server side of each step lives in App\Services\Onboarding,
+ * which the app's /api/v1/onboarding endpoints call too.
+ */
 class OnboardingFlow extends Component
 {
     // Step tracking: 1=AI Chat, 2=Community Discovery, 3=Profile Polish, 4=Launch
@@ -33,7 +33,7 @@ class OnboardingFlow extends Component
     // Profile polish
     public string $bio = '';
 
-    public function mount(): void
+    public function mount(Onboarding $onboarding): void
     {
         $user = auth()->user();
 
@@ -43,37 +43,11 @@ class OnboardingFlow extends Component
             return;
         }
 
-        // Ensure rooms exist for user's location
-        if ($user->current_country) {
-            app(LocationService::class)->handleUserLocation(
-                $user,
-                $user->current_country,
-                '',
-                $user->current_region ?? ''
-            );
-
-            // Pre-select the National + matching Regional room for the user's
-            // country/region so both communities are checked by default. The
-            // user cannot un-check them — they are mandatory.
-            $this->selectedRoomIds = YardRoom::where('is_system_room', true)
-                ->where('is_active', true)
-                ->where('country', $user->current_country)
-                ->where(function ($q) use ($user) {
-                    $q->where('room_type', RoomType::National);
-                    if ($user->current_region) {
-                        $q->orWhere(function ($q2) use ($user) {
-                            $q2->where('room_type', RoomType::Regional)
-                               ->where('region', $user->current_region);
-                        });
-                    }
-                })
-                ->pluck('id')
-                ->all();
-
-            // Snapshot the auto-selected (default) rooms so the UI can prevent
-            // the user from un-selecting them.
-            $this->defaultRoomIds = $this->selectedRoomIds;
-        }
+        // Make sure the national and regional rooms exist, then pre-select
+        // them. They are mandatory: the member can't untick them.
+        $onboarding->prepare($user);
+        $this->selectedRoomIds = $onboarding->communityRooms($user)->pluck('id')->all();
+        $this->defaultRoomIds = $this->selectedRoomIds;
 
         // Load Kamer AI welcome from session (set during registration), or create fresh
         $history = session('kamer_chat_history', []);
@@ -83,7 +57,7 @@ class OnboardingFlow extends Component
         } else {
             $this->chatMessages = [[
                 'role' => 'assistant',
-                'content' => $this->getWelcomeMessage($user),
+                'content' => $onboarding->welcomeMessage($user),
             ]];
         }
     }
@@ -94,45 +68,17 @@ class OnboardingFlow extends Component
         return auth()->user();
     }
 
+    /** The national and regional rooms, joined automatically. */
     #[Computed]
     public function discoverableRooms()
     {
-        $user = auth()->user();
-
-        if (! $user->current_country) {
-            return collect();
-        }
-
-        // Show exactly 2 system rooms — the user's country (National) and the
-        // user's detected region (Regional). They are auto-joined below, so we
-        // simply present them here as a confirmation.
-        $query = YardRoom::where('is_system_room', true)
-            ->where('is_active', true)
-            ->where('country', $user->current_country)
-            ->where(function ($q) use ($user) {
-                $q->where('room_type', RoomType::National);
-                if ($user->current_region) {
-                    $q->orWhere(function ($q2) use ($user) {
-                        $q2->where('room_type', RoomType::Regional)
-                           ->where('region', $user->current_region);
-                    });
-                }
-            })
-            ->withCount('members')
-            ->orderByRaw("FIELD(room_type, '" . RoomType::National->value . "', '" . RoomType::Regional->value . "')");
-
-        return $query->get();
+        return app(Onboarding::class)->communityRooms(auth()->user());
     }
 
     #[Computed]
     public function memberCount(): int
     {
-        $user = auth()->user();
-
-        return User::withoutGlobalScopes()
-            ->where('tenant_id', $user->tenant_id)
-            ->where('current_country', $user->current_country)
-            ->count();
+        return app(Onboarding::class)->memberCount(auth()->user());
     }
 
     /**
@@ -147,28 +93,15 @@ class OnboardingFlow extends Component
 
         $this->chatInput = '';
         $this->chatMessages[] = ['role' => 'user', 'content' => $message];
-        $this->chatLoading = true;
 
         // Detect user intent from quick replies
         $this->detectIntent($message);
 
-        // Get AI response
-        $ai = app(AIService::class);
-        $response = $ai->chat($this->chatMessages, auth()->user()->language_pref?->value ?? 'en');
-
+        $this->chatMessages[] = [
+            'role' => 'assistant',
+            'content' => app(Onboarding::class)->kamerReply(auth()->user(), $this->chatMessages),
+        ];
         $this->chatLoading = false;
-
-        if ($response) {
-            $this->chatMessages[] = ['role' => 'assistant', 'content' => $response];
-        } else {
-            // Fallback if AI unavailable
-            $this->chatMessages[] = [
-                'role' => 'assistant',
-                'content' => auth()->user()->language_pref?->value === 'fr'
-                    ? "C'est super ! Passons à la découverte de vos communautés. 👇"
-                    : "That's great! Let's discover your communities now. 👇",
-            ];
-        }
     }
 
     /**
@@ -193,15 +126,7 @@ class OnboardingFlow extends Component
      */
     public function joinSelectedRooms(): void
     {
-        $user = auth()->user();
-        $locationService = app(LocationService::class);
-
-        foreach ($this->selectedRoomIds as $roomId) {
-            $room = YardRoom::find($roomId);
-            if ($room && $room->is_system_room && $room->is_active) {
-                $locationService->joinRoom($user, $room);
-            }
-        }
+        app(Onboarding::class)->joinRooms(auth()->user(), $this->selectedRoomIds);
 
         $this->step = 3;
         $this->maxStep = max($this->maxStep, 3);
@@ -236,7 +161,7 @@ class OnboardingFlow extends Component
      */
     public function completeOnboarding(): void
     {
-        auth()->user()->update(['onboarded_at' => now()]);
+        app(Onboarding::class)->complete(auth()->user());
 
         $this->redirect(route('yard'), navigate: true);
     }
@@ -262,22 +187,6 @@ class OnboardingFlow extends Component
     {
         return view('livewire.onboarding.onboarding-flow')
             ->layout('components.layouts.app');
-    }
-
-    /**
-     * Generate a warm welcome message.
-     */
-    private function getWelcomeMessage(User $user): string
-    {
-        $name = $user->name;
-        $country = $user->current_country ?? 'abroad';
-        $lang = $user->language_pref?->value ?? 'en';
-
-        if ($lang === 'fr') {
-            return "Salut **{$name}** ! 🎉 Je suis **Kamer**, ton guide personnel sur Cameroon Network.\n\nJe suis vraiment content(e) de te voir ici ! Avant de plonger dans le Yard, dis-moi un peu, qu'est-ce qui t'amène sur la plateforme ?";
-        }
-
-        return "Hey **{$name}**! 🎉 I'm **Kamer**, your personal guide to Cameroon Network.\n\nSo glad you're here! Before we dive into The Yard, tell me, what brings you to the platform?";
     }
 
     /**

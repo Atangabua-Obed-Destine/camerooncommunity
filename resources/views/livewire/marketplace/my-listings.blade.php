@@ -1,5 +1,5 @@
 @php $lang = app()->getLocale(); @endphp
-<div class="min-h-[calc(100vh-96px)] bg-slate-100">
+<div @class(['min-h-[calc(100vh-96px)] bg-slate-100', 'pb-44 sm:pb-24' => count($selected) > 0])>
     <div class="max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-4 lg:py-6">
 
         {{-- Header card --}}
@@ -29,7 +29,7 @@
 
         {{-- Filter pills --}}
         <div class="flex gap-2 overflow-x-auto mb-4 pb-1 -mx-1 px-1 scrollbar-hide">
-            @foreach (['all'=>'All|Tous','active'=>'Active|Actives','paused'=>'Paused|En pause','sold'=>'Sold|Vendues','expired'=>'Expired|Expirées','draft'=>'Drafts|Brouillons'] as $key => $pair)
+            @foreach (['all'=>'All|Tous','active'=>'Active|Actives','pending_review'=>'Pending review|En revue','paused'=>'Paused|En pause','sold'=>'Sold|Vendues','expired'=>'Expired|Expirées','draft'=>'Drafts|Brouillons'] as $key => $pair)
                 @php [$en, $fr] = explode('|', $pair); @endphp
                 <button wire:click="setFilter('{{ $key }}')"
                         @class([
@@ -66,6 +66,7 @@
                             'paused' => 'bg-slate-200 text-slate-700',
                             'expired' => 'bg-orange-100 text-orange-800',
                             'draft' => 'bg-amber-100 text-amber-800',
+                            'pending_review' => 'bg-amber-100 text-amber-800',
                             default => 'bg-gray-100 text-gray-700',
                         };
                     @endphp
@@ -188,7 +189,7 @@
                                 <div class="flex items-center gap-2 p-2 rounded-xl bg-cm-green/10 ring-1 ring-cm-green/30">
                                     <div class="w-8 h-8 rounded-full overflow-hidden bg-slate-200 grid place-items-center text-xs font-bold text-slate-700">
                                         @if ($_picked->avatar)
-                                            <img src="{{ asset('storage/' . $_picked->avatar) }}" alt="" class="w-full h-full object-cover">
+                                            <img src="{{ \App\Support\StorageUrl::for($_picked->avatar) }}" alt="" class="w-full h-full object-cover">
                                         @else
                                             {{ mb_strtoupper(mb_substr($_picked->name ?: $_picked->username, 0, 1)) }}
                                         @endif
@@ -213,7 +214,7 @@
                                             class="w-full flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-100 text-left">
                                         <div class="w-7 h-7 rounded-full overflow-hidden bg-slate-200 grid place-items-center text-[11px] font-bold text-slate-700">
                                             @if ($cand->avatar)
-                                                <img src="{{ asset('storage/' . $cand->avatar) }}" alt="" class="w-full h-full object-cover">
+                                                <img src="{{ \App\Support\StorageUrl::for($cand->avatar) }}" alt="" class="w-full h-full object-cover">
                                             @else
                                                 {{ mb_strtoupper(mb_substr($cand->name ?: $cand->username, 0, 1)) }}
                                             @endif
@@ -277,25 +278,27 @@
             </div>
         </div>
     @endif
-    {{-- ─── Bulk Actions Bar ─── --}}
+    {{-- ─── Bulk Actions Bar ───
+         On a phone the actions are a row of three equal toolbar buttons under the
+         count; as one row of pills they were 499px wide and Delete was off-screen. --}}
     @if (count($selected) > 0)
-        <div class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] p-4">
-            <div class="max-w-6xl mx-auto w-full flex items-center justify-between gap-4">
-                <div class="flex items-center gap-3">
+        <div class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:p-4">
+            <div class="max-w-6xl mx-auto w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                <div class="flex items-center justify-between sm:justify-start gap-3">
                     <button wire:click="toggleSelectAll" class="text-sm font-bold text-slate-700 hover:text-cm-green">
                         {{ count($selected) === count($this->listings->pluck('id')) ? ($lang === 'fr' ? 'Désélectionner tout' : 'Deselect All') : ($lang === 'fr' ? 'Sélectionner tout' : 'Select All') }}
                     </button>
                     <span class="text-sm font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">{{ count($selected) }} {{ $lang === 'fr' ? 'sélectionné(s)' : 'selected' }}</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button wire:click="bulkPause" class="text-sm font-bold px-4 py-2 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 ring-1 ring-amber-200 transition">
-                        ⏸ {{ $lang === 'fr' ? 'Pause' : 'Pause' }}
+                <div class="grid grid-cols-3 gap-2 sm:flex sm:items-center">
+                    <button wire:click="bulkPause" class="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 whitespace-nowrap text-sm font-bold px-1 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-full bg-amber-50 hover:bg-amber-100 text-amber-700 ring-1 ring-amber-200 transition">
+                        <span aria-hidden="true">⏸</span><span>{{ $lang === 'fr' ? 'Pause' : 'Pause' }}</span>
                     </button>
-                    <button wire:click="bulkReactivate" class="text-sm font-bold px-4 py-2 rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 transition">
-                        ▶ {{ $lang === 'fr' ? 'Réactiver' : 'Reactivate' }}
+                    <button wire:click="bulkReactivate" class="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 whitespace-nowrap text-sm font-bold px-1 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-full bg-emerald-50 hover:bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 transition">
+                        <span aria-hidden="true">▶</span><span>{{ $lang === 'fr' ? 'Réactiver' : 'Reactivate' }}</span>
                     </button>
-                    <button wire:click="bulkRemove" wire:confirm="{{ $lang === 'fr' ? 'Supprimer les annonces sélectionnées ?' : 'Remove selected listings?' }}" class="text-sm font-bold px-4 py-2 rounded-full bg-cm-red/10 hover:bg-cm-red text-cm-red hover:text-white transition">
-                        🗑 {{ $lang === 'fr' ? 'Supprimer' : 'Delete' }}
+                    <button wire:click="bulkRemove" wire:confirm="{{ $lang === 'fr' ? 'Supprimer les annonces sélectionnées ?' : 'Remove selected listings?' }}" class="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-1 whitespace-nowrap text-sm font-bold px-1 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-full bg-cm-red/10 hover:bg-cm-red text-cm-red hover:text-white transition">
+                        <span aria-hidden="true">🗑</span><span>{{ $lang === 'fr' ? 'Supprimer' : 'Delete' }}</span>
                     </button>
                 </div>
             </div>

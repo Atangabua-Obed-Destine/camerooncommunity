@@ -69,6 +69,11 @@ class CameroonGeo
         // strip accents the simple way
         $s = strtr($s, ['é'=>'e','è'=>'e','ê'=>'e','ë'=>'e','à'=>'a','â'=>'a','ô'=>'o','î'=>'i','ï'=>'i','ç'=>'c','ù'=>'u','û'=>'u']);
 
+        // A key itself ('far_north', as the app's filters send it): no alias
+        // has an underscore, so 'far_north' used to match nothing and the
+        // Far North area filter quietly showed the whole country.
+        if (isset(self::regionLabels()[$s])) { return $s; }
+
         // Longest alias first. Declaration order put 'nord' ahead of
         // 'nord-ouest', and a hyphen is a word boundary, so every French
         // Nord-Ouest and Sud-Ouest resolved to North and South — quietly

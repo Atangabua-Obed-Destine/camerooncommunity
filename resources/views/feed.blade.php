@@ -11,11 +11,11 @@
              x-data>
             <div class="flex items-center gap-4">
                 <div class="flex h-14 w-14 items-center justify-center rounded-full bg-cm-yellow text-2xl font-bold text-cm-green shrink-0">
-                    {{ substr(auth()->user()->name ?? 'U', 0, 1) }}
+                    {{ mb_strtoupper(mb_substr(auth()->user()->name ?? 'U', 0, 1)) }}
                 </div>
                 <div class="min-w-0">
                     <h1 class="text-xl font-bold text-slate-900 truncate"
-                        x-text="$store.lang.t('Welcome back, {{ explode(' ', auth()->user()->name ?? 'friend')[0] }}!', 'Bon retour, {{ explode(' ', auth()->user()->name ?? 'ami')[0] }} !')">
+                        x-text="$store.lang.t(@js('Welcome back, ' . explode(' ', auth()->user()->name ?? 'friend')[0] . '!'), @js('Bon retour, ' . explode(' ', auth()->user()->name ?? 'ami')[0] . ' !'))">
                     </h1>
                     <p class="text-sm text-slate-500" x-text="$store.lang.t('Connecting Cameroonians, wherever they are.', 'Connecter les Camerounais, où qu’ils soient.')"></p>
                 </div>

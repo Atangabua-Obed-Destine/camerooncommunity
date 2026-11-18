@@ -17,7 +17,7 @@
                     {{-- Avatar --}}
                     <div class="w-24 h-24 rounded-2xl ring-4 ring-white bg-gradient-to-br from-cm-green to-cm-green/70 flex items-center justify-center text-white font-bold text-3xl shadow-lg overflow-hidden shrink-0">
                         @if($user->avatar)
-                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="" class="w-full h-full object-cover">
+                            <img src="{{ \App\Support\StorageUrl::for($user->avatar) }}" alt="" class="w-full h-full object-cover">
                         @else
                             <x-user-avatar :user="$user" size="w-full h-full" letters="2" />
                         @endif
