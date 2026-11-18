@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use App\Services\GoogleIdToken;
 use App\Services\Registration;
+use App\Support\RemoteAvatar;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -65,16 +67,108 @@ class AuthController extends Controller
     }
 
     /**
+     * "Continue with Google": the web's GoogleAuthController::callback, for an
+     * ID token from the phone's own Google sign-in.
+     *
+     * The same three branches. A member already linked to this Google account
+     * is signed in. A member with the same, Google-verified, email is linked
+     * and signed in. Anyone else is new: nothing is created, and the answer
+     * is `status: register` with what Google said about them, so the app runs
+     * the register wizard (its location step included, as the web insists)
+     * and sends the token again with it.
+     */
+    public function google(Request $request, GoogleIdToken $tokens): JsonResponse
+    {
+        $request->validate([
+            'id_token' => 'required|string|max:4096',
+            'device_name' => 'required|string|max:120',
+        ]);
+
+        $google = $tokens->verify((string) $request->input('id_token'));
+
+        $user = User::withoutGlobalScopes()->where('google_id', $google['google_id'])->first();
+
+        // Linking by email needs Google to vouch for the address; otherwise
+        // anyone could add someone else's email to a Google account and take
+        // their account here.
+        if (! $user && $google['email_verified']) {
+            $user = User::withoutGlobalScopes()->where('email', $google['email'])->first();
+            $user?->forceFill([
+                'google_id' => $google['google_id'],
+                'email_verified_at' => $user->email_verified_at ?: now(),
+            ])->save();
+        }
+
+        if (! $user) {
+            if (! $google['email_verified']) {
+                throw ValidationException::withMessages([
+                    'id_token' => __('Google did not return an email address. Please use a Google account with a verified email.'),
+                ]);
+            }
+
+            return response()->json([
+                'status' => 'register',
+                'google' => [
+                    'email' => $google['email'],
+                    'name' => $google['name'],
+                    'avatar_url' => $google['picture'] ?: null,
+                    'locale' => $google['locale'],
+                ],
+            ]);
+        }
+
+        if (! $user->is_active) {
+            throw ValidationException::withMessages([
+                'id_token' => __('Your account is not active.'),
+            ]);
+        }
+
+        // A Google picture fills an empty avatar, as on the web.
+        if (empty($user->avatar) && $google['picture']) {
+            if ($path = RemoteAvatar::fetch($google['picture'])) {
+                $user->forceFill(['avatar' => $path])->save();
+            }
+        }
+
+        $deviceName = (string) $request->input('device_name');
+        $user->tokens()->where('name', $deviceName)->delete();
+        $token = $user->createToken($deviceName)->plainTextToken;
+        $user->forceFill(['last_active_at' => now()])->saveQuietly();
+
+        return $this->signedIn($request, $user, $token, ['status' => 'signed_in']);
+    }
+
+    /**
      * Create an account and sign this device in: the web's register wizard,
      * in one request. Everything register() does on the web happens here too,
      * because both call App\Services\Registration.
      */
-    public function register(Request $request, Registration $registration): JsonResponse
+    public function register(Request $request, Registration $registration, GoogleIdToken $tokens): JsonResponse
     {
+        // A newcomer from "Continue with Google" (the web's session
+        // `google_signup`): the token stands in for the password, and the
+        // email is Google's, whatever the form says, as the web locks it.
+        $google = null;
+        if ($request->filled('google_id_token')) {
+            $google = $tokens->verify((string) $request->input('google_id_token'));
+            if (! $google['email_verified']) {
+                throw ValidationException::withMessages([
+                    'email' => __('Google did not return an email address. Please use a Google account with a verified email.'),
+                ]);
+            }
+            $request->merge(['email' => $google['email']]);
+        }
+
         $data = $request->validate(
-            Registration::rules() + ['device_name' => 'required|string|max:120'],
+            Registration::rules(isGoogle: $google !== null) + ['device_name' => 'required|string|max:120'],
             Registration::messages(),
         );
+
+        if ($google !== null) {
+            $data['google_id'] = $google['google_id'];
+            $data['avatar'] = RemoteAvatar::fetch($google['picture']);
+            unset($data['password']);
+        }
 
         $user = $registration->register($data);
         $token = $user->createToken($data['device_name'])->plainTextToken;

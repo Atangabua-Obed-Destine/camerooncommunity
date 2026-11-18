@@ -52,10 +52,34 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
      */
     Route::get('configuration', ConfigurationController::class)->name('configuration');
 
+    // The landing screen, the web's guest home page: shown before anyone has
+    // an account, so it is public like the configuration.
+    Route::get('landing', \App\Http\Controllers\Api\V1\LandingController::class)
+        ->middleware('throttle:60,1')
+        ->name('landing');
+
+    // Its Kamer bubble. A visitor is the random id their phone made
+    // (X-Guest-Id). A reply costs an OpenAI call, hence the member's limit.
+    Route::get('landing/kamer', [KamerController::class, 'guestShow'])
+        ->middleware('throttle:60,1')
+        ->name('landing.kamer.show');
+    Route::post('landing/kamer/messages', [KamerController::class, 'guestSend'])
+        ->middleware('throttle:20,1,kamer-guest')
+        ->name('landing.kamer.send');
+    Route::delete('landing/kamer', [KamerController::class, 'guestClear'])
+        ->middleware('throttle:60,1')
+        ->name('landing.kamer.clear');
+
     // Tight limit: this is the password-guessing endpoint.
     Route::post('auth/login', [AuthController::class, 'login'])
         ->middleware('throttle:10,1')
         ->name('auth.login');
+
+    // "Continue with Google" with the phone's own Google ID token. As tight
+    // as the password endpoint: it signs people in too.
+    Route::post('auth/google', [AuthController::class, 'google'])
+        ->middleware('throttle:10,1')
+        ->name('auth.google');
 
     // Register, the web's three-step wizard in one request (step 1's location
     // and step 2's live email check have their own endpoints below).

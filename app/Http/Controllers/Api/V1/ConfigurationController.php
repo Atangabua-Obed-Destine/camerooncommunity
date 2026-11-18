@@ -91,11 +91,15 @@ class ConfigurationController extends Controller
                 ->values(),
 
             'auth' => [
-                // Off until the native sign-in endpoints exist (they need the
-                // iOS client id and an Apple Services id). The app hides the
-                // buttons rather than offering one that fails. Apple has to
-                // ship with Google: App Store rule 4.8.
-                'google' => false,
+                // Google: on once the site has its OAuth client. The phone asks
+                // Google for an ID token addressed to that same web client
+                // (its serverClientId), which is what /auth/google accepts.
+                // The Android client registered beside it in Google Cloud is
+                // what lets this app ask; it needs no secret here.
+                'google' => filled(config('services.google.client_id')),
+                'google_client_id' => config('services.google.client_id') ?: null,
+                // Apple needs an Apple Services id, and has to ship with
+                // Google on iOS (App Store rule 4.8): off until then.
                 'apple' => false,
                 'require_email_verification' => Registration::requiresVerification(),
                 // Register step 3's "You could be a Founding Member" shows only

@@ -197,6 +197,10 @@ class AuthFlowTest extends TestCase
 
     public function test_configuration_tells_the_auth_screens_what_they_need(): void
     {
+        // Google follows the site's OAuth client (GoogleSignInTest); without
+        // one the button stays hidden.
+        config(['services.google.client_id' => null]);
+
         $this->getJson(route('api.v1.configuration'))
             ->assertOk()
             ->assertJsonPath('auth.google', false)
