@@ -5,6 +5,7 @@ namespace Livewire\Mechanisms\HandleRequests;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Route;
 use Livewire\Features\SupportScriptsAndAssets\SupportScriptsAndAssets;
+use Livewire\Features\SupportReactiveProps\SupportReactiveProps;
 use Livewire\Mechanisms\HandleRequests\EndpointResolver;
 use Livewire\Exceptions\PayloadTooLargeException;
 use Livewire\Exceptions\TooManyComponentsException;
@@ -17,13 +18,15 @@ class HandleRequests extends Mechanism
 {
     protected $updateRoute;
 
+    protected $shouldPropagateExceptions = false;
+
     function boot()
     {
         // Register the default route immediately (before routes files load)
         // so it's positioned before any catch-all routes.
         if (! $this->updateRoute && ! $this->updateRouteExists()) {
-            app($this::class)->setUpdateRoute(function ($handle) {
-                return Route::post(EndpointResolver::updatePath(), $handle)
+            app($this::class)->setUpdateRoute(function ($handle, $path) {
+                return Route::post($path, $handle)
                     ->middleware(['web', RequireLivewireHeaders::class])
                     ->name('default-livewire.update');
             });
@@ -91,15 +94,18 @@ class HandleRequests extends Mechanism
     {
         $route = $callback([self::class, 'handleUpdate'], EndpointResolver::updatePath());
 
-        // Ensure the header guard middleware is always present, even on custom routes.
-        $route->middleware(RequireLivewireHeaders::class);
-
         // Ensure the route includes the `web` middleware group.
         // Without it, CSRF protection is lost entirely on the update endpoint.
         // Note: we use middleware() (not gatherMiddleware()) to avoid polluting
         // the route's computed middleware cache before it's fully configured.
         if (! in_array('web', $route->middleware())) {
             $route->middleware('web');
+        }
+
+        // Ensure the header guard middleware is always present, even on custom routes.
+        // Only append if its not exists on current middleware stack
+        if (! in_array(RequireLivewireHeaders::class, $route->middleware())) {
+            $route->middleware(RequireLivewireHeaders::class);
         }
 
         // Append `livewire.update` to the existing name, if any.
@@ -131,6 +137,19 @@ class HandleRequests extends Mechanism
         return $route->named('*livewire.update');
     }
 
+    function temporarilyPropagateExceptions($callback)
+    {
+        $cachedShouldPropagateExceptions = $this->shouldPropagateExceptions;
+
+        $this->shouldPropagateExceptions = true;
+
+        try {
+            return $callback();
+        } finally {
+            $this->shouldPropagateExceptions = $cachedShouldPropagateExceptions;
+        }
+    }
+
     function handleUpdate()
     {
         // When a custom update route is registered, reject requests that arrive
@@ -145,10 +164,10 @@ class HandleRequests extends Mechanism
         $maxSize = config('livewire.payload.max_size');
 
         if ($maxSize !== null) {
-            $contentLength = request()->header('Content-Length', 0);
+            $size = strlen(request()->getContent());
 
-            if ($contentLength > $maxSize) {
-                throw new PayloadTooLargeException($contentLength, $maxSize);
+            if ($size > $maxSize) {
+                throw new PayloadTooLargeException($size, $maxSize);
             }
         }
 
@@ -186,10 +205,23 @@ class HandleRequests extends Mechanism
             $updates = $componentPayload['updates'];
             $calls = $componentPayload['calls'];
 
+            // If this is a reactive child whose props didn't change,
+            // skip its entire lifecycle (hydrate, render, dehydrate)...
+            if (empty($updates) && SupportReactiveProps::shouldSkipUpdate($snapshot, $calls)) {
+                $componentResponses[] = [
+                    'skip' => true,
+                    'id' => $snapshot['memo']['id'],
+                ];
+
+                continue;
+            }
+
             try {
                 [ $snapshot, $effects ] = app('livewire')->update($snapshot, $updates, $calls);
             } catch (\TypeError $e) {
-                if (config('app.debug')) throw $e;
+                report($e);
+
+                if (config('app.debug') || $this->shouldPropagateExceptions) throw $e;
 
                 abort(419);
             }

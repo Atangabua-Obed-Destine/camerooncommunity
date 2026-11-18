@@ -943,6 +943,14 @@ trait ValidatesAttributes
             return false;
         }
 
+        if (strlen((string) $value) > 254) {
+            return false;
+        }
+
+        if (preg_match('/[\r\n]/', (string) $value) > 0) {
+            return false;
+        }
+
         $validations = (new Collection($parameters))
             ->unique()
             ->map(fn ($validation) => match (true) {
@@ -1518,7 +1526,7 @@ trait ValidatesAttributes
             return count(array_diff($value, $parameters)) === 0;
         }
 
-        return ! is_array($value) && in_array((string) $value, $parameters);
+        return ! is_array($value) && in_array((string) $value, $parameters, true);
     }
 
     /**

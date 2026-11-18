@@ -4,11 +4,9 @@ namespace Livewire\Features\SupportModels;
 
 use Livewire\Mechanisms\HandleComponents\Synthesizers\Synth;
 use Livewire\Mechanisms\HandleComponents\ComponentContext;
-use Livewire\Mechanisms\PersistentMiddleware\PersistentMiddleware;
 use Illuminate\Queue\SerializesAndRestoresModelIdentifiers;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\ClassMorphViolationException;
 
 class ModelSynth extends Synth {
     use SerializesAndRestoresModelIdentifiers, IsLazy;
@@ -31,13 +29,11 @@ class ModelSynth extends Synth {
 
         $class = $target::class;
 
-        try {
-            // If no alias is found, this just returns the class name
-            $alias = $target->getMorphClass();
-        } catch (ClassMorphViolationException $e) {
-            // If the model is not using morph classes, this exception is thrown
-            $alias = $class;
-        }
+        $morphMap = Relation::morphMap();
+
+        $alias = in_array($class, $morphMap)
+            ? array_search($class, $morphMap, true)
+            : $class;
 
         $serializedModel = $target->exists
             ? (array) $this->getSerializedPropertyValue($target)
@@ -77,16 +73,29 @@ class ModelSynth extends Synth {
 
         $key = $meta['key'];
 
-        // If this model was already resolved by route binding (via
-        // SubstituteBindings middleware), reuse it to avoid a duplicate query.
-        $resolvedModel = app(PersistentMiddleware::class)->getResolvedRouteModel($class, $key);
+        // If this model was already resolved this request — by route binding (via
+        // SubstituteBindings middleware) or by another hydrated property — then
+        // reuse it to avoid a duplicate query.
+        $resolvedModel = SupportModels::getResolvedModel($class, $key);
 
         if ($resolvedModel) {
             return $resolvedModel;
         }
 
         return $this->makeLazyProxy($class, $meta, function () use ($class, $key) {
-            return (new $class)->newQueryForRestoration($key)->useWritePdo()->firstOrFail();
+            // Another property (like a collection containing this model) may have
+            // resolved since hydration, so check for a match one more time...
+            $resolvedModel = SupportModels::getResolvedModel($class, $key);
+
+            if ($resolvedModel) {
+                return $resolvedModel;
+            }
+
+            $model = (new $class)->newQueryForRestoration($key)->useWritePdo()->firstOrFail();
+
+            SupportModels::rememberResolvedModel($model);
+
+            return $model;
         });
     }
 

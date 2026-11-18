@@ -7,7 +7,6 @@ use Livewire\Mechanisms\HandleComponents\ComponentContext;
 use Illuminate\Queue\SerializesAndRestoresModelIdentifiers;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Database\ClassMorphViolationException;
 
 class EloquentCollectionSynth extends Synth {
     use SerializesAndRestoresModelIdentifiers, IsLazy;
@@ -33,20 +32,12 @@ class EloquentCollectionSynth extends Synth {
         $class = $target::class;
         $modelClass = $target->getQueueableClass();
 
-        /**
-         * `getQueueableClass` above checks all models are the same and
-         * then returns the class. We then instantiate a model object
-         * so we can call `getMorphClass()` on it.
-         *
-         * If no alias is found, this just returns the class name
-         */
         if ($modelClass) {
-            try {
-                $modelAlias = (new $modelClass)->getMorphClass();
-            } catch (ClassMorphViolationException $e) {
-                // If the model is not using morph classes, this exception is thrown
-                $modelAlias = $modelClass;
-            }
+            $morphMap = Relation::morphMap();
+
+            $modelAlias = in_array($modelClass, $morphMap)
+                ? array_search($modelClass, $morphMap, true)
+                : $modelClass;
         } else {
             $modelAlias = null;
         }
@@ -72,7 +63,7 @@ class EloquentCollectionSynth extends Synth {
         $modelClass = $meta['modelClass'];
 
         // If no alias found, this returns `null`
-        $modelAlias = Relation::getMorphedModel($modelClass);
+        $modelAlias = $modelClass ? Relation::getMorphedModel($modelClass) : null;
 
         if (! is_null($modelAlias)) {
             $modelClass = $modelAlias;
@@ -85,16 +76,36 @@ class EloquentCollectionSynth extends Synth {
         }
 
         return $this->makeLazyProxy($class, $meta, function () use ($modelClass, $keys, $meta) {
-            // We are using Laravel's method here for restoring the collection, which ensures
-            // that all models in the collection are restored in one query, preventing n+1
-            // issues and also only restores models that exist.
-            $collection = (new $modelClass)->newQueryForRestoration($keys)->useWritePdo()->get();
+            $models = [];
+            $missingKeys = [];
 
-            $collection = $collection->keyBy->getKey();
+            // Reuse any models already resolved this request — by route binding (via
+            // SubstituteBindings middleware) or by another hydrated property — so
+            // that only the remaining models need to be queried.
+            foreach (array_unique($keys) as $key) {
+                if ($model = SupportModels::getResolvedModel($modelClass, $key)) {
+                    $models[$key] = $model;
+                } else {
+                    $missingKeys[] = $key;
+                }
+            }
+
+            if (count($missingKeys) > 0) {
+                // We are using Laravel's method here for restoring the collection, which ensures
+                // that all models in the collection are restored in one query, preventing n+1
+                // issues and also only restores models that exist.
+                $collection = (new $modelClass)->newQueryForRestoration($missingKeys)->useWritePdo()->get();
+
+                foreach ($collection as $model) {
+                    $models[$model->getKey()] = $model;
+
+                    SupportModels::rememberResolvedModel($model);
+                }
+            }
 
             return new $meta['class'](
-                collect($meta['keys'])->map(function ($id) use ($collection) {
-                    return $collection[$id] ?? null;
+                collect($meta['keys'])->map(function ($id) use ($models) {
+                    return $models[$id] ?? null;
                 })->filter()
             );
         });

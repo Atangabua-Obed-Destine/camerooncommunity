@@ -2,6 +2,25 @@
 
 All notable changes to `spatie/laravel-activitylog` will be documented in this file
 
+## 4.12.2 - 2026-03-24
+
+### What's Changed
+
+* Use try/finally in withinBatch to close batch when callback throws (#1449) by @isaackaara
+
+## 4.12.1 - 2026-02-22
+
+### What's Changed
+
+* Bump actions/stale from 9.1.0 to 10.2.0 by @dependabot[bot] in https://github.com/spatie/laravel-activitylog/pull/1446
+* Fix activitylog cleanup to require integer days input by @sandeep728 in https://github.com/spatie/laravel-activitylog/pull/1448
+
+### New Contributors
+
+* @sandeep728 made their first contribution in https://github.com/spatie/laravel-activitylog/pull/1448
+
+**Full Changelog**: https://github.com/spatie/laravel-activitylog/compare/4.12.0...4.12.1
+
 ## 4.12.0 - 2026-02-21
 
 ### What's Changed

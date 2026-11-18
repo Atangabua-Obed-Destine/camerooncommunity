@@ -22,7 +22,7 @@ use Spatie\Image\Enums\CropPosition;
 use Spatie\Image\Enums\Fit;
 use Spatie\Image\Enums\FlipDirection;
 use Spatie\Image\Enums\Orientation;
-use Spatie\Image\Exceptions\CannotOptimizePng;
+use Spatie\Image\Exceptions\CouldNotSaveImage;
 use Spatie\Image\Exceptions\InvalidFont;
 use Spatie\Image\Exceptions\MissingParameter;
 use Spatie\Image\Exceptions\UnsupportedImageFormat;
@@ -42,7 +42,7 @@ class VipsDriver implements ImageDriver
 
     protected Image $image;
 
-    protected string $originalPath;
+    protected ?string $originalPath = null;
 
     protected ?string $format = null;
 
@@ -83,6 +83,7 @@ class VipsDriver implements ImageDriver
     public function loadFile(string $path, bool $autoRotate = true): static
     {
         $this->optimize = false;
+        $this->quality = null;
         $this->originalPath = $path;
 
         // Use 'access' => 'sequential' to avoid libvips file caching issues
@@ -104,6 +105,25 @@ class VipsDriver implements ImageDriver
 
     }
 
+    /** @return array<string, int> */
+    protected function savePropertiesForFormat(string $format): array
+    {
+        // Q parameter is only supported for JPEG, WebP, AVIF, HEIC
+        $formatsWithQuality = ['jpg', 'jpeg', 'webp', 'avif', 'heic', 'heif'];
+        $saveProperties = [];
+
+        if (in_array($format, $formatsWithQuality)) {
+            $saveProperties['Q'] = $this->quality ?? $this->defaultQuality;
+        }
+
+        if ($format === 'png' && $this->quality !== null) {
+            // Map quality (0-100) to PNG compression (0-9), matching GdDriver
+            $saveProperties['compression'] = max(0, min(9, (int) round((100 - $this->quality) / 10)));
+        }
+
+        return $saveProperties;
+    }
+
     public function save(string $path = ''): static
     {
         if (! $path) {
@@ -112,28 +132,32 @@ class VipsDriver implements ImageDriver
 
         $extension = $this->format ?? strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
-        if ($this->quality && $extension === 'png') {
-            throw CannotOptimizePng::make();
-        }
+        $saveProperties = $this->savePropertiesForFormat($extension);
 
-        // Q parameter is only supported for JPEG, WebP, AVIF, HEIC
-        $formatsWithQuality = ['jpg', 'jpeg', 'webp', 'avif', 'heic', 'heif'];
-        $saveProperties = [];
-
-        if (in_array($extension, $formatsWithQuality)) {
-            $saveProperties['Q'] = $this->quality ?? $this->defaultQuality;
-        }
+        // libvips is a streaming library: it reads from the source while writing
+        // the result. Writing back to the file we loaded from corrupts the source
+        // mid-decode, which can crash libjpeg-turbo with SIGBUS on JPEGs (see
+        // https://github.com/libvips/libvips/issues/4397). When the destination
+        // matches the load path, write to a sibling temp file and rename over it.
+        $writePath = $this->resolveWritePath($path);
 
         try {
             $pathExtension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
             if ($this->format && $this->format !== $pathExtension) {
                 $buffer = $this->image->writeToBuffer('.'.$extension, $saveProperties);
-                file_put_contents($path, $buffer);
+
+                if (file_put_contents($writePath, $buffer) === false) {
+                    throw CouldNotSaveImage::failedToWriteToPath($writePath);
+                }
             } else {
-                $this->image->writeToFile($path, $saveProperties);
+                $this->image->writeToFile($writePath, $saveProperties);
             }
         } catch (Exception $exception) {
+            if ($writePath !== $path && file_exists($writePath)) {
+                unlink($writePath);
+            }
+
             $message = $exception->getMessage();
             if (str_contains($message, 'is not a known file format') ||
                 str_contains($message, 'unsupported') ||
@@ -144,6 +168,12 @@ class VipsDriver implements ImageDriver
             throw $exception;
         }
 
+        if ($writePath !== $path && ! rename($writePath, $path)) {
+            unlink($writePath);
+
+            throw CouldNotSaveImage::failedToRename($writePath, $path);
+        }
+
         if ($this->optimize) {
             $this->optimizerChain->optimize($path);
         }
@@ -151,6 +181,25 @@ class VipsDriver implements ImageDriver
         $this->format = null;
 
         return $this;
+    }
+
+    protected function resolveWritePath(string $path): string
+    {
+        if ($this->originalPath === null || $path !== $this->originalPath) {
+            return $path;
+        }
+
+        $directory = dirname($path);
+        $filename = pathinfo($path, PATHINFO_FILENAME);
+        $extension = pathinfo($path, PATHINFO_EXTENSION);
+
+        $writePath = $directory.DIRECTORY_SEPARATOR.$filename.'.tmp-'.bin2hex(random_bytes(8));
+
+        if ($extension !== '') {
+            $writePath .= '.'.$extension;
+        }
+
+        return $writePath;
     }
 
     public function getWidth(): int
@@ -459,7 +508,10 @@ class VipsDriver implements ImageDriver
 
     public function base64(string $imageFormat, bool $prefixWithFormat = true): string
     {
-        $contents = base64_encode($this->image->writeToBuffer('.'.$imageFormat));
+        $contents = base64_encode($this->image->writeToBuffer(
+            '.'.$imageFormat,
+            $this->savePropertiesForFormat(strtolower($imageFormat)),
+        ));
 
         if ($prefixWithFormat) {
             return 'data:image/'.$imageFormat.';base64,'.$contents;
@@ -531,6 +583,15 @@ class VipsDriver implements ImageDriver
     {
         if (! $this->exif || empty($this->exif['Orientation'])) {
             return;
+        }
+
+        $loadedFromJpeg = str_starts_with((string) $this->image->get('vips-loader'), 'jpegload');
+        $needsRotation = in_array($this->exif['Orientation'], [3, 5, 6, 7, 8]);
+
+        if ($loadedFromJpeg) {
+            if ($needsRotation) {
+                $this->image = $this->image->copyMemory();
+            }
         }
 
         switch ($this->exif['Orientation']) {

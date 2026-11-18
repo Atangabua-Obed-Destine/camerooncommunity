@@ -11,7 +11,7 @@ class Laravel extends Driver
     /**
      * Authorize access for the request.
      *
-     * @throws \RuntimeException
+     * @throws RuntimeException
      */
     public function authorize(Request $request): bool
     {
@@ -25,6 +25,10 @@ class Laravel extends Driver
             throw new RuntimeException(
                 sprintf('Unable to access "%s /%s" using "local" environment, please change the environment or configure trusted proxies: https://laravel.com/docs/requests#configuring-trusted-proxies', $request->method(), $request->path())
             );
+        }
+
+        if ($this->isRunningOnDockerLocally($request)) {
+            return true;
         }
 
         return $this->authorizeAccessingViaReverseProxies($request);

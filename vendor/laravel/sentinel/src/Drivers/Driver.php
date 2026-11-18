@@ -13,7 +13,7 @@ abstract class Driver
     /**
      * Construct a new driver.
      *
-     * @param  \Closure(): \Illuminate\Contracts\Foundation\Application  $applicationResolver
+     * @param  Closure(): Application  $applicationResolver
      */
     public function __construct(protected Closure $applicationResolver)
     {
@@ -28,7 +28,7 @@ abstract class Driver
     /**
      * Authorize access for the request or throw an exception.
      *
-     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws AuthorizationException
      */
     public function authorizeOrFail(Request $request): void
     {
@@ -47,6 +47,14 @@ abstract class Driver
         }
 
         return true;
+    }
+
+    /**
+     * Determine if the application is running on Docker locally.
+     */
+    protected function isRunningOnDockerLocally(Request $request): bool
+    {
+        return $request->server->get('REMOTE_ADDR') === '127.0.0.1' && file_exists(base_path('.dockerenv'));
     }
 
     /**

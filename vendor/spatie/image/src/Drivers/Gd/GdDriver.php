@@ -169,6 +169,7 @@ class GdDriver implements ImageDriver
                 \imagewebp($this->image, $path, $quality);
                 break;
             case 'avif':
+                \imagepalettetotruecolor($this->image);
                 \imageavif($this->image, $path, $this->quality);
                 break;
             default:
@@ -200,10 +201,13 @@ class GdDriver implements ImageDriver
                 \imagegif($this->image, null);
                 break;
             case 'webp':
-                \imagewebp($this->image, null);
+                $quality = $this->quality === 100 ? IMG_WEBP_LOSSLESS : $this->quality;
+                \imagepalettetotruecolor($this->image);
+                \imagewebp($this->image, null, $quality);
                 break;
             case 'avif':
-                \imageavif($this->image, null);
+                \imagepalettetotruecolor($this->image);
+                \imageavif($this->image, null, $this->quality);
                 break;
             default:
                 throw UnsupportedImageFormat::make($imageFormat);

@@ -3,6 +3,7 @@
 namespace Laravel\Reverb\Protocols\Pusher;
 
 use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 use Laravel\Reverb\Application;
 use Laravel\Reverb\Contracts\Connection;
 use Laravel\Reverb\Protocols\Pusher\Contracts\ChannelManager;
@@ -14,7 +15,7 @@ class EventDispatcher
     /**
      * Dispatch a message to a channel.
      */
-    public static function dispatch(Application $app, array $payload, ?Connection $connection = null): void
+    public static function dispatch(Application $app, array $payload, ?Connection $connection = null, ?string $socketId = null): void
     {
         $server = app(ServerProviderManager::class);
 
@@ -30,8 +31,10 @@ class EventDispatcher
             'payload' => $payload,
         ];
 
-        if ($connection?->id() !== null) {
-            $data['socket_id'] = $connection?->id();
+        $socketId ??= $connection?->id();
+
+        if ($socketId !== null) {
+            $data['socket_id'] = $socketId;
         }
 
         app(PubSubProvider::class)->publish($data);
@@ -53,7 +56,9 @@ class EventDispatcher
 
             $payload['channel'] = $channel->name();
 
-            $channel->broadcast($payload, $connection);
+            Str::startsWith($payload['event'] ?? '', 'pusher_internal:')
+                ? $channel->broadcastInternally($payload, $connection)
+                : $channel->broadcast($payload, $connection);
         }
     }
 }

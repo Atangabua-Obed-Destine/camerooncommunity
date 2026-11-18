@@ -104,10 +104,12 @@ class TelescopeServiceProvider extends ServiceProvider
             $this->commands([
                 Console\ClearCommand::class,
                 Console\InstallCommand::class,
+                Console\ListCommand::class,
                 Console\PauseCommand::class,
                 Console\PruneCommand::class,
                 Console\PublishCommand::class,
                 Console\ResumeCommand::class,
+                Console\ShowCommand::class,
             ]);
         }
     }
@@ -161,11 +163,11 @@ class TelescopeServiceProvider extends ServiceProvider
 
         $this->app->when(DatabaseEntriesRepository::class)
             ->needs('$connection')
-            ->give(config('telescope.storage.database.connection'));
+            ->give(fn () => config('telescope.storage.database.connection'));
 
         $this->app->when(DatabaseEntriesRepository::class)
             ->needs('$chunkSize')
-            ->give(config('telescope.storage.database.chunk'));
+            ->give(fn () => config('telescope.storage.database.chunk'));
     }
 
     /**

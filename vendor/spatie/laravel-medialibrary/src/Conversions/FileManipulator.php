@@ -4,6 +4,7 @@ namespace Spatie\MediaLibrary\Conversions;
 
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Spatie\MediaLibrary\Conversions\Actions\PerformConversionAction;
 use Spatie\MediaLibrary\Conversions\ImageGenerators\ImageGeneratorFactory;
 use Spatie\MediaLibrary\Conversions\Jobs\PerformConversionsJob;
@@ -25,7 +26,7 @@ class FileManipulator
             return;
         }
 
-        [$queuedConversions, $conversions] = ConversionCollection::createForMedia($media)
+        $allConversions = ConversionCollection::createForMedia($media)
             ->filter(function (Conversion $conversion) use ($onlyConversionNames) {
                 if (count($onlyConversionNames) === 0) {
                     return true;
@@ -33,11 +34,27 @@ class FileManipulator
 
                 return in_array($conversion->getName(), $onlyConversionNames);
             })
-            ->filter(fn (Conversion $conversion) => $conversion->shouldBePerformedOn($media->collection_name))
-            ->partition(fn (Conversion $conversion) => $queueAll || $conversion->shouldBeQueued());
+            ->filter(fn (Conversion $conversion) => $conversion->shouldBePerformedOn($media->collection_name));
+
+        if ($queueAll) {
+            $this
+                ->dispatchQueuedConversions($media, $allConversions, $onlyMissing)
+                ->generateResponsiveImages($media, $withResponsiveImages);
+
+            return;
+        }
+
+        [$deferredConversions, $remaining] = $allConversions->partition(
+            fn (Conversion $conversion) => $conversion->shouldBeDeferred()
+        );
+
+        [$queuedConversions, $conversions] = $remaining->partition(
+            fn (Conversion $conversion) => $conversion->shouldBeQueued()
+        );
 
         $this
             ->performConversions($conversions, $media, $onlyMissing)
+            ->performDeferredConversions($deferredConversions, $media, $onlyMissing)
             ->dispatchQueuedConversions($media, $queuedConversions, $onlyMissing)
             ->generateResponsiveImages($media, $withResponsiveImages);
     }
@@ -51,13 +68,15 @@ class FileManipulator
             ->when(
                 $onlyMissing,
                 fn (ConversionCollection $conversions) => $conversions->reject(function (Conversion $conversion) use ($media) {
+                    $diskName = $media->conversions_disk ?: $media->disk;
+
                     $relativePath = $media->getPath($conversion->getName());
 
-                    if ($rootPath = config("filesystems.disks.{$media->disk}.root")) {
+                    if ($rootPath = config("filesystems.disks.{$diskName}.root")) {
                         $relativePath = str_replace($rootPath, '', $relativePath);
                     }
 
-                    return Storage::disk($media->disk)->exists($relativePath);
+                    return Storage::disk($diskName)->exists($relativePath);
                 })
             );
 
@@ -67,19 +86,41 @@ class FileManipulator
 
         $temporaryDirectory = TemporaryDirectory::create();
 
-        $copiedOriginalFile = app(Filesystem::class)->copyFromMediaLibrary(
-            $media,
-            $temporaryDirectory->path(Str::random(32).'.'.$media->extension)
-        );
+        try {
+            $copiedOriginalFile = app(Filesystem::class)->copyFromMediaLibrary(
+                $media,
+                $temporaryDirectory->path(Str::random(32).'.'.$media->extension)
+            );
 
-        // Check if the file exists and has content to avoid issues with missing files
-        if (! file_exists($copiedOriginalFile) || filesize($copiedOriginalFile) === 0) {
+            // Check if the file exists and has content to avoid issues with missing files
+            if (! file_exists($copiedOriginalFile) || filesize($copiedOriginalFile) === 0) {
+                return $this;
+            }
+
+            $conversions->each(fn (Conversion $conversion) => (new PerformConversionAction)->execute($conversion, $media, $copiedOriginalFile));
+        } finally {
+            $temporaryDirectory->delete();
+        }
+
+        return $this;
+    }
+
+    protected function performDeferredConversions(
+        ConversionCollection $conversions,
+        Media $media,
+        bool $onlyMissing = false
+    ): self {
+        if ($conversions->isEmpty()) {
             return $this;
         }
 
-        $conversions->each(fn (Conversion $conversion) => (new PerformConversionAction)->execute($conversion, $media, $copiedOriginalFile));
+        if (! function_exists('defer')) {
+            throw new RuntimeException(
+                'Deferred conversions require Laravel 11.23 or higher. Use queued() or nonQueued() instead.',
+            );
+        }
 
-        $temporaryDirectory->delete();
+        defer(fn () => $this->performConversions($conversions, $media, $onlyMissing));
 
         return $this;
     }

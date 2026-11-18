@@ -59,6 +59,7 @@ return [
         'inertia'         => env('DEBUGBAR_COLLECTORS_INERTIA', true),          // Display Inertia (when available)
         'jobs'            => env('DEBUGBAR_COLLECTORS_JOBS', true),             // Display dispatched jobs
         'pennant'         => env('DEBUGBAR_COLLECTORS_PENNANT', true),          // Display Pennant feature flags
+        'ai'              => env('DEBUGBAR_COLLECTORS_AI', true),               // Display laravel/ai agent runs
         'http_client'     => env('DEBUGBAR_COLLECTORS_HTTP_CLIENT', true),      // Display HTTP Client requests
     ],
 
@@ -101,11 +102,10 @@ return [
             ],
             'backtrace'         => env('DEBUGBAR_OPTIONS_DB_BACKTRACE', true),   // Use a backtrace to find the origin of the query in your files.
             'backtrace_exclude_paths' => [],   // Paths to exclude from backtrace. (in addition to defaults)
+            'backtrace_editor_links' => env('DEBUGBAR_OPTIONS_DB_BACKTRACE_EDITOR_LINKS', false), // Add editor links to backtrace entries (non-vendor files only)
             'timeline'          => env('DEBUGBAR_OPTIONS_DB_TIMELINE', false),  // Add the queries to the timeline
             'duration_background'  => env('DEBUGBAR_OPTIONS_DB_DURATION_BACKGROUND', true),   // Show shaded background on each query relative to how long it took to execute.
-            'explain' => [                 // Show EXPLAIN output on queries
-                'enabled' => env('DEBUGBAR_OPTIONS_DB_EXPLAIN_ENABLED', true),
-            ],
+            'explain'           => env('DEBUGBAR_OPTIONS_DB_EXPLAIN_ENABLED', true), // Show EXPLAIN output on queries
             'show_query_result' => env('DEBUGBAR_OPTIONS_DB_SHOW_QUERY_RESULT', false), // Show option to re-run SELECT queries and show the result
             'only_slow_queries' => env('DEBUGBAR_OPTIONS_DB_ONLY_SLOW_QUERIES', true), // Only track queries that last longer than `slow_threshold`
             'slow_threshold'    => env('DEBUGBAR_OPTIONS_DB_SLOW_THRESHOLD', false), // Max query execution time (ms). Exceeding queries will be highlighted
@@ -119,6 +119,7 @@ return [
         ],
         'views' => [
             'timeline' => env('DEBUGBAR_OPTIONS_VIEWS_TIMELINE', true),                  // Add the views to the timeline
+            'timeline_duration' => env('DEBUGBAR_OPTIONS_VIEWS_TIMELINE_DURATION', false),// Add the views duration on timeline (Experimental)
             'data' => env('DEBUGBAR_OPTIONS_VIEWS_DATA', false),                         // True for all data, 'keys' for only names, false for no parameters.
             'group' => (int) env('DEBUGBAR_OPTIONS_VIEWS_GROUP', 50),                    // Group duplicate views. Pass value to auto-group, or true/false to force
             'exclude_paths' => [    // Add the paths which you don't want to appear in the views
@@ -156,6 +157,9 @@ return [
         'http_client' => [
             'masked' => [],
             'timeline' => env('DEBUGBAR_OPTIONS_HTTP_CLIENT_TIMELINE', true),  // Add requests to the timeline
+        ],
+        'ai' => [
+            'values' => env('DEBUGBAR_OPTIONS_AI_VALUES', true), // Collect prompt/response/tool bodies
         ],
     ],
 
@@ -200,12 +204,20 @@ return [
     | Changing `ajax_handler_auto_show` to false will prevent the Debugbar from reloading.
     |
     | You can defer loading the dataset, so it will be loaded with ajax after the request is done. (Experimental)
+    |
+    | Streamed responses (SSE, StreamedResponse, Livewire streaming) lose the phpdebugbar-id response header.
+    | Enable `capture_streamed` to tag same-origin fetch/XHR requests with a phpdebugbar-request-id header and
+    | look the dataset up through the open handler afterwards (requires storage + the open handler enabled).
+    | `streamed_content_types` limits the fallback to these Content-Types; set it to an empty array or null to
+    | match any response missing the id header. Broaden it (e.g. text/html, application/json) for chunked responses.
     */
 
     'capture_ajax' => env('DEBUGBAR_CAPTURE_AJAX', true),
     'add_ajax_timing' => env('DEBUGBAR_ADD_AJAX_TIMING', false),
     'ajax_handler_auto_show' => env('DEBUGBAR_AJAX_HANDLER_AUTO_SHOW', true),
     'ajax_handler_enable_tab' => env('DEBUGBAR_AJAX_HANDLER_ENABLE_TAB', true),
+    'capture_streamed' => env('DEBUGBAR_CAPTURE_STREAMED', false),
+    'streamed_content_types' => ['text/event-stream'],
     'defer_datasets' => env('DEBUGBAR_DEFER_DATASETS', false),
 
     /*
@@ -249,7 +261,8 @@ return [
     | Warning: Enabling storage.open will allow everyone to access previous
     | request, do not enable open storage in publicly available environments!
     | Specify a callback if you want to limit based on IP or authentication.
-    | Leaving it to null will allow localhost only.
+    | Leaving it to null will allow localhost and private network IPs
+    | (eg. Docker/Sail or LAN) only. Set to false to disable it completely.
     */
     'storage' => [
         'enabled'    => env('DEBUGBAR_STORAGE_ENABLED', true),
@@ -259,6 +272,21 @@ return [
         'connection' => env('DEBUGBAR_STORAGE_CONNECTION'), // Leave null for default connection (Redis/PDO)
         'provider'   => env('DEBUGBAR_STORAGE_PROVIDER', ''), // Instance of StorageInterface for custom driver
     ],
+
+    /*
+     |--------------------------------------------------------------------------
+     | Force Allow Debugbar to be Enabled during boot
+     |--------------------------------------------------------------------------
+     |
+     | By default, debugbar can only be enabled when the app is in debug mode and not in production.
+     | For special cases, eg admin panels behind proper authentication, you can force debugbar to be enabled.
+     | Just this setting alone will not enable the Debugbar, but it will boot the Debugbar including routes and listeners,
+     | so you can enable it further in the requests using $debugbar->enable().
+     |
+     | Warning: Use with caution. Debugbar is a development tool and should never be exposed in non-trusted endpoints.
+     |
+    */
+    'force_allow_enable' => env('DEBUGBAR_FORCE_ALLOW_ENABLE', false),
 
     /*
      |--------------------------------------------------------------------------

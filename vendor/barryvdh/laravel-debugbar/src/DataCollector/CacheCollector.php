@@ -62,6 +62,7 @@ class CacheCollector extends TimeDataCollector implements AssetProvider, Resetta
         $class = get_class($event);
         $params = get_object_vars($event);
         $label = $this->classMap[$class][0];
+        $startHashKey = $this->getEventHash($this->classMap[$class][1] ?? '', $params);
 
         if (isset($params['value'])) {
             if (!($params['value'] instanceof \Closure || is_resource($params['value']))) {
@@ -77,7 +78,6 @@ class CacheCollector extends TimeDataCollector implements AssetProvider, Resetta
         }
 
         $time = microtime(true);
-        $startHashKey = $this->getEventHash($this->classMap[$class][1] ?? '', $params);
         $startTime = $this->eventStarts[$startHashKey] ?? $time;
 
         $this->addMeasure($label . "\t" . ($params['key'] ?? ''), $startTime, $time, $params);
@@ -89,7 +89,7 @@ class CacheCollector extends TimeDataCollector implements AssetProvider, Resetta
         if (isset($event->key) && in_array($label, ['hit', 'written'], true) && Route::has('debugbar.cache.delete')) {
             $measureIndex = array_key_last($this->measures);
             $this->measures[$measureIndex]['delete_url'] = url()->signedRoute('debugbar.cache.delete', [
-                'key' => urlencode((string) $event->key),
+                'key' => (string) $event->key,
                 'tags' => $params['tags'] ?? [],
             ]);
         }

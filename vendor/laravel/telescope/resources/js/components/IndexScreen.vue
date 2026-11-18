@@ -18,6 +18,7 @@ export default {
             familyHash: '',
             entries: [],
             ready: false,
+            requestController: new AbortController(),
             recordingStatus: 'enabled',
             lastEntryIndex: '',
             hasMoreEntries: true,
@@ -66,7 +67,8 @@ export default {
     /**
      * Clean after the component is destroyed.
      */
-    destroyed() {
+    unmounted() {
+        this.requestController.abort();
         clearTimeout(this.newEntriesTimeout);
         clearTimeout(this.updateEntriesTimeout);
         clearTimeout(this.updateTimeAgoTimeout);
@@ -77,18 +79,19 @@ export default {
 
     watch: {
         '$route.query': function () {
+            this.requestController.abort();
+            this.requestController = new AbortController();
             clearTimeout(this.newEntriesTimeout);
+            clearTimeout(this.updateEntriesTimeout);
 
             this.hasNewEntries = false;
             this.lastEntryIndex = '';
+            this.loadingNewEntries = false;
+            this.loadingMoreEntries = false;
 
-            if (!this.$route.query.family_hash) {
-                this.familyHash = '';
-            }
+            this.familyHash = this.$route.query.family_hash || '';
 
-            if (!this.$route.query.tag) {
-                this.tag = '';
-            }
+            this.tag = this.$route.query.tag || '';
 
             this.ready = false;
 
@@ -96,6 +99,7 @@ export default {
                 this.entries = entries;
 
                 this.checkForNewEntries();
+                this.updateEntries();
 
                 this.ready = true;
             });
@@ -105,12 +109,17 @@ export default {
 
     methods: {
         loadEntries(after){
-            axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
+            const {signal} = this.requestController;
+
+            return axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
                     '?tag=' + this.tag +
                     '&before=' + this.lastEntryIndex +
                     '&take=' + this.entriesPerRequest +
-                    '&family_hash=' + this.familyHash
+                    '&family_hash=' + this.familyHash,
+                    null, {signal}
             ).then(response => {
+                if (signal.aborted) return;
+
                 this.lastEntryIndex = response.data.entries.length ? _.last(response.data.entries).sequence : this.lastEntryIndex;
 
                 this.hasMoreEntries = response.data.entries.length >= this.entriesPerRequest;
@@ -122,7 +131,18 @@ export default {
                             this.familyHash || this.showAllFamily ? response.data.entries : _.uniqBy(response.data.entries, entry => entry.family_hash || _.uniqueId())
                     );
                 }
-            })
+            }).catch(error => {
+                if (signal.aborted) return;
+
+                this.ready = true;
+                this.loadingNewEntries = false;
+                this.loadingMoreEntries = false;
+
+                if (!this.mayRetry(error, signal)) return;
+
+                this.checkForNewEntries();
+                this.updateEntries();
+            });
         },
 
 
@@ -130,13 +150,18 @@ export default {
          * Keep checking if there are new entries.
          */
         checkForNewEntries(){
+            const {signal} = this.requestController;
+
+            clearTimeout(this.newEntriesTimeout);
+
             this.newEntriesTimeout = setTimeout(() => {
                 axios.post(Telescope.basePath + '/telescope-api/' + this.resource +
                         '?tag=' + this.tag +
                         '&take=1' +
-                        '&family_hash=' + this.familyHash
+                        '&family_hash=' + this.familyHash,
+                        null, {signal}
                 ).then(response => {
-                    if (! this._isDestroyed) {
+                    if (!signal.aborted) {
                         this.recordingStatus = response.data.status;
 
                         if (response.data.entries.length && !this.entries.length) {
@@ -151,7 +176,9 @@ export default {
                             this.checkForNewEntries();
                         }
                     }
-                })
+                }).catch(error => {
+                    if (this.mayRetry(error, signal)) this.checkForNewEntries();
+                });
             }, this.newEntriesTimer);
         },
 
@@ -177,8 +204,6 @@ export default {
             this.debouncer(() => {
                 this.hasNewEntries = false;
                 this.lastEntryIndex = '';
-
-                clearTimeout(this.newEntriesTimeout);
 
                 this.$router.push({query: _.assign({}, this.$route.query, {tag: this.tag})});
             });
@@ -224,26 +249,34 @@ export default {
          * Update the existing entries if needed.
          */
         updateEntries(){
+            const {signal} = this.requestController;
+
             if (this.resource !== 'jobs') return;
+
+            clearTimeout(this.updateEntriesTimeout);
 
             this.updateEntriesTimeout = setTimeout(() => {
                 let uuids = _.chain(this.entries).filter(entry => entry.content.status === 'pending').map('id').value();
 
-                if (uuids.length) {
-                    axios.post(Telescope.basePath + '/telescope-api/' + this.resource, {
-                        uuids: uuids
-                    }).then(response => {
-                        this.recordingStatus = response.data.status;
+                if (!uuids.length) return this.updateEntries();
 
-                        this.entries = _.map(this.entries, entry => {
-                            if (!_.includes(uuids, entry.id)) return entry;
+                axios.post(Telescope.basePath + '/telescope-api/' + this.resource, {
+                    uuids: uuids
+                }, {signal}).then(response => {
+                    if (signal.aborted) return;
 
-                            return _.find(response.data.entries, {id: entry.id});
-                        });
-                    })
-                }
+                    this.recordingStatus = response.data.status;
 
-                this.updateEntries();
+                    this.entries = _.map(this.entries, entry => {
+                        if (!_.includes(uuids, entry.id)) return entry;
+
+                        return _.find(response.data.entries, {id: entry.id}) || entry;
+                    });
+
+                    this.updateEntries();
+                }).catch(error => {
+                    if (this.mayRetry(error, signal)) this.updateEntries();
+                });
             }, this.updateEntriesTimer);
         },
 
@@ -269,7 +302,7 @@ export default {
 <template>
     <div class="card overflow-hidden">
         <div class="card-header d-flex align-items-center justify-content-between">
-            <h2 class="h6 m-0">{{ this.title }}</h2>
+            <h2 class="h6 m-0">{{ title }}</h2>
 
             <div class="form-control-with-icon w-25" v-if="!hideSearch && (tag || entries.length > 0)">
                 <div class="icon-wrapper">

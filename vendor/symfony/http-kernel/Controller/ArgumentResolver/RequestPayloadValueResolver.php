@@ -151,7 +151,11 @@ class RequestPayloadValueResolver implements ValueResolverInterface, EventSubscr
                     if (\is_array($payload) && !empty($constraints) && !$constraints instanceof Assert\All) {
                         $constraints = new Assert\All($constraints);
                     }
-                    $violations->addAll($this->validator->validate($payload, $constraints, $argument->validationGroups ?? null));
+                    if ($argument instanceof MapUploadedFile) {
+                        $violations->addAll($this->validator->startContext()->atPath($argument->metadata->getName())->validate($payload, $constraints, $argument->validationGroups ?? null)->getViolations());
+                    } else {
+                        $violations->addAll($this->validator->validate($payload, $constraints, $argument->validationGroups ?? null));
+                    }
                 }
 
                 if (\count($violations)) {
@@ -214,6 +218,10 @@ class RequestPayloadValueResolver implements ValueResolverInterface, EventSubscr
 
         if ($attribute->acceptFormat && !\in_array($format, (array) $attribute->acceptFormat, true)) {
             throw new UnsupportedMediaTypeHttpException(\sprintf('Unsupported format, expects "%s", but "%s" given.', implode('", "', (array) $attribute->acceptFormat), $format));
+        }
+
+        if (!$attribute->acceptFormat && !\in_array($format, ['form', 'json', 'xml'], true)) {
+            throw new UnsupportedMediaTypeHttpException(\sprintf('Unsupported format, "%s" must be explicitly listed in "acceptFormat".', $format));
         }
 
         if ('array' === $argument->getType() && null !== $attribute->type) {

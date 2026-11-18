@@ -111,6 +111,8 @@ trait HandlesValidation
         if (method_exists($this, 'rules')) $rulesFromComponent = $this->rules();
         else if (property_exists($this, 'rules')) $rulesFromComponent = $this->rules;
 
+        if ($rulesFromComponent instanceof Arrayable) $rulesFromComponent = $rulesFromComponent->toArray();
+
         $rulesFromOutside = array_merge_recursive(
             ...array_map(
                 fn($i) => value($i),
@@ -128,6 +130,8 @@ trait HandlesValidation
         if (method_exists($this, 'messages')) $messages = $this->messages();
         elseif (property_exists($this, 'messages')) $messages = $this->messages;
 
+        if ($messages instanceof Arrayable) $messages = $messages->toArray();
+
         $messagesFromOutside = array_merge(
             ...array_map(
                 fn($i) => value($i),
@@ -144,6 +148,8 @@ trait HandlesValidation
 
         if (method_exists($this, 'validationAttributes')) $validationAttributes = $this->validationAttributes();
         elseif (property_exists($this, 'validationAttributes')) $validationAttributes = $this->validationAttributes;
+
+        if ($validationAttributes instanceof Arrayable) $validationAttributes = $validationAttributes->toArray();
 
         $validationAttributesFromOutside = array_merge(
             ...array_map(
@@ -365,8 +371,6 @@ trait HandlesValidation
 
         $rulesForField = $rulesForField->toArray();
 
-        $ruleKeysForField = array_keys($rulesForField);
-
         $data = array_merge($this->getDataForValidation($rules), $dataOverrides);
 
         $data = $this->prepareForValidation($data);
@@ -409,13 +413,13 @@ trait HandlesValidation
             $messages = $e->validator->getMessageBag();
 
             invade($e->validator)->messages = $messages->merge(
-                $this->errorBagExcept($ruleKeysForField)
+                $this->errorBagExcept($field)
             );
 
             throw $e;
         }
 
-        $this->resetErrorBag($ruleKeysForField);
+        $this->resetErrorBag($field);
 
         return $result;
     }
@@ -431,7 +435,7 @@ trait HandlesValidation
             if ($fieldKey == '*') {
                 // If the specified field has a '*', then loop through the collection and keep the whole collection intact.
                 foreach ($data as $key => $value) {
-                    $data[$key] = $this->filterCollectionDataDownToSpecificKeys($value, $ruleKeys, $fieldKeys);
+                    $data[$key] = $this->filterCollectionDataDownToSpecificKeys($value, clone $ruleKeys, clone $fieldKeys);
                 }
             } else {
                 // Otherwise filter collection down to a specific key
@@ -484,7 +488,7 @@ trait HandlesValidation
         // Let's make sure there are no form objects that contain them...
         $allRules = $rules;
 
-        if ($this->isRootComponent()) {
+        if (empty($rules) && $this->isRootComponent()) {
             foreach ($this->getFormObjects() as $form) {
                 $allRules = array_merge($allRules, $form->getRules());
             }
@@ -506,6 +510,8 @@ trait HandlesValidation
     protected function unwrapDataForValidation($data)
     {
         return collect($data)->map(function ($value) {
+            // Scalars and arrays are already valid Laravel validation data...
+            if (! is_object($value)) return $value;
 
             $synth = app('livewire')->findSynth($value, $this);
 

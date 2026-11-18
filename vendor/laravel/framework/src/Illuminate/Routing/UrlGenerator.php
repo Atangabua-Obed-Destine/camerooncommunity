@@ -14,6 +14,7 @@ use Illuminate\Support\InteractsWithTime;
 use Illuminate\Support\Str;
 use Illuminate\Support\Traits\Macroable;
 use InvalidArgumentException;
+use Symfony\Component\HttpFoundation\HeaderUtils;
 use Symfony\Component\Routing\Exception\RouteNotFoundException;
 
 class UrlGenerator implements UrlGeneratorContract
@@ -451,7 +452,9 @@ class UrlGenerator implements UrlGeneratorContract
      */
     public function hasCorrectSignature(Request $request, $absolute = true, Closure|array $ignoreQuery = [])
     {
-        $url = $absolute ? $request->url() : '/'.$request->path();
+        $url = $absolute
+            ? rtrim($request->getSchemeAndHttpHost().$request->getBaseUrl().$request->getPathInfo(), '/')
+            : '/'.$request->path();
 
         $queryString = (new Collection(explode('&', (string) $request->server->get('QUERY_STRING'))))
             ->reject(function ($parameter) use ($ignoreQuery) {
@@ -475,10 +478,16 @@ class UrlGenerator implements UrlGeneratorContract
 
         $keys = is_array($keys) ? $keys : [$keys];
 
+        $signature = $request->query('signature');
+
+        if (! is_string($signature)) {
+            return false;
+        }
+
         foreach ($keys as $key) {
             if (hash_equals(
                 hash_hmac('sha256', $original, $key),
-                (string) $request->query('signature', '')
+                $signature
             )) {
                 return true;
             }
@@ -496,6 +505,17 @@ class UrlGenerator implements UrlGeneratorContract
     public function signatureHasNotExpired(Request $request)
     {
         $expires = $request->query('expires');
+
+        if (is_null($expires)) {
+            $queries = HeaderUtils::parseQuery(match (true) {
+                $request->server->has('VAPOR_RAW_QUERY_STRING') => $request->server->get('VAPOR_RAW_QUERY_STRING'),
+                default => $request->getQueryString() ?? '',
+            });
+
+            if (isset($queries['expires'])) {
+                $expires = $queries['expires'];
+            }
+        }
 
         return ! ($expires && Carbon::now()->getTimestamp() > $expires);
     }

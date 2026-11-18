@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Mail\Attachment;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -60,8 +61,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * @property array $custom_properties
  * @property array $generated_conversions
  * @property array $responsive_images
- * @property-read ?\Illuminate\Support\Carbon $created_at
- * @property-read ?\Illuminate\Support\Carbon $updated_at
+ * @property-read ?Carbon $created_at
+ * @property-read ?Carbon $updated_at
  */
 class Media extends Model implements Attachable, Htmlable, Responsable
 {
@@ -399,13 +400,19 @@ class Media extends Model implements Attachable, Htmlable, Responsable
     {
         $filename = str_replace('"', '\'', Str::ascii($this->getDownloadFilename()));
 
-        $size = $conversion !== ''
-            ? Storage::disk($this->conversions_disk)->size($this->getPathRelativeToRoot($conversion))
-            : $this->size;
+        $size = $this->size;
+        $mimeType = $this->mime_type;
+
+        if ($conversion !== '') {
+            $disk = Storage::disk($this->conversions_disk);
+            $path = $this->getPathRelativeToRoot($conversion);
+            $size = $disk->size($path);
+            $mimeType = $disk->mimeType($path) ?: 'application/octet-stream';
+        }
 
         $downloadHeaders = [
             'Cache-Control' => 'must-revalidate, post-check=0, pre-check=0',
-            'Content-Type' => $this->mime_type,
+            'Content-Type' => $mimeType,
             'Content-Length' => $size,
             'Content-Disposition' => $contentDispositionType.'; filename="'.$filename.'"',
             'Pragma' => 'public',

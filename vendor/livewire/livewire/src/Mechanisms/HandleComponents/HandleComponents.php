@@ -2,35 +2,27 @@
 
 namespace Livewire\Mechanisms\HandleComponents;
 
-use function Livewire\{on, store, trigger, wrap };
-use ReflectionUnionType;
+use function Livewire\{on, trigger, wrap };
 use Livewire\Mechanisms\Mechanism;
-use Livewire\Mechanisms\HandleComponents\Synthesizers\Synth;
+use Livewire\Mechanisms\HandleSynths\HandleSynths;
 use Livewire\Exceptions\PublicPropertyNotFoundException;
 use Livewire\Exceptions\MethodNotFoundException;
 use Livewire\Exceptions\MaxNestingDepthExceededException;
 use Livewire\Exceptions\TooManyCallsException;
 use Livewire\Drawer\Utils;
+use Livewire\Features\SupportEvents\SupportEvents;
+use Livewire\Features\SupportFormObjects\Form;
 use Illuminate\Support\Facades\View;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HandleComponents extends Mechanism
 {
-    protected $propertySynthesizers = [
-        Synthesizers\CarbonSynth::class,
-        Synthesizers\CollectionSynth::class,
-        Synthesizers\StringableSynth::class,
-        Synthesizers\EnumSynth::class,
-        Synthesizers\StdClassSynth::class,
-        Synthesizers\ArraySynth::class,
-        Synthesizers\IntSynth::class,
-        Synthesizers\FloatSynth::class
-    ];
-
-    // Performance optimization: Cache which synthesizer matches which type
-    protected $synthesizerTypeCache = [];
-
     public static $renderStack = [];
     public static $componentStack = [];
+
+    public function __construct(protected HandleSynths $synths) {}
 
     public function boot()
     {
@@ -39,13 +31,6 @@ class HandleComponents extends Mechanism
             static::$componentStack = [];
             Utils::flushReflectionCache();
         });
-    }
-
-    public function registerPropertySynthesizer($synth)
-    {
-        foreach ((array) $synth as $class) {
-            array_unshift($this->propertySynthesizers, $class);
-        }
     }
 
     public function mount($name, $params = [], $key = null, $slots = [])
@@ -215,6 +200,7 @@ class HandleComponents extends Mechanism
             if (! is_array($call)
                 || ! is_string($call['method'] ?? null)
                 || ! is_array($call['params'] ?? null)
+                || ! Utils::hasUnambiguousParameterKeys($call['params'])
             ) {
                 if (config('app.debug')) throw new \InvalidArgumentException('Invalid Livewire call structure: each call must contain [method] (string) and [params] (array).');
 
@@ -302,25 +288,10 @@ class HandleComponents extends Mechanism
         $data = Utils::getPublicPropertiesDefinedOnSubclass($component);
 
         foreach ($data as $key => $value) {
-            $data[$key] = $this->dehydrate($value, $context, $key);
+            $data[$key] = $this->synths->dehydrate($value, $context, $key);
         }
 
         return $data;
-    }
-
-    protected function dehydrate($target, $context, $path)
-    {
-        if (Utils::isAPrimitive($target)) return $target;
-
-        $synth = $this->propertySynth($target, $context, $path);
-
-        [ $data, $meta ] = $synth->dehydrate($target, function ($name, $child) use ($context, $path) {
-            return $this->dehydrate($child, $context, "{$path}.{$name}");
-        });
-
-        $meta['s'] = $synth::getKey();
-
-        return [ $data, $meta ];
     }
 
     protected function hydrateProperties($component, $data, $context)
@@ -328,7 +299,7 @@ class HandleComponents extends Mechanism
         foreach ($data as $key => $value) {
             if (! property_exists($component, $key)) continue;
 
-            $child = $this->hydrate($value, $context, $key);
+            $child = $this->synths->hydrate($value, $context, $key);
 
             // Typed properties shouldn't be set back to "null". It will throw an error...
             if ((new \ReflectionProperty($component, $key))->getType() && is_null($child)) continue;
@@ -337,55 +308,9 @@ class HandleComponents extends Mechanism
         }
     }
 
-    protected function hydrate($valueOrTuple, $context, $path)
-    {
-        if (! Utils::isSyntheticTuple($value = $tuple = $valueOrTuple)) return $value;
-
-        [$value, $meta] = $tuple;
-
-        // Nested properties get set as `__rm__` when they are removed. We don't want to hydrate these.
-        if ($this->isRemoval($value) && str($path)->contains('.')) {
-            return $value;
-        }
-
-        // Validate class against denylist before any synthesizer can instantiate it...
-        if (isset($meta['class'])) {
-            SecurityPolicy::validateClass($meta['class']);
-        }
-
-        $synth = $this->propertySynth($meta['s'], $context, $path);
-
-        return $synth->hydrate($value, $meta, function ($name, $child) use ($context, $path) {
-            return $this->hydrate($child, $context, "{$path}.{$name}");
-        });
-    }
-
-    protected function hydratePropertyUpdate($valueOrTuple, $context, $path)
-    {
-        if (! Utils::isSyntheticTuple($value = $tuple = $valueOrTuple)) return $value;
-
-        [$value, $meta] = $tuple;
-
-        // Nested properties get set as `__rm__` when they are removed. We don't want to hydrate these.
-        if ($this->isRemoval($value) && str($path)->contains('.')) {
-            return $value;
-        }
-
-        // Validate class against denylist before any synthesizer can instantiate it...
-        if (isset($meta['class'])) {
-            SecurityPolicy::validateClass($meta['class']);
-        }
-
-        $synth = $this->propertySynth($meta['s'], $context, $path);
-
-        return $synth->hydrate($value, $meta, function ($name, $child) {
-            return $child;
-        });
-    }
-
     protected function render($component, $default = null)
     {
-        if ($html = store($component)->get('skipRender', false)) {
+        if ($html = $component->shouldSkipRender()) {
             $html = value(is_string($html) ? $html : $default);
 
             if (! $html) return;
@@ -406,12 +331,14 @@ class HandleComponents extends Mechanism
 
             $viewContext = new ViewContext;
 
-            $html = $view->render(function ($view) use ($viewContext) {
-                // Extract leftover slots, sections, and pushes before they get flushed...
-                $viewContext->extractFromEnvironment($view->getFactory());
-            });
-
-            $revertA(); $revertB();
+            try {
+                $html = $view->render(function ($view) use ($viewContext) {
+                    // Extract leftover slots, sections, and pushes before they get flushed...
+                    $viewContext->extractFromEnvironment($view->getFactory());
+                });
+            } finally {
+                $revertA(); $revertB();
+            }
 
             $html = Utils::insertAttributesIntoHtmlRoot($html, [
                 'wire:id' => $component->getId(),
@@ -457,17 +384,26 @@ class HandleComponents extends Mechanism
     {
         array_push(static::$renderStack, $component);
 
-        return tap($callback(), function () {
+        try {
+            return $callback();
+        } finally {
             array_pop(static::$renderStack);
-        });
+        }
     }
 
     protected function updateProperties($component, $updates, $data, $context)
     {
+        // When the JS diff algorithm detects that all properties of a form object
+        // have changed, it consolidates them into a single update (e.g. {form: {title: '...', status: '...'}}).
+        // Form objects are special — they should never be fully replaced. Instead, decompose
+        // the consolidated update into individual property updates so each goes through
+        // the normal hydration path (which handles type casting for enums, etc.)...
+        $updates = $this->expandConsolidatedFormObjectUpdates($component, $updates);
+
         $finishes = [];
 
         foreach ($updates as $path => $value) {
-            $value = $this->hydrateForUpdate($data, $path, $value, $context);
+            $value = $this->synths->hydrateForUpdate($data, $path, $value, $context);
 
             // We only want to run "updated" hooks after all properties have
             // been updated so that each individual hook has the ability
@@ -478,6 +414,27 @@ class HandleComponents extends Mechanism
         foreach ($finishes as $finish) {
             $finish();
         }
+    }
+
+    protected function expandConsolidatedFormObjectUpdates($component, $updates)
+    {
+        $expanded = [];
+
+        foreach ($updates as $path => $value) {
+            if (is_array($value)
+                && property_exists($component, $path)
+                && ! Utils::propertyIsTypedAndUninitialized($component, $path)
+                && $component->$path instanceof Form
+            ) {
+                foreach ($value as $key => $child) {
+                    $expanded["{$path}.{$key}"] = $child;
+                }
+            } else {
+                $expanded[$path] = $value;
+            }
+        }
+
+        return $expanded;
     }
 
     public function updateProperty($component, $path, $value, $context)
@@ -503,7 +460,12 @@ class HandleComponents extends Mechanism
         if (empty($segments)) {
             $this->setComponentPropertyAwareOfTypes($component, $property, $value);
         } else {
-            $propertyValue = $component->$property;
+            // An uninitialized typed property has no value to drill into. Start from
+            // an empty structure, like missing nested keys below, so the assignment
+            // runs through the usual typed property handling instead of throwing...
+            $propertyValue = Utils::propertyIsTypedAndUninitialized($component, $property)
+                ? []
+                : $component->$property;
 
             $this->setComponentPropertyAwareOfTypes($component, $property,
                 $this->recursivelySetValue($property, $propertyValue, $value, $segments, 0, $context)
@@ -511,54 +473,6 @@ class HandleComponents extends Mechanism
         }
 
         return $finish;
-    }
-
-    protected function hydrateForUpdate($raw, $path, $value, $context)
-    {
-        $meta = $this->getMetaForPath($raw, $path);
-
-        // If we have meta data already for this property, let's use that to get a synth...
-        if ($meta) {
-            return $this->hydratePropertyUpdate([$value, $meta], $context, $path);
-        }
-
-        // If we don't, let's check to see if it's a typed property and fetch the synth that way...
-        $parent = str($path)->contains('.')
-            ? data_get($context->component, str($path)->beforeLast('.')->toString())
-            : $context->component;
-
-        $childKey = str($path)->afterLast('.');
-
-        if ($parent && is_object($parent) && property_exists($parent, $childKey) && Utils::propertyIsTyped($parent, $childKey)) {
-            $type = Utils::getProperty($parent, $childKey)->getType();
-
-            $types = $type instanceof ReflectionUnionType ? $type->getTypes() : [$type];
-
-            foreach ($types as $type) {
-                $synth = $this->getSynthesizerByType($type->getName(), $context, $path);
-
-                if ($synth) return $synth->hydrateFromType($type->getName(), $value);
-            }
-        }
-
-        return $value;
-    }
-
-    protected function getMetaForPath($raw, $path)
-    {
-        $segments = explode('.', $path);
-
-        $first = array_shift($segments);
-
-        [$data, $meta] = Utils::isSyntheticTuple($raw) ? $raw : [$raw, null];
-
-        if ($path !== '') {
-            $value = $data[$first] ?? null;
-
-            return $this->getMetaForPath($value, implode('.', $segments));
-        }
-
-        return $meta;
     }
 
     protected function recursivelySetValue($baseProperty, $target, $leafValue, $segments, $index = 0, $context = null)
@@ -569,7 +483,9 @@ class HandleComponents extends Mechanism
 
         $path = implode('.', array_slice($segments, 0, $index + 1));
 
-        $synth = $this->propertySynth($target, $context, $path);
+        $synths = $this->synths;
+
+        $synth = $synths->resolve($target, $context, $path);
 
         if ($isLastSegment) {
             $toSet = $leafValue;
@@ -588,7 +504,7 @@ class HandleComponents extends Mechanism
             $toSet = $this->recursivelySetValue($baseProperty, $propertyTarget, $leafValue, $segments, $index + 1, $context);
         }
 
-        $method = ($this->isRemoval($leafValue) && $isLastSegment) ? 'unset' : 'set';
+        $method = ($synths->isRemoval($leafValue) && $isLastSegment) ? 'unset' : 'set';
 
         $pathThusFar = collect([$baseProperty, ...$segments])->slice(0, $index + 1)->join('.');
         $fullPath = collect([$baseProperty, ...$segments])->join('.');
@@ -608,9 +524,16 @@ class HandleComponents extends Mechanism
             // If a value is being set to "null", do the same...
             if ($value === '' || $value === null) {
                 unset($component->$property);
-            } else {
-                throw $e;
+
+                return;
             }
+
+            // This is almost certainly a bot/scanner probing typed properties
+            // with wrong-type values. Abort with 419 directly so it never
+            // reaches the top-level catch (which would report it as a real bug).
+            if (config('app.debug')) throw $e;
+
+            abort(419);
         }
     }
 
@@ -623,6 +546,7 @@ class HandleComponents extends Mechanism
         }
 
         $returns = [];
+        $shouldSkipRender = $this->shouldSkipRenderAfterCalls($root, $calls);
 
         foreach ($calls as $idx => $call) {
             $method = $call['method'];
@@ -639,7 +563,16 @@ class HandleComponents extends Mechanism
             $finish = trigger('call', $root, $method, $params, $componentContext, $returnEarly, $metadata, $idx);
 
             if ($earlyReturnCalled) {
-                $returns[] = $finish($earlyReturn);
+                $return = $finish($earlyReturn);
+
+                // File downloads and redirects are sent to the browser through their own effects, so we
+                // shouldn't add the response object as a return here. But we need to keep it's position
+                // in `returns` so we will just set it to `null` instead...
+                if ($return instanceof StreamedResponse || $return instanceof BinaryFileResponse || $return instanceof RedirectResponse) {
+                    $return = null;
+                }
+
+                $returns[] = $return;
 
                 continue;
             }
@@ -660,74 +593,54 @@ class HandleComponents extends Mechanism
             $return = wrap($root)->{$method}(...$params);
             if (config('app.debug')) trigger('profile', 'call'.$idx, $root->getId(), [$start, microtime(true)]);
 
-            $returns[] = $finish($return);
+            $return = $finish($return);
 
-            // Support `Wire:click.renderless`...
-            if ($metadata['renderless'] ?? false) {
-                $root->skipRender();
+            // File downloads and redirects are sent to the browser through their own effects, so we
+            // shouldn't add the response object as a return here. But we need to keep it's position
+            // in `returns` so we will just set it to `null` instead...
+            if ($return instanceof StreamedResponse || $return instanceof BinaryFileResponse || $return instanceof RedirectResponse) {
+                $return = null;
             }
+
+            $returns[] = $return;
+        }
+
+        if ($shouldSkipRender) {
+            $root->skipRender();
         }
 
         $componentContext->addEffect('returns', $returns);
     }
 
-    public function findSynth($keyOrTarget, $component): ?Synth
+    protected function shouldSkipRenderAfterCalls($root, $calls)
     {
-        $context = new ComponentContext($component);
-        try {
-            return $this->propertySynth($keyOrTarget, $context, null);
-        } catch (\Exception $e) {
-            return null;
-        }
+        if (count($calls) === 0) return false;
+
+        return collect($calls)->every(
+            fn ($call) => $this->isCallRenderless($root, $call)
+        );
     }
 
-    public function propertySynth($keyOrTarget, $context, $path): Synth
+    protected function isCallRenderless($root, $call)
     {
-        return is_string($keyOrTarget)
-            ? $this->getSynthesizerByKey($keyOrTarget, $context, $path)
-            : $this->getSynthesizerByTarget($keyOrTarget, $context, $path);
+        return ($call['metadata']['renderless'] ?? false)
+            || $root->isRenderlessMethod($this->resolveCalledMethod($root, $call));
     }
 
-    protected function getSynthesizerByKey($key, $context, $path)
+    protected function resolveCalledMethod($root, $call)
     {
-        foreach ($this->propertySynthesizers as $synth) {
-            if ($synth::getKey() === $key) {
-                return new $synth($context, $path);
-            }
+        if ($call['method'] !== '__dispatch' || ! isset($call['params'][0])) {
+            return $call['method'];
         }
 
-        throw new \Exception('No synthesizer found for key: "'.$key.'"');
-    }
+        $event = $call['params'][0];
 
-    protected function getSynthesizerByTarget($target, $context, $path)
-    {
-        // Performance optimization: Cache synthesizer matches by runtime type...
-        $type = get_debug_type($target);
-
-        if (! isset($this->synthesizerTypeCache[$type])) {
-            foreach ($this->propertySynthesizers as $synth) {
-                if ($synth::match($target)) {
-                    $this->synthesizerTypeCache[$type] = $synth;
-
-                    return new $synth($context, $path);
-                }
-            }
-
-            throw new \Exception('Property type not supported in Livewire for property: ['.json_encode($target).']');
+        // Event listeners travel as __dispatch calls, but their attributes belong to the listener method...
+        if (! in_array($event, SupportEvents::getListenerEventNames($root))) {
+            return $call['method'];
         }
 
-        return new $this->synthesizerTypeCache[$type]($context, $path);
-    }
-
-    protected function getSynthesizerByType($type, $context, $path)
-    {
-        foreach ($this->propertySynthesizers as $synth) {
-            if ($synth::matchByType($type)) {
-                return new $synth($context, $path);
-            }
-        }
-
-        return null;
+        return SupportEvents::getListenerMethodName($root, $event);
     }
 
     protected function pushOntoComponentStack($component)
@@ -738,9 +651,5 @@ class HandleComponents extends Mechanism
     protected function popOffComponentStack()
     {
         array_pop($this::$componentStack);
-    }
-
-    protected function isRemoval($value) {
-        return $value === '__rm__';
     }
 }

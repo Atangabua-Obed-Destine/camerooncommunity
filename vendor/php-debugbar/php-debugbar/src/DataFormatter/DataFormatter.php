@@ -34,6 +34,18 @@ class DataFormatter implements DataFormatterInterface
 
     public function formatVar(mixed $data, bool $deep = true): mixed
     {
+        if (is_string($data)) {
+            $maxString = $this->getClonerOptions()['max_string'] ?? 10_000;
+            if (strlen($data) <= $maxString) {
+                return $data;
+            }
+            return substr($data, 0, $maxString) . '[truncated ' . (strlen($data) - $maxString) . ' chars]';
+        }
+
+        if ($data === null || is_bool($data) || is_int($data) || is_float($data)) {
+            return var_export($data, true);
+        }
+
         return trim($this->dumpClonedVar($this->cloneVar($data, $deep)));
     }
 
@@ -56,9 +68,9 @@ class DataFormatter implements DataFormatterInterface
     {
         $dumper = $this->getDumper();
         if ($dumper instanceof CliDumper) {
-            return $dumper->dump($data, true);
+            return $dumper->dump($data, true) ?? '';
         }
-        return $dumper->dump($data);
+        return $dumper->dump($data) ?? '';
 
     }
 

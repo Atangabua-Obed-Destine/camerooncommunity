@@ -1,15 +1,16 @@
 ## Debugbar for Laravel
+
 ![Unit Tests](https://github.com/fruitcake/laravel-debugbar/workflows/Unit%20Tests/badge.svg)
-[![Packagist License](https://img.shields.io/badge/Licence-MIT-blue)](http://choosealicense.com/licenses/mit/)
+[![Packagist License](https://img.shields.io/badge/Licence-MIT-blue)](https://choosealicense.com/licenses/mit)
 [![Latest Stable Version](https://img.shields.io/packagist/v/fruitcake/laravel-debugbar?label=Stable)](https://packagist.org/packages/fruitcake/laravel-debugbar)
 [![Total Downloads](https://img.shields.io/packagist/dt/barryvdh/laravel-debugbar?label=Downloads)](https://packagist.org/packages/fruitcake/laravel-debugbar)
-[![Fruitcake](https://img.shields.io/badge/Powered%20By-Fruitcake-b2bc35.svg)](https://fruitcake.nl/)
+[![Fruitcake](https://img.shields.io/badge/Powered%20By-Fruitcake-b2bc35.svg)](https://fruitcake.nl)
 
 This is a package to integrate [PHP Debug Bar](https://github.com/php-debugbar/php-debugbar) with Laravel.
 It includes a ServiceProvider to register the debugbar and attach it to the output. You can publish assets and configure it through Laravel.
 It bootstraps some Collectors to work with Laravel and implements a couple custom DataCollectors, specific for Laravel.
-It is configured to display Redirects and Ajax/Livewire Requests. (Shown in a dropdown)
-Read [the documentation](http://phpdebugbar.com/docs/) for more configuration options.
+It is configured to display Redirects and Ajax/Livewire Requests, which are shown in a dropdown.
+Read the [documentation](https://php-debugbar.com/docs) for more configuration options.
 
 ![Debugbar Dark Mode screenshot](https://github.com/fruitcake/laravel-debugbar/assets/973269/6600837a-8b2d-4acb-ab0c-158c9ca5439c)
 
@@ -17,9 +18,10 @@ Read [the documentation](http://phpdebugbar.com/docs/) for more configuration op
 > Use the DebugBar only in development. Do not use Debugbar on publicly accessible websites, as it will leak information from stored requests (by design).
 
 > [!WARNING]
->  It can also slow the application down (because it has to gather and render data). So when experiencing slowness, try disabling some of the collectors.
+> It can also slow the application down (because it has to gather and render data). So when experiencing slowness, try disabling some of the collectors.
 
 This package includes some custom collectors:
+
 - QueryCollector: Show all queries, including binding + timing
 - RouteCollector: Show information about the current Route.
 - ViewCollector: Show the currently loaded views. (Optionally: display the shared data)
@@ -32,10 +34,12 @@ This package includes some custom collectors:
 - CacheCollector: Display all cache events. (disabled by default)
 
 Bootstraps the following collectors for Laravel:
+
 - LogCollector: Show all Log messages
 - SymfonyMailCollector for Mail
 
 And the default collectors:
+
 - PhpInfoCollector
 - MessagesCollector
 - TimeDataCollector (With Booting and Application timing)
@@ -52,10 +56,8 @@ Require this package with composer. It is recommended to only require the packag
 composer require fruitcake/laravel-debugbar --dev
 ```
 
-> Note: The package name has changed to `fruitcake/laravel-debugbar`. If you're using `barryvdh/laravel-debugbar`, 
+> Note: The package name has changed to `fruitcake/laravel-debugbar`. If you're using `barryvdh/laravel-debugbar`,
 > you can safely replace this with the new package name: `composer remove barryvdh/laravel-debugbar --dev --no-scripts`
-
-> Tip: Use 'composer require fruitcake/laravel-debugbar:"^4@beta" --dev' flag to try the new 4.x Beta version!
 
 Laravel uses Package Auto-Discovery, so doesn't require you to manually add the ServiceProvider.
 
@@ -73,13 +75,9 @@ php artisan vendor:publish --provider='Fruitcake\LaravelDebugbar\ServiceProvider
 
 ### Laravel with Octane:
 
-Make sure to add LaravelDebugbar to your flush list in `config/octane.php`.
+Laravel Debugbar 4.x works out of the box with Octane. No need to add anything to your config.
 
-```php
-    'flush' => [
-        \Fruitcake\LaravelDebugbar\LaravelDebugbar::class,
-    ],
-```
+If you're upgrading from Laravel Debugbar 3.x, remove the 'flush' config for Debugbar in `config/octane.php`.
 
 ## Usage
 
@@ -122,10 +120,10 @@ debug($var1, $someString, $intValue, $object);
 // `$collection->debug()` will return the collection and dump it as a debug message. Like `$collection->dump()`
 collect([$var1, $someString])->debug();
 
-start_measure('render','Time for rendering');
-stop_measure('render');
-add_measure('now', LARAVEL_START, microtime(true));
-measure('My long operation', function() {
+debugbar()->startMeasure('render','Time for rendering');
+debugbar()->stopMeasure('render');
+debugbar()->addMeasure('now', LARAVEL_START, microtime(true));
+debugbar()->measure('My long operation', function() {
     // Do something…
 });
 ```
@@ -134,13 +132,13 @@ If you want you can add your own DataCollectors, through the Container or the Fa
 
 ```php
 Debugbar::addCollector(new DebugBar\DataCollector\MessagesCollector('my_messages'));
-//Or via the App container:
+// Or via the App container:
 $debugbar = App::make('debugbar');
 $debugbar->addCollector(new DebugBar\DataCollector\MessagesCollector('my_messages'));
 ```
 
 By default, the Debugbar is injected just before `</body>`. If you want to inject the Debugbar yourself,
-set the config option 'inject' to false and use the renderer yourself and follow http://phpdebugbar.com/docs/rendering.html
+set the config option 'inject' to false and use the renderer yourself and follow https://php-debugbar.com/docs/rendering
 
 ```php
 $renderer = Debugbar::getJavascriptRenderer();
@@ -150,6 +148,7 @@ Note: Not using the auto-inject, will disable the Request information, because t
 You can add the default_request datacollector in the config as alternative.
 
 ## Enabling/Disabling on run time
+
 You can enable or disable the debugbar during run time.
 
 ```php
@@ -159,9 +158,14 @@ You can enable or disable the debugbar during run time.
 
 NB. Once enabled, the collectors are added (and could produce extra overhead), so if you want to use the debugbar in production, disable in the config and only enable when needed.
 
+> Note: by default Debugbar can only be enabled in debug mode and non-production environments. It's highly recommended to don't install this in production at all.
+> If you really need to enable it in production, you can set `debugbar.force_allow_enable` to true, or set `DEBUGBAR_FORCE_ALLOW_ENABLE=true` in your .env.
+> This will not enable the Debugbar, but will run the ServiceProvider bootstrap so you can enable it after booting.
+
 ## Storage
 
-Debugbar remembers previous requests, which you can view using the Browse button on the right. This will only work if you enable `debugbar.storage.open` in the config.
+Debugbar remembers previous requests, which you can view using the Browse button on the right. By default, this only works for requests from localhost or a private network (e.g. Docker/Sail or your LAN).
+To change this, set `debugbar.storage.open` (or `DEBUGBAR_OPEN_STORAGE`) to `true`/`false`, or use a callback.
 Make sure you only do this on local development, because otherwise other people will be able to view previous requests.
 In general, Debugbar should only be used locally or at least restricted by IP.
 It's possible to pass a callback, which will receive the Request object, so you can determine access to the OpenHandler storage.
@@ -178,7 +182,7 @@ Add the following extensions to your TwigBridge config/extensions.php (or regist
 'Fruitcake\LaravelDebugbar\Twig\Extension\Stopwatch',
 ```
 
-The Dump extension will replace the [dump function](http://twig.sensiolabs.org/doc/functions/dump.html) to output variables using the DataFormatter. The Debug extension adds a `debug()` function which passes variables to the Message Collector,
+The Dump extension will replace the [dump function](https://twig.symfony.com/doc/3.x/functions/dump.html) to output variables using the DataFormatter. The Debug extension adds a `debug()` function which passes variables to the Message Collector,
 instead of showing it directly in the template. It dumps the arguments, or when empty; all context variables.
 
 ```twig
@@ -186,14 +190,10 @@ instead of showing it directly in the template. It dumps the arguments, or when 
 {{ debug(user, categories) }}
 ```
 
-The Stopwatch extension adds a [stopwatch tag](http://symfony.com/blog/new-in-symfony-2-4-a-stopwatch-tag-for-twig)  similar to the one in Symfony/Silex Twigbridge.
+The Stopwatch extension adds a [stopwatch tag](https://symfony.com/blog/new-in-symfony-2-4-a-stopwatch-tag-for-twig) similar to the one in Symfony/Silex Twigbridge.
 
 ```twig
 {% stopwatch "foo" %}
     …some things that gets timed
 {% endstopwatch %}
 ```
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=fruitcake/laravel-debugbar&type=Date)](https://www.star-history.com/#fruitcake/laravel-debugbar&Date)

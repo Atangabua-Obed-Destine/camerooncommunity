@@ -3,7 +3,6 @@
 namespace Laravel\Reverb\Servers\Reverb\Http;
 
 use Closure;
-use GuzzleHttp\Psr7\HttpFactory;
 use GuzzleHttp\Psr7\Message;
 use Illuminate\Support\Arr;
 use Laravel\Reverb\Servers\Reverb\Concerns\ClosesConnections;
@@ -32,7 +31,7 @@ class Router
      */
     public function __construct(protected UrlMatcherInterface $matcher)
     {
-        $this->negotiator = new ServerNegotiator(new RequestVerifier, new HttpFactory);
+        $this->negotiator = new ServerNegotiator(new RequestVerifier, new HandshakeResponseFactory);
     }
 
     /**
@@ -61,7 +60,9 @@ class Router
         $controller = $this->controller($route);
 
         if ($this->isWebSocketRequest($request)) {
-            $wsConnection = $this->attemptUpgrade($request, $connection);
+            if (! $wsConnection = $this->attemptUpgrade($request, $connection)) {
+                return null;
+            }
 
             return $controller($request, $wsConnection, ...Arr::except($route, ['_controller', '_route']));
         }
@@ -101,12 +102,18 @@ class Router
     /**
      * Negotiate the WebSocket connection upgrade.
      */
-    protected function attemptUpgrade(RequestInterface $request, Connection $connection): ReverbConnection
+    protected function attemptUpgrade(RequestInterface $request, Connection $connection): ?ReverbConnection
     {
         $response = $this->negotiator->handshake($request)
             ->withHeader('X-Powered-By', 'Laravel Reverb');
 
         $connection->write(Message::toString($response));
+
+        if ($response->getStatusCode() !== 101) {
+            $connection->close();
+
+            return null;
+        }
 
         return new ReverbConnection($connection);
     }

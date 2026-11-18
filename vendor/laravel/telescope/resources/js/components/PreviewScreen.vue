@@ -11,6 +11,8 @@ export default {
     },
 
 
+    emits: ['ready'],
+
     /**
      * The component's data.
      */
@@ -19,7 +21,9 @@ export default {
             entry: null,
             batch: null,
             ready: false,
+            requestController: new AbortController(),
 
+            unwatchReady: null,
             updateEntryTimeout: null,
             updateEntryTimer: 2500,
         };
@@ -44,7 +48,8 @@ export default {
     /**
      * Clean after the component is destroyed.
      */
-    destroyed() {
+    unmounted() {
+        this.requestController.abort();
         clearTimeout(this.updateEntryTimeout);
     },
 
@@ -67,10 +72,16 @@ export default {
 
     methods: {
         prepareEntry() {
+            this.requestController.abort();
+            this.requestController = new AbortController();
+            clearTimeout(this.updateEntryTimeout);
+
             document.title = this.title + " - Telescope";
             this.ready = false;
 
-            let unwatch = this.$watch('ready', newVal => {
+            if (this.unwatchReady) this.unwatchReady();
+
+            const unwatch = this.unwatchReady = this.$watch('ready', newVal => {
                 if (newVal) {
                     this.$emit('ready');
                     unwatch();
@@ -92,12 +103,20 @@ export default {
 
 
         loadEntry(after){
-            axios.get(Telescope.basePath + '/telescope-api/' + this.resource + '/' + this.id).then(response => {
+            const {signal} = this.requestController;
+
+            return axios.get(Telescope.basePath + '/telescope-api/' + this.resource + '/' + this.id, {signal}).then(response => {
+                if (signal.aborted) return;
+
                 if (_.isFunction(after)) {
                     after(response);
                 }
             }).catch(error => {
+                if (signal.aborted) return;
+
                 this.ready = true;
+
+                if (this.mayRetry(error, signal)) this.updateEntry();
             })
         },
 
@@ -107,7 +126,7 @@ export default {
          */
         updateEntry(){
             if (this.resource != 'jobs') return;
-            if (this.entry.content.status !== 'pending') return;
+            if (!this.entry || this.entry.content.status !== 'pending') return;
 
             this.updateEntryTimeout = setTimeout(() => {
                 this.loadEntry((response) => {
@@ -118,9 +137,9 @@ export default {
                     this.$parent.batch = response.data.batch;
 
                     this.ready = true;
-                });
 
-                this.updateEntry();
+                    this.updateEntry();
+                });
             }, this.updateEntryTimer);
         }
     }
@@ -131,7 +150,7 @@ export default {
     <div>
         <div class="card overflow-hidden">
             <div class="card-header d-flex align-items-center justify-content-between">
-                <h2 class="h6 m-0">{{ this.title }}</h2>
+                <h2 class="h6 m-0">{{ title }}</h2>
             </div>
 
             <div
